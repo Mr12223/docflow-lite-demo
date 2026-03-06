@@ -46,6 +46,10 @@ BATCH_SUITE_ALIASES = {
 }
 _EASYOCR_READER_CACHE = None
 _EASYOCR_READER_ERROR = None
+_RAPIDOCR_READER_CACHE = None
+_RAPIDOCR_READER_ERROR = None
+_PADDLEOCR_READER_CACHE = None
+_PADDLEOCR_READER_ERROR = None
 IMAGE_OCR_CACHE_VERSION = "v1"
 IMAGE_OCR_CACHE_DIR = PROJECT_ROOT / "uploads_temp" / "ocr_cache"
 IMAGE_OCR_MEMORY_CACHE = {}
@@ -91,10 +95,11 @@ def _is_cloud_runtime() -> bool:
 
 
 def _get_image_ocr_order() -> list[str]:
-    raw = str(os.getenv("DOCFLOW_IMAGE_OCR_ORDER", "tesseract,easyocr")).strip().lower()
+    default_order = "rapidocr,tesseract,easyocr"
+    raw = str(os.getenv("DOCFLOW_IMAGE_OCR_ORDER", default_order)).strip().lower()
     engines = [item.strip() for item in raw.split(",") if item.strip()]
-    valid = [item for item in engines if item in {"tesseract", "easyocr"}]
-    return valid or ["tesseract", "easyocr"]
+    valid = [item for item in engines if item in {"rapidocr", "paddleocr", "tesseract", "easyocr"}]
+    return valid or default_order.split(",")
 
 
 def _get_image_ocr_resize_config() -> dict:
@@ -126,6 +131,62 @@ def _get_image_ocr_resize_config() -> dict:
     return config
 
 
+def _get_google_vision_api_key() -> str:
+    for env_name in (
+        "DOCFLOW_GOOGLE_VISION_API_KEY",
+        "GOOGLE_VISION_API_KEY",
+        "GOOGLE_API_KEY",
+    ):
+        value = str(os.getenv(env_name, "")).strip()
+        if value:
+            return value
+    return ""
+
+
+def _get_google_vision_language_hints() -> list[str]:
+    raw = str(os.getenv("DOCFLOW_GOOGLE_VISION_LANGUAGE_HINTS", "")).strip()
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+def _get_google_vision_feature() -> str:
+    value = str(os.getenv("DOCFLOW_GOOGLE_VISION_FEATURE", "DOCUMENT_TEXT_DETECTION")).strip().upper()
+    return value if value in {"DOCUMENT_TEXT_DETECTION", "TEXT_DETECTION"} else "DOCUMENT_TEXT_DETECTION"
+
+
+def _get_google_vision_endpoint() -> str:
+    return str(
+        os.getenv("DOCFLOW_GOOGLE_VISION_API_ENDPOINT", "https://vision.googleapis.com/v1/images:annotate")
+    ).strip()
+
+
+def _is_google_vision_enabled() -> bool:
+    default_enabled = _is_cloud_runtime() or bool(_get_google_vision_api_key())
+    return _env_flag("DOCFLOW_ENABLE_GOOGLE_VISION_OCR", default_enabled)
+
+
+def _check_google_vision_ready() -> tuple[bool, str]:
+    global _GOOGLE_VISION_READY_CACHE
+    if _GOOGLE_VISION_READY_CACHE is not None:
+        return _GOOGLE_VISION_READY_CACHE
+
+    if not _is_google_vision_enabled():
+        _GOOGLE_VISION_READY_CACHE = (False, "Google Vision OCR 已禁用")
+        return _GOOGLE_VISION_READY_CACHE
+
+    endpoint = _get_google_vision_endpoint()
+    if not endpoint.startswith("https://"):
+        _GOOGLE_VISION_READY_CACHE = (False, "Google Vision OCR 接口地址无效")
+        return _GOOGLE_VISION_READY_CACHE
+
+    api_key = _get_google_vision_api_key()
+    if not api_key:
+        _GOOGLE_VISION_READY_CACHE = (False, "未配置 Google Vision API Key")
+        return _GOOGLE_VISION_READY_CACHE
+
+    _GOOGLE_VISION_READY_CACHE = (True, "")
+    return _GOOGLE_VISION_READY_CACHE
+
+
 def _get_easyocr_reader():
     global _EASYOCR_READER_CACHE, _EASYOCR_READER_ERROR
     if _EASYOCR_READER_CACHE is not None:
@@ -140,6 +201,464 @@ def _get_easyocr_reader():
     except Exception as exc:
         _EASYOCR_READER_ERROR = exc
         raise
+
+
+def _prepare_image_for_google_vision(image_path: str) -> tuple[bytes, dict]:
+    import io
+    from PIL import Image, ImageOps
+
+    resize_config = _get_image_ocr_resize_config()
+    max_long_edge = min(
+        resize_config["max_long_edge"],
+        _env_int("DOCFLOW_GOOGLE_VISION_MAX_LONG_EDGE", resize_config["max_long_edge"]),
+    )
+    huge_trigger = min(
+        resize_config["fast_edge_trigger"],
+        _env_int("DOCFLOW_GOOGLE_VISION_FAST_EDGE_TRIGGER", resize_config["fast_edge_trigger"]),
+    )
+    huge_long_edge = min(
+        resize_config["huge_long_edge"],
+        _env_int("DOCFLOW_GOOGLE_VISION_HUGE_LONG_EDGE", resize_config["huge_long_edge"]),
+    )
+    huge_long_edge = min(huge_long_edge, max_long_edge)
+    huge_trigger = max(huge_trigger, max_long_edge)
+
+    with Image.open(image_path) as source:
+        image = ImageOps.exif_transpose(source)
+        if image.mode not in ("RGB", "RGBA", "L"):
+            image = image.convert("RGB")
+
+        original_size = image.size
+        width, height = image.size
+        long_edge = max(width, height)
+        target_long_edge = huge_long_edge if long_edge >= huge_trigger else max_long_edge
+
+        if long_edge > target_long_edge:
+            scale = target_long_edge / max(long_edge, 1)
+            image = image.resize(
+                (max(1, int(width * scale)), max(1, int(height * scale))),
+                Image.LANCZOS,
+            )
+
+        if image.mode not in ("RGB", "RGBA", "L"):
+            image = image.convert("RGB")
+
+        payload = io.BytesIO()
+        image.save(payload, format="PNG", optimize=True)
+        image_bytes = payload.getvalue()
+        prepared_size = image.size
+
+    return image_bytes, {
+        "original_size": original_size,
+        "prepared_size": prepared_size,
+        "long_edge_target": target_long_edge,
+        "provider": "google_vision",
+        "transport_format": "png",
+        "cloud_downsample_enabled": resize_config["cloud_downsample_enabled"],
+    }
+
+
+def _run_google_vision_ocr(image_path: str) -> tuple[str, dict]:
+    from urllib import error, parse, request
+
+    is_ready, reason = _check_google_vision_ready()
+    if not is_ready:
+        raise RuntimeError(reason)
+
+    api_key = _get_google_vision_api_key()
+    endpoint = _get_google_vision_endpoint()
+    feature_type = _get_google_vision_feature()
+    language_hints = _get_google_vision_language_hints()
+    timeout_sec = _env_int("DOCFLOW_GOOGLE_VISION_TIMEOUT_SEC", 20)
+    image_bytes, prepared_meta = _prepare_image_for_google_vision(image_path)
+
+    request_payload = {
+        "requests": [
+            {
+                "image": {"content": base64.b64encode(image_bytes).decode("ascii")},
+                "features": [{"type": feature_type}],
+            }
+        ]
+    }
+    if language_hints:
+        request_payload["requests"][0]["imageContext"] = {"languageHints": language_hints}
+
+    request_url = f"{endpoint}?key={parse.quote(api_key)}"
+    req = request.Request(
+        request_url,
+        data=json.dumps(request_payload, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        method="POST",
+    )
+
+    try:
+        with request.urlopen(req, timeout=timeout_sec) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(f"Google Vision HTTP {exc.code}: {detail[:240] or exc.reason}") from exc
+    except error.URLError as exc:
+        raise RuntimeError(f"Google Vision 网络请求失败: {exc.reason}") from exc
+    except Exception as exc:
+        raise RuntimeError(f"Google Vision 请求异常: {exc}") from exc
+
+    responses = payload.get("responses") or []
+    if not responses:
+        raise RuntimeError("Google Vision 未返回识别结果")
+
+    first = responses[0] or {}
+    error_info = first.get("error") or {}
+    if error_info.get("message"):
+        raise RuntimeError(str(error_info.get("message")))
+
+    text = ((first.get("fullTextAnnotation") or {}).get("text")) or ""
+    if not text:
+        text_annotations = first.get("textAnnotations") or []
+        if text_annotations:
+            text = str(text_annotations[0].get("description") or "")
+
+    prepared_meta.update(
+        {
+            "feature": feature_type,
+            "language_hints": language_hints,
+            "endpoint": endpoint,
+            "payload_bytes": len(image_bytes),
+        }
+    )
+    return text, prepared_meta
+
+
+def _get_paddleocr_reader():
+    global _PADDLEOCR_READER_CACHE, _PADDLEOCR_READER_ERROR
+    if not _env_flag("DOCFLOW_ENABLE_PADDLEOCR", True):
+        raise RuntimeError("PaddleOCR 已禁用")
+    if _PADDLEOCR_READER_CACHE is not None:
+        return _PADDLEOCR_READER_CACHE
+    if _PADDLEOCR_READER_ERROR is not None:
+        raise _PADDLEOCR_READER_ERROR
+
+    try:
+        import inspect
+
+        paddleocr_module = import_with_base_fallback("paddleocr")
+        paddleocr_cls = getattr(paddleocr_module, "PaddleOCR", None)
+        if paddleocr_cls is None:
+            raise RuntimeError("未找到 PaddleOCR 类")
+
+        signature = inspect.signature(paddleocr_cls)
+        kwargs = {}
+        if "lang" in signature.parameters:
+            kwargs["lang"] = str(os.getenv("DOCFLOW_PADDLEOCR_LANG", "ch")).strip() or "ch"
+        if "show_log" in signature.parameters:
+            kwargs["show_log"] = _env_flag("DOCFLOW_PADDLEOCR_SHOW_LOG", False)
+        if "use_angle_cls" in signature.parameters:
+            kwargs["use_angle_cls"] = _env_flag("DOCFLOW_PADDLEOCR_USE_ANGLE_CLS", False)
+        if "use_gpu" in signature.parameters:
+            kwargs["use_gpu"] = _env_flag("DOCFLOW_PADDLEOCR_USE_GPU", False)
+
+        _PADDLEOCR_READER_CACHE = paddleocr_cls(**kwargs)
+        return _PADDLEOCR_READER_CACHE
+    except Exception as exc:
+        _PADDLEOCR_READER_ERROR = exc
+        raise
+
+
+def _get_rapidocr_reader():
+    global _RAPIDOCR_READER_CACHE, _RAPIDOCR_READER_ERROR
+    if not _env_flag("DOCFLOW_ENABLE_RAPIDOCR", True):
+        raise RuntimeError("RapidOCR 已禁用")
+    if _RAPIDOCR_READER_CACHE is not None:
+        return _RAPIDOCR_READER_CACHE
+    if _RAPIDOCR_READER_ERROR is not None:
+        raise _RAPIDOCR_READER_ERROR
+
+    try:
+        rapidocr_module = import_with_base_fallback("rapidocr")
+        rapidocr_cls = getattr(rapidocr_module, "RapidOCR", None)
+        if rapidocr_cls is None:
+            raise RuntimeError("未找到 RapidOCR 类")
+        try:
+            _RAPIDOCR_READER_CACHE = rapidocr_cls()
+        except TypeError:
+            _RAPIDOCR_READER_CACHE = rapidocr_cls(params={})
+        return _RAPIDOCR_READER_CACHE
+    except Exception as exc:
+        _RAPIDOCR_READER_ERROR = exc
+        raise
+
+
+def _prepare_image_for_rapidocr(image_path: str) -> tuple[str, dict, callable]:
+    import tempfile
+    from PIL import Image, ImageOps
+
+    resize_config = _get_image_ocr_resize_config()
+    max_long_edge = min(
+        resize_config["max_long_edge"],
+        _env_int("DOCFLOW_RAPIDOCR_MAX_LONG_EDGE", resize_config["max_long_edge"]),
+    )
+    huge_trigger = min(
+        resize_config["fast_edge_trigger"],
+        _env_int("DOCFLOW_RAPIDOCR_FAST_EDGE_TRIGGER", resize_config["fast_edge_trigger"]),
+    )
+    huge_long_edge = min(
+        resize_config["huge_long_edge"],
+        _env_int("DOCFLOW_RAPIDOCR_HUGE_LONG_EDGE", resize_config["huge_long_edge"]),
+    )
+    huge_long_edge = min(huge_long_edge, max_long_edge)
+    huge_trigger = max(huge_trigger, max_long_edge)
+
+    with Image.open(image_path) as source:
+        image = ImageOps.exif_transpose(source)
+        if image.mode not in ("RGB", "RGBA", "L"):
+            image = image.convert("RGB")
+
+        original_size = image.size
+        width, height = image.size
+        long_edge = max(width, height)
+        target_long_edge = huge_long_edge if long_edge >= huge_trigger else max_long_edge
+
+        if long_edge <= target_long_edge:
+            return image_path, {
+                "original_size": original_size,
+                "prepared_size": original_size,
+                "long_edge_target": target_long_edge,
+                "provider": "rapidocr",
+                "cloud_downsample_enabled": resize_config["cloud_downsample_enabled"],
+            }, (lambda: None)
+
+        scale = target_long_edge / max(long_edge, 1)
+        resized = image.resize(
+            (max(1, int(width * scale)), max(1, int(height * scale))),
+            Image.LANCZOS,
+        )
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png", dir=UPLOAD_FOLDER)
+        temp_path = temp_file.name
+        temp_file.close()
+        resized.save(temp_path, format="PNG", optimize=True)
+        prepared_size = resized.size
+
+    def cleanup() -> None:
+        try:
+            os.remove(temp_path)
+        except Exception:
+            pass
+
+    return temp_path, {
+        "original_size": original_size,
+        "prepared_size": prepared_size,
+        "long_edge_target": target_long_edge,
+        "provider": "rapidocr",
+        "transport_format": "png",
+        "cloud_downsample_enabled": resize_config["cloud_downsample_enabled"],
+    }, cleanup
+
+
+def _extract_text_from_rapidocr_result(payload) -> str:
+    lines: list[str] = []
+
+    def add_line(value) -> None:
+        text = str(value or "").strip()
+        if text:
+            lines.append(text)
+
+    def walk(node) -> None:
+        if node is None:
+            return
+        txts = getattr(node, "txts", None)
+        if isinstance(txts, (list, tuple)):
+            for item in txts:
+                add_line(item)
+            return
+        if isinstance(node, dict):
+            for key in ("txts", "texts", "rec_texts"):
+                value = node.get(key)
+                if isinstance(value, (list, tuple)):
+                    for item in value:
+                        add_line(item)
+                    return
+            if isinstance(node.get("text"), str):
+                add_line(node.get("text"))
+                return
+            for key in ("res", "result", "data", "ocr_result"):
+                if key in node:
+                    walk(node.get(key))
+            return
+        if isinstance(node, (list, tuple)):
+            if len(node) >= 3 and isinstance(node[1], str):
+                add_line(node[1])
+                return
+            if len(node) >= 2 and isinstance(node[1], (list, tuple)):
+                candidate = node[1]
+                if candidate and isinstance(candidate[0], str):
+                    add_line(candidate[0])
+                    return
+            for item in node:
+                walk(item)
+
+    walk(payload)
+    merged = []
+    last_line = None
+    for line in lines:
+        if line != last_line:
+            merged.append(line)
+            last_line = line
+    return "\n".join(merged)
+
+
+def _run_rapidocr(image_path: str) -> tuple[str, dict]:
+    reader = _get_rapidocr_reader()
+    prepared_path, prepared_meta, cleanup = _prepare_image_for_rapidocr(image_path)
+    try:
+        raw_result = reader(prepared_path)
+    finally:
+        cleanup()
+
+    text = _extract_text_from_rapidocr_result(raw_result)
+    prepared_meta.update(
+        {
+            "api_variant": "__call__",
+            "engine_class": reader.__class__.__name__,
+            "elapsed": getattr(raw_result, "elapse", None),
+        }
+    )
+    return text, prepared_meta
+
+
+def _prepare_image_for_paddleocr(image_path: str) -> tuple[str, dict, callable]:
+    import tempfile
+    from PIL import Image, ImageOps
+
+    resize_config = _get_image_ocr_resize_config()
+    max_long_edge = min(
+        resize_config["max_long_edge"],
+        _env_int("DOCFLOW_PADDLEOCR_MAX_LONG_EDGE", resize_config["max_long_edge"]),
+    )
+    huge_trigger = min(
+        resize_config["fast_edge_trigger"],
+        _env_int("DOCFLOW_PADDLEOCR_FAST_EDGE_TRIGGER", resize_config["fast_edge_trigger"]),
+    )
+    huge_long_edge = min(
+        resize_config["huge_long_edge"],
+        _env_int("DOCFLOW_PADDLEOCR_HUGE_LONG_EDGE", resize_config["huge_long_edge"]),
+    )
+    huge_long_edge = min(huge_long_edge, max_long_edge)
+    huge_trigger = max(huge_trigger, max_long_edge)
+
+    with Image.open(image_path) as source:
+        image = ImageOps.exif_transpose(source)
+        if image.mode not in ("RGB", "RGBA", "L"):
+            image = image.convert("RGB")
+
+        original_size = image.size
+        width, height = image.size
+        long_edge = max(width, height)
+        target_long_edge = huge_long_edge if long_edge >= huge_trigger else max_long_edge
+
+        if long_edge <= target_long_edge:
+            return image_path, {
+                "original_size": original_size,
+                "prepared_size": original_size,
+                "long_edge_target": target_long_edge,
+                "provider": "paddleocr",
+                "cloud_downsample_enabled": resize_config["cloud_downsample_enabled"],
+            }, (lambda: None)
+
+        scale = target_long_edge / max(long_edge, 1)
+        resized = image.resize(
+            (max(1, int(width * scale)), max(1, int(height * scale))),
+            Image.LANCZOS,
+        )
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png", dir=UPLOAD_FOLDER)
+        temp_path = temp_file.name
+        temp_file.close()
+        resized.save(temp_path, format="PNG", optimize=True)
+        prepared_size = resized.size
+
+    def cleanup() -> None:
+        try:
+            os.remove(temp_path)
+        except Exception:
+            pass
+
+    return temp_path, {
+        "original_size": original_size,
+        "prepared_size": prepared_size,
+        "long_edge_target": target_long_edge,
+        "provider": "paddleocr",
+        "transport_format": "png",
+        "cloud_downsample_enabled": resize_config["cloud_downsample_enabled"],
+    }, cleanup
+
+
+def _extract_text_from_paddleocr_result(payload) -> str:
+    lines: list[str] = []
+
+    def add_line(value) -> None:
+        text = str(value or "").strip()
+        if text:
+            lines.append(text)
+
+    def walk(node) -> None:
+        if node is None:
+            return
+        if isinstance(node, dict):
+            rec_texts = node.get("rec_texts")
+            if isinstance(rec_texts, (list, tuple)):
+                for item in rec_texts:
+                    add_line(item)
+                return
+            if isinstance(node.get("text"), str):
+                add_line(node.get("text"))
+                return
+            for key in ("res", "result", "ocr_result", "data"):
+                if key in node:
+                    walk(node.get(key))
+            return
+        if isinstance(node, (list, tuple)):
+            if len(node) >= 2 and isinstance(node[1], (list, tuple)) and node[1]:
+                candidate = node[1][0]
+                if isinstance(candidate, str):
+                    add_line(candidate)
+                    return
+            for item in node:
+                walk(item)
+
+    walk(payload)
+    merged = []
+    last_line = None
+    for line in lines:
+        if line != last_line:
+            merged.append(line)
+            last_line = line
+    return "\n".join(merged)
+
+
+def _run_paddleocr(image_path: str) -> tuple[str, dict]:
+    reader = _get_paddleocr_reader()
+    prepared_path, prepared_meta, cleanup = _prepare_image_for_paddleocr(image_path)
+    try:
+        if hasattr(reader, "predict"):
+            raw_result = reader.predict(prepared_path)
+            api_variant = "predict"
+        elif hasattr(reader, "ocr"):
+            raw_result = reader.ocr(
+                prepared_path,
+                cls=_env_flag("DOCFLOW_PADDLEOCR_USE_ANGLE_CLS", False),
+            )
+            api_variant = "ocr"
+        else:
+            raise RuntimeError("当前 PaddleOCR 版本缺少可调用的预测接口")
+    finally:
+        cleanup()
+
+    text = _extract_text_from_paddleocr_result(raw_result)
+    prepared_meta.update(
+        {
+            "api_variant": api_variant,
+            "lang": str(os.getenv("DOCFLOW_PADDLEOCR_LANG", "ch")).strip() or "ch",
+        }
+    )
+    return text, prepared_meta
 
 
 def _prepare_image_for_tesseract(image_path: str):
@@ -226,6 +745,13 @@ def _get_image_ocr_profile() -> dict:
         "grayscale": resize_config["grayscale"],
         "autocontrast": resize_config["autocontrast"],
         "cloud_downsample_enabled": resize_config["cloud_downsample_enabled"],
+        "rapidocr_enabled": _env_flag("DOCFLOW_ENABLE_RAPIDOCR", True),
+        "rapidocr_max_long_edge": _env_int("DOCFLOW_RAPIDOCR_MAX_LONG_EDGE", resize_config["max_long_edge"]),
+        "rapidocr_fast_edge_trigger": _env_int("DOCFLOW_RAPIDOCR_FAST_EDGE_TRIGGER", resize_config["fast_edge_trigger"]),
+        "rapidocr_huge_long_edge": _env_int("DOCFLOW_RAPIDOCR_HUGE_LONG_EDGE", resize_config["huge_long_edge"]),
+        "paddleocr_enabled": _env_flag("DOCFLOW_ENABLE_PADDLEOCR", True),
+        "paddleocr_lang": str(os.getenv("DOCFLOW_PADDLEOCR_LANG", "ch")).strip() or "ch",
+        "paddleocr_use_angle_cls": _env_flag("DOCFLOW_PADDLEOCR_USE_ANGLE_CLS", False),
         "psm": _env_int("DOCFLOW_IMAGE_OCR_PSM", 6),
         "oem": os.getenv("DOCFLOW_IMAGE_OCR_OEM", "").strip(),
     }
@@ -277,7 +803,7 @@ def _save_image_ocr_cache(cache_key: str, file_sha256: str, profile: dict, resul
         return
     if not isinstance(result, dict):
         return
-    if result.get("metadata", {}).get("engine") not in {"Tesseract", "EasyOCR"}:
+    if result.get("metadata", {}).get("engine") not in {"Tesseract", "EasyOCR", "PaddleOCR", "RapidOCR"}:
         return
 
     payload = {
@@ -1234,6 +1760,8 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
     emit(5, "image_prepare", f"正在读取图片：{filename}")
     text = ""
     engine_used = ""
+    rapidocr_error = ""
+    paddleocr_error = ""
     easyocr_error = ""
     tesseract_error = ""
     prepared_meta = {}
@@ -1263,7 +1791,41 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
         if text or engine_used:
             break
 
-        if engine_name == "tesseract":
+        if engine_name == "rapidocr":
+            try:
+                ensure_not_cancelled()
+                emit(20, "image_rapidocr_prepare", "正在准备 RapidOCR 识别")
+                ensure_not_cancelled()
+                emit(52, "image_rapidocr", "正在执行 RapidOCR 识别")
+                candidate_text, candidate_meta = _run_rapidocr(image_path)
+                if str(candidate_text or "").strip():
+                    text = candidate_text
+                    prepared_meta = candidate_meta
+                    engine_used = "RapidOCR"
+                else:
+                    prepared_meta = candidate_meta
+                    rapidocr_error = "RapidOCR 未识别到有效文本"
+            except Exception as e:
+                rapidocr_error = str(e)
+
+        elif engine_name == "paddleocr":
+            try:
+                ensure_not_cancelled()
+                emit(22, "image_paddleocr_prepare", "正在准备 PaddleOCR 识别")
+                ensure_not_cancelled()
+                emit(56, "image_paddleocr", "正在执行 PaddleOCR 识别")
+                candidate_text, candidate_meta = _run_paddleocr(image_path)
+                if str(candidate_text or "").strip():
+                    text = candidate_text
+                    prepared_meta = candidate_meta
+                    engine_used = "PaddleOCR"
+                else:
+                    prepared_meta = candidate_meta
+                    paddleocr_error = "PaddleOCR 未识别到有效文本"
+            except Exception as e:
+                paddleocr_error = str(e)
+
+        elif engine_name == "tesseract":
             try:
                 ensure_not_cancelled()
                 emit(24, "image_preprocess", "正在优化图片尺寸与对比度")
@@ -1303,6 +1865,10 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
     # 两种都没装：返回提示
     if not engine_used:
         error_lines = []
+        if rapidocr_error:
+            error_lines.append(f"RapidOCR: {rapidocr_error}")
+        if paddleocr_error:
+            error_lines.append(f"PaddleOCR: {paddleocr_error}")
         if easyocr_error:
             error_lines.append(f"EasyOCR: {easyocr_error}")
         if tesseract_error:
@@ -1310,7 +1876,7 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
         detail = "\n".join(error_lines)
         text = (
             "⚠ OCR 不可用\n\n"
-            "请安装 `easyocr`，或补齐 `pytesseract + Tesseract OCR` 运行环境。"
+            "请安装并配置 `RapidOCR`，或补齐 `pytesseract + Tesseract OCR` / `easyocr` 运行环境。"
         )
         if detail:
             text += f"\n\n{detail}"
@@ -1365,7 +1931,7 @@ OCR 引擎: {engine_used}
         ),
         "error": "",
     }
-    if cache_key and file_sha256 and cache_profile and engine_used in {"Tesseract", "EasyOCR"}:
+    if cache_key and file_sha256 and cache_profile and engine_used in {"Tesseract", "EasyOCR", "PaddleOCR", "RapidOCR"}:
         _save_image_ocr_cache(cache_key, file_sha256, cache_profile, result)
     return result
 

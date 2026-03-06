@@ -62,6 +62,24 @@ DEPENDENCY_SPECS = [
         "optional": True,
     },
     {
+        "id": "onnxruntime",
+        "label": "ONNXRuntime 推理引擎",
+        "module": "onnxruntime",
+        "package": "onnxruntime",
+        "install": "pip install onnxruntime",
+        "required_for": ["image", "ocr"],
+        "optional": True,
+    },
+    {
+        "id": "rapidocr",
+        "label": "RapidOCR 引擎",
+        "module": "rapidocr",
+        "package": "rapidocr",
+        "install": "pip install rapidocr onnxruntime",
+        "required_for": ["image", "ocr"],
+        "optional": True,
+    },
+    {
         "id": "pytesseract",
         "label": "Tesseract Python 接口",
         "module": "pytesseract",
@@ -282,13 +300,14 @@ def prepare_pytesseract(preferred_languages: tuple[str, ...] = ("chi_sim", "eng"
 
 
 def _derive_profile_status(dep_map: dict[str, dict[str, Any]], tool_map: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    rapid_ready = dep_map["onnxruntime"]["installed"] and dep_map["rapidocr"]["installed"]
     easyocr_ready = dep_map["easyocr"]["installed"]
     pytesseract_ready = dep_map["pytesseract"]["installed"]
     tesseract_ready = tool_map["tesseract"]["installed"]
     pdfplumber_ready = dep_map["pdfplumber"]["installed"]
     pymupdf_ready = dep_map["pymupdf"]["installed"]
     pdf_fallback_ready = dep_map["pypdfium2"]["installed"] and dep_map["pillow"]["installed"] and dep_map["numpy"]["installed"] and (
-        easyocr_ready or (pytesseract_ready and tesseract_ready)
+        rapid_ready or easyocr_ready or (pytesseract_ready and tesseract_ready)
     )
 
     def pack(label: str, status: str, reason: str) -> dict[str, Any]:
@@ -321,9 +340,11 @@ def _derive_profile_status(dep_map: dict[str, dict[str, Any]], tool_map: dict[st
         ),
         "image_ocr": pack(
             "图片 OCR",
-            "ready" if easyocr_ready or (pytesseract_ready and tesseract_ready) else "missing",
-            "EasyOCR 可用" if easyocr_ready else (
-                "pytesseract + tesseract 可用" if pytesseract_ready and tesseract_ready else "OCR 引擎链路不完整"
+            "ready" if rapid_ready or easyocr_ready or (pytesseract_ready and tesseract_ready) else "missing",
+            "RapidOCR 可用" if rapid_ready else (
+                "EasyOCR 可用" if easyocr_ready else (
+                    "pytesseract + tesseract 可用" if pytesseract_ready and tesseract_ready else "OCR 引擎链路不完整"
+                )
             ),
         ),
         "legacy_doc_fallback": pack(
