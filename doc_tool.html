@@ -1,0 +1,2836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocFlow · 多格式文档智能处理工具</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080810;--s1:#10101a;--s2:#161620;--s3:#1e1e2c;
+  --border:#252535;--border2:#2e2e44;
+  --accent:#7c6aff;--accent2:#ff6a8e;--accent3:#3de8a0;
+  --amber:#ffb340;--blue:#5ab4ff;
+  --text:#ddddf0;--dim:#6868a0;--muted:#32324a;
+  --font:'Noto Sans SC',sans-serif;--mono:'JetBrains Mono',monospace;--display:'Syne',sans-serif;
+  --left-w:280px;--mid-w:300px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(124,106,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(124,106,255,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+nav{position:relative;z-index:20;display:flex;align-items:center;gap:16px;padding:0 20px;height:52px;border-bottom:1px solid var(--border);background:rgba(8,8,16,.92);backdrop-filter:blur(16px);flex-shrink:0}
+.logo{font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:-.5px;display:flex;align-items:center;gap:8px}
+.logo-box{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.logo em{color:var(--accent);font-style:normal}
+.nav-sep{flex:1}
+.nav-pill{font-family:var(--mono);font-size:10px;letter-spacing:.5px;padding:4px 10px;border:1px solid var(--border2);border-radius:20px;color:var(--dim)}
+.nav-pill b{color:var(--accent3);font-weight:500}
+.gbar{height:2px;background:var(--border);flex-shrink:0;position:relative;overflow:hidden}
+.gbar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent3));transition:width .4s ease}
+.gbar-fill.ind{width:35%!important;animation:ind 1.4s ease-in-out infinite}
+@keyframes ind{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+.app{position:relative;z-index:1;flex:1;display:grid;grid-template-columns:var(--left-w) var(--mid-w) 1fr;min-height:0}
+.col{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;min-height:0}
+.col-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--s1)}
+.col-title{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);flex:1}
+.col-badge{font-family:var(--mono);font-size:10px;padding:2px 7px;background:var(--s3);border:1px solid var(--border2);border-radius:10px;color:var(--dim)}
+.col-body{flex:1;overflow-y:auto;overflow-x:hidden}
+.col-body::-webkit-scrollbar{width:3px}
+.col-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+/* Drop zone */
+.drop-zone{margin:10px;border:1.5px dashed var(--border2);border-radius:10px;padding:16px 12px;text-align:center;cursor:pointer;transition:all .25s;background:rgba(124,106,255,.02)}
+.drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:rgba(124,106,255,.06)}
+.drop-zone.over{transform:scale(1.01)}
+.drop-icon{font-size:26px;display:block;margin-bottom:6px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.drop-txt{font-size:11px;color:var(--dim);line-height:1.6}
+.drop-formats{font-size:9.5px;color:var(--muted);margin-top:3px}
+.drop-actions{margin-top:10px;display:flex;gap:6px;justify-content:center}
+.drop-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;background:var(--s3);border:1px solid var(--border2);border-radius:7px;font-size:11px;font-family:var(--mono);color:var(--text);cursor:pointer;transition:all .2s}
+.drop-btn:hover{border-color:var(--accent);color:var(--accent)}
+.drop-btn.clr:hover{border-color:var(--accent2);color:var(--accent2)}
+#file-input{display:none}
+/* File list */
+.file-list{padding:4px 8px 8px}
+.file-item{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:8px;padding:8px 10px;margin-bottom:3px;border-radius:9px;cursor:pointer;transition:all .15s;border:1px solid transparent;position:relative;overflow:hidden}
+.file-item:hover{background:var(--s2)}
+.file-item.active{background:rgba(124,106,255,.1);border-color:rgba(124,106,255,.35)}
+.file-item.processing{border-color:rgba(124,106,255,.5);background:rgba(124,106,255,.07)}
+.file-item.done-item{border-color:rgba(61,232,160,.15)}
+.file-item.error-item{border-color:rgba(255,106,142,.2)}
+.fi-icon{font-size:16px;line-height:1;text-align:center}
+.fi-body{min-width:0}
+.fi-name{font-size:11.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi-meta{font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap}
+.fi-chars{color:var(--accent3);font-weight:500}
+.fi-right{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.fi-status{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.fi-status.ready{background:var(--muted)}
+.fi-status.proc{background:var(--accent);animation:pulse 1s infinite}
+.fi-status.done{background:var(--accent3);box-shadow:0 0 6px var(--accent3)}
+.fi-status.error{background:var(--accent2)}
+.fi-status.cancel{background:var(--amber);box-shadow:0 0 6px rgba(255,179,64,.4)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.fi-del{opacity:0;font-size:10px;cursor:pointer;color:var(--dim);background:none;border:none;padding:2px 5px;border-radius:4px;transition:all .15s}
+.file-item:hover .fi-del{opacity:1}
+.fi-del:hover{color:var(--accent2);background:rgba(255,106,142,.12)}
+.fi-prog{position:absolute;bottom:0;left:0;width:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:0 0 9px 9px;display:none;transition:width .25s ease}
+.file-item.processing .fi-prog{display:block;animation:shimmer 1.4s ease-in-out infinite}
+@keyframes shimmer{0%,100%{opacity:.5}50%{opacity:1}}
+.file-empty{padding:16px;text-align:center;color:var(--muted);font-size:11px;font-family:var(--mono)}
+/* Batch summary bar */
+.batch-bar{display:none;margin:0 8px 8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;gap:10px}
+.batch-bar.visible{display:flex;align-items:center}
+.batch-stat{font-family:var(--mono);font-size:9.5px;color:var(--dim);display:flex;flex-direction:column;gap:1px;min-width:0}
+.batch-stat b{color:var(--text);font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.batch-sep{width:1px;background:var(--border);align-self:stretch;flex-shrink:0}
+/* Footer */
+.col-foot{padding:8px 10px;border-top:1px solid var(--border);flex-shrink:0;background:var(--s1);display:flex;flex-direction:column;gap:6px}
+.run-btn{width:100%;padding:10px;background:linear-gradient(135deg,var(--accent) 0%,#9c6aff 60%,var(--accent2) 100%);background-size:200% 200%;animation:grad 5s ease infinite;border:none;border-radius:9px;color:white;font-family:var(--display);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.run-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 28px rgba(124,106,255,.4)}
+.run-btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.process-actions{display:flex;gap:6px}
+.process-actions .run-btn{flex:1}
+.process-cancel-btn{flex:1;padding:10px;background:rgba(255,179,64,.08);border:1px solid rgba(255,179,64,.32);border-radius:9px;color:var(--amber);font-family:var(--display);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.process-cancel-btn:hover:not(:disabled){transform:translateY(-1px);border-color:var(--amber);box-shadow:0 8px 28px rgba(255,179,64,.18)}
+.process-cancel-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+@keyframes grad{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.progress-row{display:none;flex-direction:column;gap:6px}
+.progress-row.visible{display:flex}
+.prog-head{display:flex;align-items:center;gap:8px;width:100%}
+.prog-track{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:2px;transition:width .35s ease;width:0%}
+.prog-label{font-family:var(--mono);font-size:9.5px;color:var(--dim);white-space:nowrap}
+.prog-hint{width:100%;min-height:16px;font-family:var(--mono);font-size:10px;color:var(--text);opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Options */
+.opts-section{padding:10px 14px 6px}
+.opts-label{font-family:var(--mono);font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.opt-item{display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;user-select:none}
+.opt-item:hover{border-color:var(--border2)}
+.opt-item.on{border-color:rgba(124,106,255,.5);background:rgba(124,106,255,.09)}
+.opt-ck{width:13px;height:13px;border:1.5px solid var(--border2);border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px}
+.opt-item.on .opt-ck{background:var(--accent);border-color:var(--accent)}
+.opt-lbl{font-size:11px}
+.opts-divider{height:1px;background:var(--border);margin:6px 14px}
+.fmt-chips{display:flex;flex-wrap:wrap;gap:5px;padding:0 14px 10px}
+.fmt-chip{font-family:var(--mono);font-size:10px;padding:5px 10px;background:var(--s2);border:1px solid var(--border);border-radius:20px;cursor:pointer;transition:all .15s;color:var(--dim)}
+.fmt-chip:hover{border-color:var(--border2);color:var(--text)}
+.fmt-chip.on{border-color:rgba(61,232,160,.4);background:rgba(61,232,160,.08);color:var(--accent3)}
+.pdf-mode-box{margin:0 14px 10px;padding:10px 11px;background:var(--s2);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;gap:8px}
+.pdf-mode-row{display:flex;gap:6px}
+.pdf-mode-chip{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:9px 10px;background:var(--s1);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .18s ease;color:var(--dim)}
+.pdf-mode-chip:hover{border-color:rgba(124,106,255,.4);color:var(--text);transform:translateY(-1px)}
+.pdf-mode-chip.on{border-color:rgba(61,232,160,.35);background:rgba(61,232,160,.08);color:var(--text);box-shadow:0 8px 18px rgba(0,0,0,.1)}
+.pdf-mode-name{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.pdf-mode-desc{font-size:10px;line-height:1.4;color:var(--dim)}
+.pdf-mode-chip.on .pdf-mode-desc{color:#a7cdb8}
+.mode-compare-box{margin:0 14px 10px;padding:10px 11px;background:var(--s2);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;gap:8px}
+.mode-compare-target{padding:8px 10px;background:var(--s1);border:1px solid var(--border);border-radius:8px;font-size:10.5px;color:var(--text);line-height:1.6}
+.mode-compare-hint{font-family:var(--mono);font-size:9.5px;color:var(--dim)}
+.mode-compare-summary{display:flex;flex-wrap:wrap;gap:6px}
+.mode-compare-actions{display:flex;gap:6px}
+.mode-compare-actions .panel-action-btn{flex:1}
+.mode-compare-summary .batch-tag{cursor:default}
+.batch-test-box{margin:0 14px 10px;padding:10px 11px;background:var(--s2);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;gap:8px}
+.batch-test-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.batch-test-opt{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--s1);border:1px solid var(--border);border-radius:8px;font-size:10.5px;color:var(--text);user-select:none}
+.batch-test-opt input{accent-color:var(--accent);margin:0}
+.batch-test-actions{display:flex;gap:6px}
+.batch-test-btn{width:100%;justify-content:center;padding:8px 12px;font-size:11px}
+.batch-stop-btn{width:100%;justify-content:center;padding:8px 12px;font-size:11px;background:rgba(255,179,64,.08);border-color:rgba(255,179,64,.32);color:var(--amber)}
+.batch-stop-btn:hover{border-color:var(--amber);color:var(--amber)}
+.batch-stop-btn:disabled{opacity:.45;cursor:not-allowed}
+.collapsible-panel{position:relative}
+.collapsible-head{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;user-select:none;padding:9px 10px;border:1px solid var(--border2);border-radius:10px;background:linear-gradient(180deg,rgba(124,106,255,.08),rgba(124,106,255,.03));box-shadow:inset 0 1px 0 rgba(255,255,255,.03);transition:border-color .18s ease,background .18s ease,transform .18s ease,box-shadow .18s ease}
+.collapsible-head:hover{border-color:rgba(124,106,255,.45);background:linear-gradient(180deg,rgba(124,106,255,.13),rgba(124,106,255,.05));transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,.12)}
+.collapsible-head:focus-visible{outline:1px solid var(--accent);outline-offset:2px;border-radius:10px}
+.collapsible-title-wrap{display:flex;align-items:center;gap:8px;min-width:0}
+.collapsible-sub{font-size:9.5px;color:#9292c9;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.collapsible-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.collapsible-chevron{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;border:1px solid var(--border2);background:rgba(255,255,255,.03);font-size:12px;color:var(--text);transition:transform .24s ease,color .18s ease,border-color .18s ease,background .18s ease}
+.collapsible-head:hover .collapsible-chevron{border-color:rgba(124,106,255,.45);background:rgba(124,106,255,.12)}
+.collapsible-panel.collapsed .collapsible-chevron{transform:rotate(-90deg)}
+.collapsible-body{display:flex;flex-direction:column;gap:8px;overflow:hidden;max-height:1600px;opacity:1;transform:translateY(0);margin-top:8px;transition:max-height .28s cubic-bezier(.22,.61,.36,1),opacity .22s ease,transform .22s ease,margin-top .22s ease}
+.collapsible-panel.collapsed .collapsible-body{max-height:0!important;opacity:0;transform:translateY(-6px);margin-top:0;pointer-events:none}
+.panel-action-btn{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;border:1px solid rgba(124,106,255,.34);background:rgba(124,106,255,.1);color:#c9c3ff;font-size:10px;font-family:var(--mono);cursor:pointer;transition:border-color .18s ease,background .18s ease,color .18s ease,transform .18s ease,box-shadow .18s ease}
+.panel-action-btn:hover{border-color:rgba(61,232,160,.35);background:rgba(61,232,160,.12);color:var(--accent3);transform:translateY(-1px)}
+.panel-action-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.panel-action-btn.primary{border-color:rgba(61,232,160,.38);background:rgba(61,232,160,.14);color:var(--accent3);box-shadow:0 0 0 1px rgba(61,232,160,.08) inset}
+.panel-action-btn.primary:hover{border-color:rgba(61,232,160,.56);background:rgba(61,232,160,.2);color:#eafff6}
+.panel-action-btn.subtle{border-color:rgba(124,106,255,.28);background:rgba(124,106,255,.08);color:#c9c3ff}
+.panel-action-btn.warn{border-color:rgba(255,179,64,.35);background:rgba(255,179,64,.1);color:var(--amber)}
+.panel-action-btn.warn:hover{border-color:rgba(255,179,64,.56);background:rgba(255,179,64,.16);color:#ffe7b0}
+.batch-test-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:9.5px;color:var(--dim)}
+.batch-test-current{font-family:var(--mono);font-size:10px;color:var(--text);min-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.batch-test-links{display:flex;flex-wrap:wrap;gap:6px}
+.dep-box,.batch-summary-box{margin:0 14px 10px;padding:10px 11px;background:var(--s2);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;gap:8px}
+.history-panel{margin:0 14px 10px;padding:10px 11px;background:var(--s2);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;gap:8px}
+.dep-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dep-title{font-family:var(--mono);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim)}
+.dep-refresh{background:none;border:none;color:var(--accent);font-size:10px;font-family:var(--mono);cursor:pointer}
+.dep-refresh:hover{color:var(--accent3)}
+.dep-overview{font-size:11px;color:var(--text);line-height:1.5}
+.dep-profile-grid,.batch-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.dep-card,.mini-card{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:8px}
+.dep-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.dep-card-label,.mini-label{font-size:10px;color:var(--dim);font-family:var(--mono)}
+.dep-card-msg,.dep-item-msg,.mini-sub{font-size:10px;color:var(--text);line-height:1.45}
+.dep-pill,.dep-badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:999px;font-size:9px;font-family:var(--mono);border:1px solid var(--border2)}
+.dep-pill.ready,.dep-badge.ready{color:var(--accent3);border-color:rgba(61,232,160,.35);background:rgba(61,232,160,.08)}
+.dep-pill.degraded,.dep-badge.degraded,.dep-pill.optional_missing,.dep-badge.optional_missing{color:var(--amber);border-color:rgba(255,179,64,.35);background:rgba(255,179,64,.08)}
+.dep-pill.missing,.dep-badge.missing{color:var(--accent2);border-color:rgba(255,106,142,.35);background:rgba(255,106,142,.08)}
+.dep-list{display:flex;flex-direction:column;gap:6px}
+.dep-item{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:8px 9px;background:var(--s1);border:1px solid var(--border);border-radius:8px}
+.dep-item-main{min-width:0;flex:1}
+.dep-item-name{font-size:11px;color:var(--text)}
+.dep-item-meta{font-size:9px;color:var(--dim);font-family:var(--mono);margin-top:2px}
+.dep-item-msg{margin-top:3px}
+.dep-rec{display:flex;flex-wrap:wrap;gap:6px}
+.dep-rec-item,.batch-tag{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;background:var(--s1);border:1px solid var(--border2);font-size:10px;color:var(--text)}
+.dep-empty{padding:8px 0;color:var(--dim);font-size:10px;font-family:var(--mono)}
+.dep-command-box{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px dashed var(--border2);border-radius:10px;background:rgba(124,106,255,.04)}
+.dep-command-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dep-command-title{font-size:10px;color:var(--dim);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px}
+.dep-command-text{margin:0;min-height:64px;max-height:180px;overflow:auto;padding:10px 12px;border-radius:8px;background:var(--s1);border:1px solid var(--border);font-size:11px;line-height:1.7;color:var(--text);font-family:var(--mono);white-space:pre-wrap;word-break:break-word}
+.mini-value{font-size:18px;font-weight:700;color:var(--text);margin:5px 0 2px}
+.mini-muted{font-size:9px;color:var(--dim);font-family:var(--mono)}
+.batch-format-list{display:flex;flex-direction:column;gap:6px}
+.batch-format-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 8px;background:var(--s1);border:1px solid var(--border);border-radius:8px;font-size:10px}
+.batch-format-name{font-family:var(--mono);color:var(--text)}
+.batch-format-meta{color:var(--dim)}
+.batch-link{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:var(--s1);border:1px solid var(--border2);border-radius:7px;color:var(--accent3);font-family:var(--mono);font-size:10px;text-decoration:none}
+.batch-link:hover{border-color:var(--accent3);background:rgba(61,232,160,.08)}
+.batch-link.secondary{color:var(--accent)}
+.batch-link.warn{color:var(--amber)}
+.batch-link.html{color:#7cb4ff}
+/* History */
+.hist-item{display:flex;align-items:flex-start;gap:10px;padding:9px 14px;cursor:pointer;transition:background .15s;border-bottom:1px solid var(--border)}
+.hist-item:hover{background:var(--s2)}
+.hist-item.active-hist{background:rgba(124,106,255,.08);border-left:2px solid var(--accent)}
+.hi-icon{font-size:15px;margin-top:1px;flex-shrink:0}
+.hi-info{flex:1;min-width:0}
+.hi-name{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hi-meta{font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px}
+.hi-del{font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 4px;border-radius:3px;transition:all .15s;flex-shrink:0;margin-top:1px}
+.hi-del:hover{color:var(--accent2);background:rgba(255,106,142,.1)}
+.hist-empty{padding:20px 14px;text-align:center;color:var(--muted);font-size:11px;font-family:var(--mono)}
+/* Result col */
+.result-col{display:flex;flex-direction:column;min-height:0;border-right:none}
+.result-head{display:flex;align-items:center;gap:8px;padding:0 14px;height:44px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--s1)}
+.result-title{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);flex-shrink:0}
+.result-file{font-size:12px;font-weight:500;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 8px}
+.result-status{font-family:var(--mono);font-size:10px;color:var(--dim);flex-shrink:0}
+/* Search */
+.search-bar{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);background:var(--s1);flex-shrink:0}
+.search-wrap{position:relative;flex:1;display:flex}
+.search-wrap input{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:5px 10px 5px 28px;font-size:12px;font-family:var(--mono);color:var(--text);outline:none;transition:border-color .2s}
+.search-wrap input:focus{border-color:var(--accent)}
+.search-wrap input::placeholder{color:var(--muted)}
+.search-icon{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;pointer-events:none;color:var(--dim)}
+.search-count{font-family:var(--mono);font-size:10px;color:var(--dim);white-space:nowrap;min-width:55px;text-align:right}
+.search-nav{display:flex;gap:3px}
+.search-nav button{background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--dim);cursor:pointer;font-size:11px;padding:3px 7px;transition:all .15s}
+.search-nav button:hover{border-color:var(--accent);color:var(--accent)}
+/* Tabs */
+.tab-bar{display:flex;gap:2px;padding:7px 12px 0;background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:7px 7px 0 0;cursor:pointer;color:var(--dim);border:1px solid transparent;border-bottom:none;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);background:var(--s2);border-color:var(--border)}
+.tab-badge{font-size:9px;padding:1px 5px;background:var(--s3);border-radius:8px}
+.tab.active .tab-badge{background:rgba(124,106,255,.2);color:var(--accent)}
+.result-body{flex:1;min-height:0;background:var(--s2);overflow:hidden;display:flex;flex-direction:column}
+.tab-pane{display:none;flex:1;min-height:0;overflow:hidden;flex-direction:column}
+.tab-pane.active{display:flex}
+/* Text */
+.text-out{flex:1;padding:18px 22px;font-family:var(--mono);font-size:12.5px;line-height:1.85;color:var(--text);white-space:pre-wrap;word-break:break-word;overflow-y:auto}
+.text-out::-webkit-scrollbar{width:4px}
+.text-out::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+mark.hl{background:rgba(255,179,64,.3);color:var(--amber);border-radius:2px}
+mark.hl.current{background:rgba(255,179,64,.6);outline:1px solid var(--amber)}
+.placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;color:var(--muted)}
+.ph-icon{font-size:38px;opacity:.3}
+.ph-txt{font-size:13px}
+/* Tables */
+.table-scroll{flex:1;overflow:auto;padding:12px}
+.table-scroll::-webkit-scrollbar{width:4px;height:4px}
+.table-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.tbl-label{font-family:var(--mono);font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+table{width:max-content;border-collapse:collapse;font-family:var(--mono);font-size:11.5px;margin-bottom:20px}
+th{background:rgba(124,106,255,.12);padding:7px 14px;text-align:left;border:1px solid var(--border2);color:var(--accent);font-weight:500;white-space:nowrap}
+td{padding:6px 14px;border:1px solid var(--border);color:var(--text);white-space:nowrap}
+tr:hover td{background:rgba(124,106,255,.04)}
+/* Stats */
+.stats-body{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.stats-body::-webkit-scrollbar{width:4px}
+.stats-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:11px 13px;transition:border-color .2s}
+.stat-card:hover{border-color:var(--border2)}
+.stat-lbl{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.stat-val{font-family:var(--display);font-size:20px;font-weight:700;color:var(--accent)}
+.stat-sub{font-size:10px;color:var(--dim);margin-top:2px}
+.stat-full{grid-column:span 4}
+.stat-half{grid-column:span 2}
+.kw-cloud{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.kw-tag{font-family:var(--mono);font-size:10.5px;padding:3px 9px;background:var(--s2);border:1px solid var(--border);border-radius:20px;cursor:default;transition:all .15s}
+.kw-tag:hover{border-color:var(--accent);color:var(--accent)}
+.kw-cnt{color:var(--muted);margin-left:3px;font-size:9px}
+.summary-card{background:var(--s1);border:1px solid var(--border);border-left:3px solid var(--accent3);border-radius:10px;padding:12px 14px}
+.summary-title{font-family:var(--mono);font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--accent3);margin-bottom:8px}
+.summary-text{font-size:12.5px;line-height:1.8;color:var(--text)}
+.detail-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.detail-title{font-family:var(--mono);font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+.detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.detail-sub{font-family:var(--mono);font-size:9.5px;color:var(--dim);line-height:1.6}
+.detail-row{display:flex;gap:8px;font-size:11.5px;margin-bottom:5px}
+.detail-key{color:var(--dim);width:90px;flex-shrink:0;font-family:var(--mono);font-size:10.5px}
+.detail-val{color:var(--text);font-family:var(--mono);font-size:10.5px}
+.pdf-compare-card{border-color:rgba(124,106,255,.24);background:linear-gradient(180deg,rgba(124,106,255,.06),rgba(124,106,255,.03))}
+.pdf-compare-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.pdf-mini-card{background:rgba(8,14,27,.42);border:1px solid rgba(124,106,255,.18);border-radius:10px;padding:10px 12px}
+.pdf-mini-lbl{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim)}
+.pdf-mini-val{font-size:17px;font-weight:700;color:var(--text);margin-top:6px}
+.pdf-mini-sub{font-size:10px;color:var(--dim);margin-top:4px;line-height:1.5}
+.pdf-compare-track{display:flex;height:12px;border-radius:999px;overflow:hidden;background:var(--s2);border:1px solid var(--border);margin:12px 0 10px}
+.pdf-track-seg{height:100%}
+.pdf-track-text{background:linear-gradient(90deg,#4d7fff,#7cb4ff)}
+.pdf-track-ocr{background:linear-gradient(90deg,var(--accent3),#7af1bd)}
+.pdf-track-empty{background:linear-gradient(90deg,rgba(255,179,64,.85),rgba(255,106,142,.85))}
+.pdf-compare-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.pdf-legend-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:var(--s2);border:1px solid var(--border);font-size:10px;color:var(--text);font-family:var(--mono)}
+.pdf-legend-dot{width:8px;height:8px;border-radius:999px}
+.pdf-legend-dot.text{background:#7cb4ff}
+.pdf-legend-dot.ocr{background:var(--accent3)}
+.pdf-legend-dot.empty{background:var(--amber)}
+.pdf-hints{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.pdf-hint{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid var(--border2);font-size:10px;color:var(--text)}
+.pdf-page-list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;padding-right:4px}
+.pdf-page-list::-webkit-scrollbar{width:4px}
+.pdf-page-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.pdf-page-row{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:10px;background:rgba(8,14,27,.38);border:1px solid rgba(124,106,255,.12)}
+.pdf-page-no{width:44px;flex-shrink:0;font-family:var(--mono);font-size:10px;color:var(--dim);padding-top:2px}
+.pdf-page-main{flex:1;min-width:0}
+.pdf-page-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.pdf-source-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:10px;font-family:var(--mono);border:1px solid transparent}
+.pdf-source-badge.text{background:rgba(124,180,255,.12);color:#9ecbff;border-color:rgba(124,180,255,.22)}
+.pdf-source-badge.ocr{background:rgba(61,232,160,.12);color:var(--accent3);border-color:rgba(61,232,160,.24)}
+.pdf-source-badge.empty{background:rgba(255,179,64,.12);color:var(--amber);border-color:rgba(255,179,64,.24)}
+.pdf-source-badge.other{background:rgba(155,140,255,.12);color:#c4baff;border-color:rgba(155,140,255,.24)}
+.pdf-page-metrics{display:flex;gap:8px;flex-wrap:wrap;color:var(--dim);font-family:var(--mono);font-size:10px}
+.pdf-page-preview{margin-top:7px;font-size:11px;line-height:1.65;color:var(--text)}
+.pdf-page-error{margin-top:7px;font-size:10px;line-height:1.55;color:var(--accent2);font-family:var(--mono)}
+.mode-compare-report-card{border-color:rgba(61,232,160,.2);background:linear-gradient(180deg,rgba(61,232,160,.06),rgba(61,232,160,.03))}
+.mode-report-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.mode-report-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.mode-report-card{background:rgba(8,14,27,.42);border:1px solid rgba(124,106,255,.18);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.mode-report-card.recommended{border-color:rgba(61,232,160,.36);box-shadow:0 0 0 1px rgba(61,232,160,.1) inset}
+.mode-report-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.mode-report-title{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text)}
+.mode-report-badges{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.mode-badge{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;border:1px solid var(--border2);font-size:9px;color:var(--text);font-family:var(--mono);background:var(--s2)}
+.mode-badge.rec{border-color:rgba(61,232,160,.35);color:var(--accent3);background:rgba(61,232,160,.08)}
+.mode-badge.fastest{border-color:rgba(124,180,255,.35);color:#9ecbff;background:rgba(124,180,255,.08)}
+.mode-badge.best{border-color:rgba(255,179,64,.35);color:var(--amber);background:rgba(255,179,64,.08)}
+.mode-report-metrics{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mode-metric{padding:7px 8px;border-radius:8px;background:var(--s1);border:1px solid var(--border)}
+.mode-metric-lbl{font-family:var(--mono);font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px}
+.mode-metric-val{margin-top:4px;font-size:14px;font-weight:700;color:var(--text)}
+.mode-metric-sub{margin-top:2px;font-size:9.5px;color:var(--dim);line-height:1.45}
+.mode-report-note{font-size:10px;line-height:1.55;color:var(--dim)}
+.mode-report-error{font-family:var(--mono);font-size:10px;line-height:1.55;color:var(--accent2)}
+.mode-report-summary{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.mode-report-summary-text{padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);font-size:11px;line-height:1.7;color:var(--text);margin-bottom:10px}
+.mode-report-table{display:flex;flex-direction:column;gap:6px}
+.mode-table-row{display:grid;grid-template-columns:120px repeat(3,1fr);gap:6px}
+.mode-table-cell{padding:7px 8px;border-radius:8px;background:rgba(8,14,27,.34);border:1px solid var(--border);font-size:10px;line-height:1.5;color:var(--text);font-family:var(--mono)}
+.mode-table-head .mode-table-cell{background:rgba(124,106,255,.08);color:var(--accent)}
+.mode-table-label{color:var(--dim)}
+.mode-table-cell.recommended{border-color:rgba(61,232,160,.35)}
+.mode-report-empty{padding:8px 0;color:var(--dim);font-size:10px;font-family:var(--mono)}
+/* Log */
+.log-body{flex:1;overflow-y:auto;padding:10px 14px;font-family:var(--mono);font-size:11px;line-height:1.9}
+.log-body::-webkit-scrollbar{width:4px}
+.log-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.log-line{display:flex;gap:10px;padding:1px 0}
+.log-t{color:var(--muted);flex-shrink:0}
+.log-INFO .log-lv{color:var(--accent3)}
+.log-WARN .log-lv{color:var(--amber)}
+.log-ERROR .log-lv{color:var(--accent2)}
+.log-DEBUG .log-lv{color:var(--dim)}
+.log-msg{color:var(--text)}
+.log-lv{flex-shrink:0;width:42px}
+/* Result footer - reworked, no overlap */
+.result-foot{display:flex;align-items:center;gap:6px;padding:7px 12px;border-top:1px solid var(--border);background:var(--s1);flex-shrink:0}
+.dl-label{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);flex-shrink:0}
+.dl-group{display:flex;gap:4px}
+.dl-btn{display:flex;align-items:center;gap:4px;padding:5px 11px;font-family:var(--mono);font-size:10.5px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--dim);cursor:pointer;transition:all .15s;white-space:nowrap}
+.dl-btn:hover{color:var(--text);border-color:var(--accent)}
+.dl-btn.txt{border-color:rgba(124,106,255,.3);color:var(--accent)}
+.dl-btn.txt:hover{background:rgba(124,106,255,.12)}
+.dl-btn.jsn{border-color:rgba(61,232,160,.3);color:var(--accent3)}
+.dl-btn.jsn:hover{background:rgba(61,232,160,.08)}
+.foot-sep{flex:1}
+.copy-btn{padding:5px 11px;font-family:var(--mono);font-size:10.5px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--dim);cursor:pointer;transition:all .15s}
+.copy-btn:hover{border-color:var(--border2);color:var(--text)}
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--s2);border:1px solid var(--accent);color:var(--accent);font-family:var(--mono);font-size:11.5px;padding:9px 22px;border-radius:8px;opacity:0;pointer-events:none;transition:all .25s;z-index:999;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo"><div class="logo-box">📄</div>Doc<em>Flow</em></div>
+  <span class="nav-sep"></span>
+  <span class="nav-pill">v2.1 · <b>Python</b> Backend</span>
+</nav>
+<div class="gbar"><div class="gbar-fill" id="gbar"></div></div>
+<div class="app">
+
+<!-- COL 1: FILE QUEUE -->
+<div class="col">
+  <div class="col-head">
+    <span class="col-title">文件队列</span>
+    <span class="col-badge" id="file-count">0 个</span>
+  </div>
+  <div class="col-body">
+    <div class="drop-zone" id="drop-zone">
+      <span class="drop-icon">📂</span>
+      <div class="drop-txt">拖拽文件到此处</div>
+      <div class="drop-formats">PDF · DOC · DOCX · XLSX · PPTX · TXT · CSV · 图片 · JSON</div>
+      <div class="drop-actions">
+        <button class="drop-btn" onclick="document.getElementById('file-input').click()">＋ 添加文件</button>
+        <button class="drop-btn clr" onclick="clearAllFiles()">清空</button>
+      </div>
+      <input type="file" id="file-input" multiple accept=".pdf,.doc,.docx,.xlsx,.xls,.pptx,.txt,.md,.csv,.png,.jpg,.jpeg,.bmp,.tiff,.webp,.json">
+    </div>
+    <div class="file-list" id="file-list">
+      <div class="file-empty" id="file-empty">暂无文件，请上传</div>
+    </div>
+    <div class="batch-bar" id="batch-bar">
+      <div class="batch-stat"><b id="b-files">0</b>文件完成</div>
+      <div class="batch-sep"></div>
+      <div class="batch-stat"><b id="b-chars">0</b>总字符</div>
+      <div class="batch-sep"></div>
+      <div class="batch-stat"><b id="b-tables">0</b>总表格</div>
+      <div class="batch-sep"></div>
+      <div class="batch-stat"><b id="b-time">0ms</b>总耗时</div>
+    </div>
+  </div>
+  <div class="col-foot">
+    <div class="progress-row" id="progress-row">
+      <div class="prog-head">
+        <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+        <span class="prog-label" id="prog-label">0/0</span>
+      </div>
+      <div class="prog-hint" id="prog-hint">等待开始…</div>
+    </div>
+    <div class="process-actions">
+      <button class="run-btn" id="run-btn" onclick="runProcess()" disabled>▶ 开始处理</button>
+      <button class="process-cancel-btn" id="process-cancel-btn" onclick="cancelCurrentProcessing()" disabled>⏹ 取消处理</button>
+    </div>
+  </div>
+</div>
+
+<!-- COL 2: OPTIONS + HISTORY -->
+<div class="col">
+  <div class="col-head"><span class="col-title">选项 &amp; 历史</span></div>
+  <div class="col-body">
+    <div class="opts-section">
+      <div class="opts-label">提取内容</div>
+      <div class="opt-grid">
+        <div class="opt-item on" data-opt="text"><div class="opt-ck">✓</div><span class="opt-lbl">📝 文本</span></div>
+        <div class="opt-item on" data-opt="table"><div class="opt-ck">✓</div><span class="opt-lbl">📊 表格</span></div>
+        <div class="opt-item on" data-opt="meta"><div class="opt-ck">✓</div><span class="opt-lbl">🏷 元数据</span></div>
+        <div class="opt-item" data-opt="image"><div class="opt-ck"></div><span class="opt-lbl">🖼 图片OCR</span></div>
+      </div>
+    </div>
+    <div class="opts-divider"></div>
+    <div class="opts-section">
+      <div class="opts-label">默认导出格式</div>
+      <div class="fmt-chips">
+        <div class="fmt-chip on" data-fmt="txt">TXT</div>
+        <div class="fmt-chip" data-fmt="json">JSON</div>
+        <div class="fmt-chip" data-fmt="csv">CSV</div>
+        <div class="fmt-chip" data-fmt="md">Markdown</div>
+      </div>
+    </div>
+    <div class="opts-divider"></div>
+    <div class="opts-section">
+      <div class="opts-label">PDF 专用参数</div>
+      <div class="pdf-mode-box">
+        <div class="pdf-mode-row">
+          <div class="pdf-mode-chip" data-pdf-mode="accurate">
+            <div class="pdf-mode-name">高精度</div>
+            <div class="pdf-mode-desc">更高分辨率与更多预处理，最慢但更稳</div>
+          </div>
+          <div class="pdf-mode-chip on" data-pdf-mode="balanced">
+            <div class="pdf-mode-name">平衡</div>
+            <div class="pdf-mode-desc">推荐默认模式，速度和效果均衡</div>
+          </div>
+          <div class="pdf-mode-chip" data-pdf-mode="fast">
+            <div class="pdf-mode-name">快速</div>
+            <div class="pdf-mode-desc">更少 OCR 尝试，适合大文件快速预览</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="opts-divider"></div>
+    <div class="opts-section">
+      <div class="collapsible-panel mode-compare-box" data-panel="mode_compare">
+        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePanel('mode_compare')" onkeydown="handlePanelKey(event,'mode_compare')">
+          <div class="collapsible-title-wrap">
+            <span class="dep-title">模式对比实验</span>
+            <span class="collapsible-sub">同一 PDF 跑高精度 / 平衡 / 快速</span>
+          </div>
+          <div class="collapsible-actions">
+            <button class="panel-action-btn primary" id="mode-compare-run-btn" onclick="event.stopPropagation();runPdfModeCompare()" disabled>🧪 开始实验</button>
+            <button class="panel-action-btn warn" id="mode-compare-cancel-btn" onclick="event.stopPropagation();cancelModeCompare()" disabled>⏹ 停止实验</button>
+            <button class="panel-action-btn subtle" id="mode-compare-clear-btn" onclick="event.stopPropagation();clearModeCompareReport()" disabled>清空</button>
+            <span class="collapsible-chevron">▾</span>
+          </div>
+        </div>
+        <div class="collapsible-body">
+          <div class="mode-compare-target" id="mode-compare-target">请选择一个 PDF 文件作为实验对象</div>
+          <div class="mode-compare-hint">实验固定使用 TXT 输出，避免导出格式对耗时对比造成干扰。</div>
+          <div class="batch-test-meta">
+            <span id="mode-compare-status">未执行</span>
+            <span id="mode-compare-last"></span>
+          </div>
+          <div class="prog-track"><div class="prog-fill" id="mode-compare-fill"></div></div>
+          <div class="batch-test-current" id="mode-compare-current"></div>
+          <div class="mode-compare-summary" id="mode-compare-reco"><span class="dep-rec-item">实验完成后会给出推荐模式和原因</span></div>
+        </div>
+      </div>
+      <div class="collapsible-panel batch-test-box" data-panel="batch_test">
+        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePanel('batch_test')" onkeydown="handlePanelKey(event,'batch_test')">
+          <div class="collapsible-title-wrap">
+            <span class="dep-title">批量测试</span>
+            <span class="collapsible-sub">一键运行正常/边界样本</span>
+          </div>
+          <div class="collapsible-actions">
+            <span class="collapsible-chevron">▾</span>
+          </div>
+        </div>
+        <div class="collapsible-body">
+          <div class="batch-test-grid">
+            <label class="batch-test-opt"><input type="checkbox" id="bt-suite-normal" checked> 正常样本</label>
+            <label class="batch-test-opt"><input type="checkbox" id="bt-suite-edge" checked> 异常/边界</label>
+            <label class="batch-test-opt"><input type="checkbox" id="bt-strict"> Strict 模式</label>
+            <label class="batch-test-opt"><input type="checkbox" id="bt-keywords"> 关键词</label>
+          </div>
+          <div class="batch-test-actions">
+            <button class="drop-btn batch-test-btn" id="batch-test-btn" onclick="runBatchTests()">🧪 一键批测</button>
+            <button class="drop-btn batch-stop-btn" id="batch-cancel-btn" onclick="cancelBatchTests()" disabled>⏹ 停止批测</button>
+          </div>
+          <div class="batch-test-meta">
+            <span id="batch-test-status">未执行</span>
+            <span id="batch-test-last"></span>
+          </div>
+          <div class="prog-track"><div class="prog-fill" id="batch-test-fill"></div></div>
+          <div class="batch-test-current" id="batch-test-current"></div>
+          <div class="batch-test-links" id="batch-test-links"></div>
+        </div>
+      </div>
+      <div class="collapsible-panel batch-summary-box" data-panel="batch_summary">
+        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePanel('batch_summary')" onkeydown="handlePanelKey(event,'batch_summary')">
+          <div class="collapsible-title-wrap">
+            <span class="dep-title">批测统计</span>
+            <span class="collapsible-sub" id="batch-summary-last">等待批测</span>
+          </div>
+          <div class="collapsible-actions">
+            <span class="collapsible-chevron">▾</span>
+          </div>
+        </div>
+        <div class="collapsible-body">
+          <div class="batch-stats-grid">
+            <div class="mini-card"><div class="mini-label">成功率</div><div class="mini-value" id="batch-stat-rate">--</div><div class="mini-sub">完成后自动汇总</div></div>
+            <div class="mini-card"><div class="mini-label">平均耗时</div><div class="mini-value" id="batch-stat-avg">--</div><div class="mini-sub">单位 ms</div></div>
+            <div class="mini-card"><div class="mini-label">成功 / 失败</div><div class="mini-value" id="batch-stat-okfail">0 / 0</div><div class="mini-sub">批测样本结果</div></div>
+            <div class="mini-card"><div class="mini-label">预期匹配</div><div class="mini-value" id="batch-stat-expected">--</div><div class="mini-sub">用于验证测试集</div></div>
+          </div>
+          <div class="batch-format-list" id="batch-format-list"><div class="dep-empty">批测完成后显示各格式成功率</div></div>
+          <div class="dep-rec" id="batch-error-summary"><span class="dep-rec-item">错误分类会显示在这里</span></div>
+        </div>
+      </div>
+      <div class="collapsible-panel dep-box" data-panel="dependency_check">
+        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePanel('dependency_check')" onkeydown="handlePanelKey(event,'dependency_check')">
+          <div class="collapsible-title-wrap">
+            <span class="dep-title">环境自检</span>
+            <span class="collapsible-sub">依赖、OCR、LibreOffice 检查</span>
+          </div>
+          <div class="collapsible-actions">
+            <button class="panel-action-btn primary" id="dep-check-btn" onclick="event.stopPropagation();runMissingDependencyCheck()">一键检查</button>
+            <button class="panel-action-btn warn" id="dep-install-btn" onclick="event.stopPropagation();runInstallMissingDependencies()">一键安装</button>
+            <button class="panel-action-btn subtle" onclick="event.stopPropagation();loadDependencyStatus(true)">刷新</button>
+            <span class="collapsible-chevron">▾</span>
+          </div>
+        </div>
+        <div class="collapsible-body">
+          <div class="dep-overview" id="dep-overview">正在检查依赖环境...</div>
+          <div class="dep-profile-grid" id="dep-profile-grid"></div>
+          <div class="dep-list" id="dep-list"></div>
+          <div class="dep-rec" id="dep-rec"></div>
+          <div class="dep-command-box" id="dep-command-box">
+            <div class="dep-command-head">
+              <span class="dep-command-title">安装建议</span>
+              <button class="copy-btn" id="dep-copy-btn" onclick="copyDependencyInstallCommands()" disabled>复制命令</button>
+            </div>
+            <pre class="dep-command-text" id="dep-command-text">正在等待检查结果...</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="opts-divider"></div>
+    <div class="opts-section">
+      <div class="collapsible-panel history-panel" data-panel="history_panel">
+        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePanel('history_panel')" onkeydown="handlePanelKey(event,'history_panel')">
+          <div class="collapsible-title-wrap">
+            <span class="dep-title">处理历史</span>
+            <span class="collapsible-sub">查看本地缓存结果</span>
+          </div>
+          <div class="collapsible-actions">
+            <button class="panel-action-btn" onclick="event.stopPropagation();clearHistory()">清空</button>
+            <span class="collapsible-chevron">▾</span>
+          </div>
+        </div>
+        <div class="collapsible-body">
+          <div id="hist-list"><div class="hist-empty" id="hist-empty">暂无历史记录</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COL 3: RESULT -->
+<div class="col result-col">
+  <div class="result-head">
+    <span class="result-title">结果</span>
+    <span class="result-file" id="result-file">— 等待处理 —</span>
+    <span class="result-status" id="result-status"></span>
+  </div>
+  <div class="search-bar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="在提取文本中搜索..." oninput="doSearch(this.value)">
+    </div>
+    <span class="search-count" id="search-count"></span>
+    <div class="search-nav">
+      <button onclick="navSearch(-1)">↑</button>
+      <button onclick="navSearch(1)">↓</button>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('text',this)">文本 <span class="tab-badge" id="tb-chars">—</span></div>
+    <div class="tab" onclick="switchTab('table',this)">表格 <span class="tab-badge" id="tb-tables">—</span></div>
+    <div class="tab" onclick="switchTab('stats',this)">统计 &amp; 字数</div>
+    <div class="tab" onclick="switchTab('log',this)">日志</div>
+  </div>
+  <div class="result-body">
+    <div class="tab-pane active" id="tab-text">
+      <div class="placeholder" id="ph-text"><div class="ph-icon">📄</div><div class="ph-txt">上传文件后点击「开始处理」</div></div>
+      <div class="text-out" id="text-out" style="display:none"></div>
+    </div>
+    <div class="tab-pane" id="tab-table">
+      <div class="placeholder" id="ph-table"><div class="ph-icon">📊</div><div class="ph-txt">暂无表格数据</div></div>
+      <div class="table-scroll" id="table-out" style="display:none"></div>
+    </div>
+    <div class="tab-pane" id="tab-stats">
+      <div class="stats-body">
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-lbl">总字符数</div><div class="stat-val" id="s-chars">—</div><div class="stat-sub">有效字符</div></div>
+          <div class="stat-card"><div class="stat-lbl">中文字数</div><div class="stat-val" id="s-zh">—</div><div class="stat-sub">汉字数量</div></div>
+          <div class="stat-card"><div class="stat-lbl">英文单词</div><div class="stat-val" id="s-en">—</div><div class="stat-sub">估算词数</div></div>
+          <div class="stat-card"><div class="stat-lbl">段落数</div><div class="stat-val" id="s-para">—</div><div class="stat-sub">文本段落</div></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-card stat-half"><div class="stat-lbl">预计阅读时长</div><div class="stat-val" id="s-readtime">—</div><div class="stat-sub">按400字/分钟估算</div></div>
+          <div class="stat-card stat-half"><div class="stat-lbl">页数 / 幻灯片</div><div class="stat-val" id="s-pages">—</div><div class="stat-sub">文档页数</div></div>
+          <div class="stat-card"><div class="stat-lbl">表格数</div><div class="stat-val" id="s-tables">—</div><div class="stat-sub">检测到的表格</div></div>
+          <div class="stat-card"><div class="stat-lbl">处理耗时</div><div class="stat-val" id="s-time">—</div><div class="stat-sub">毫秒</div></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-lbl">文件大小</div><div class="stat-val" id="s-size">—</div><div class="stat-sub">原始文件</div></div>
+          <div class="stat-card"><div class="stat-lbl">已处理文件</div><div class="stat-val" id="s-files">—</div><div class="stat-sub">本次会话</div></div>
+          <div class="stat-card"><div class="stat-lbl">标点符号</div><div class="stat-val" id="s-punct">—</div><div class="stat-sub">标点数量</div></div>
+          <div class="stat-card"><div class="stat-lbl">字符密度</div><div class="stat-val" id="s-density">—</div><div class="stat-sub">字符/KB</div></div>
+        </div>
+        <div class="stat-card stat-full">
+          <div class="stat-lbl">关键词分布</div>
+          <div class="kw-cloud" id="kw-cloud"><span style="color:var(--dim);font-size:11px">处理后自动提取</span></div>
+        </div>
+        <div class="summary-card" id="summary-card" style="display:none">
+          <div class="summary-title">自动摘要</div>
+          <div class="summary-text" id="summary-text"></div>
+        </div>
+        <div class="detail-card pdf-compare-card" id="pdf-compare-card" style="display:none">
+          <div class="detail-head">
+            <div>
+              <div class="detail-title">PDF 提取对比</div>
+              <div class="detail-sub" id="pdf-compare-sub">按页展示文本层与 OCR 的混合提取效果</div>
+            </div>
+          </div>
+          <div class="pdf-compare-grid" id="pdf-compare-grid"></div>
+          <div class="pdf-compare-track" id="pdf-compare-track"></div>
+          <div class="pdf-compare-legend" id="pdf-compare-legend"></div>
+          <div class="pdf-hints" id="pdf-hints"></div>
+          <div class="pdf-page-list" id="pdf-page-list"></div>
+        </div>
+        <div class="detail-card mode-compare-report-card" id="mode-compare-report-card" style="display:none">
+          <div class="detail-head">
+            <div>
+              <div class="detail-title">PDF 模式实验报告</div>
+              <div class="detail-sub" id="mode-compare-report-sub">对同一 PDF 依次运行高精度、平衡、快速，比较效果与耗时</div>
+            </div>
+            <div class="mode-report-actions">
+              <button class="panel-action-btn primary" id="mode-compare-apply-btn" onclick="applyRecommendedPdfMode()" disabled>设为推荐模式</button>
+              <button class="panel-action-btn" onclick="downloadModeCompareReport('md')">下载 MD</button>
+              <button class="panel-action-btn" onclick="downloadModeCompareReport('json')">下载 JSON</button>
+            </div>
+          </div>
+          <div class="mode-report-grid" id="mode-compare-grid"></div>
+          <div class="mode-report-summary" id="mode-compare-summary"></div>
+          <div class="mode-report-summary-text" id="mode-compare-summary-text"></div>
+          <div class="mode-report-table" id="mode-compare-table"></div>
+        </div>
+        <div class="detail-card" id="error-card" style="display:none">
+          <div class="detail-title">错误中心</div>
+          <div id="error-rows"></div>
+        </div>
+        <div class="detail-card" id="detail-card" style="display:none">
+          <div class="detail-title">文档元数据</div>
+          <div id="detail-rows"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane" id="tab-log">
+      <div class="log-body" id="log-body">
+        <div class="log-line log-INFO"><span class="log-t">00:00:00</span><span class="log-lv">INFO</span><span class="log-msg">DocFlow v2.1 就绪 — 支持 PDF/DOCX/XLSX/PPTX/TXT/CSV/图片/JSON</span></div>
+      </div>
+    </div>
+  </div>
+  <!-- FOOTER: clear layout, no overlap -->
+  <div class="result-foot">
+    <span class="dl-label">下载</span>
+    <div class="dl-group">
+      <button class="dl-btn txt" onclick="dl('txt')">⬇ TXT</button>
+      <button class="dl-btn jsn" onclick="dl('json')">⬇ JSON</button>
+      <button class="dl-btn" onclick="dl('md')">⬇ MD</button>
+      <button class="dl-btn" onclick="dl('csv')">⬇ CSV</button>
+    </div>
+    <span class="foot-sep"></span>
+    <button class="copy-btn" onclick="copyOut()">📋 复制文本</button>
+  </div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let files=[],activeIdx=-1,_lastResult=null,_lastBatchReport=null,_lastModeCompareReport=null,_batchPollTimer=null,_lastBatchLogId=0,_activeBatchJobId=null,_activeProcessJobId=null,_activeModeCompareJobId=null,_activeModeCompareMode='',_processProgressHideTimer=null,_processProgressCollapseTimer=null,_dependencyState=null,_isProcessing=false,_isModeComparing=false,_processCancelRequested=false,_modeCompareCancelRequested=false;
+let history=[];
+const PREF_KEY='df_ui_prefs_v1';
+try{history=JSON.parse(localStorage.getItem('df_history')||'[]');}catch(e){history=[];}
+
+const TYPE={
+  pdf:{icon:'📕'},doc:{icon:'📘'},docx:{icon:'📘'},xlsx:{icon:'📗'},pptx:{icon:'📙'},
+  txt:{icon:'📄'},csv:{icon:'📊'},png:{icon:'🖼'},jpg:{icon:'🖼'},
+  jpeg:{icon:'🖼'},json:{icon:'🗂'},md:{icon:'📝'},
+};
+TYPE.xls={icon:TYPE.xlsx.icon};
+TYPE.bmp={icon:TYPE.png.icon};
+TYPE.tiff={icon:TYPE.png.icon};
+TYPE.webp={icon:TYPE.png.icon};
+function ext(n){return n.split('.').pop().toLowerCase();}
+function fmtSz(b){if(b<1024)return b+'B';if(b<1048576)return (b/1024).toFixed(1)+'KB';return (b/1048576).toFixed(1)+'MB';}
+function nowStr(){const d=new Date();return[d.getHours(),d.getMinutes(),d.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');}
+function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m]));}
+function readPrefs(){try{return JSON.parse(localStorage.getItem(PREF_KEY)||'{}');}catch(e){return {};}}
+const PANEL_DEFAULTS={mode_compare:true,batch_test:true,batch_summary:true,dependency_check:true,history_panel:true};
+function getPanelOpen(panelId){
+  const panel=document.querySelector(`.collapsible-panel[data-panel="${panelId}"]`);
+  return panel?!panel.classList.contains('collapsed'):!!PANEL_DEFAULTS[panelId];
+}
+function getCurrentPrefs(){
+  const panels={};
+  Object.keys(PANEL_DEFAULTS).forEach(id=>{panels[id]=getPanelOpen(id);});
+  return {
+    format:getFormat(),
+    pdfMode:getPdfMode(),
+    batch:{
+      suiteNormal:!!document.getElementById('bt-suite-normal')?.checked,
+      suiteEdge:!!document.getElementById('bt-suite-edge')?.checked,
+      strict:!!document.getElementById('bt-strict')?.checked,
+      keywords:!!document.getElementById('bt-keywords')?.checked,
+    },
+    panels,
+  };
+}
+function savePrefs(){try{localStorage.setItem(PREF_KEY,JSON.stringify(getCurrentPrefs()));}catch(e){}}
+function syncCollapsibleHeights(){
+  document.querySelectorAll('.collapsible-panel:not(.collapsed) .collapsible-body').forEach(body=>{
+    body.style.maxHeight='none';
+    const next=Math.max(body.scrollHeight, 0);
+    body.style.maxHeight=`${next}px`;
+  });
+}
+function setPanelOpen(panelId,isOpen,persist=true){
+  const panel=document.querySelector(`.collapsible-panel[data-panel="${panelId}"]`);
+  if(!panel)return;
+  const head=panel.querySelector('.collapsible-head');
+  const body=panel.querySelector('.collapsible-body');
+  if(head)head.setAttribute('aria-expanded',String(!!isOpen));
+  if(body){
+    if(isOpen){
+      panel.classList.remove('collapsed');
+      body.style.maxHeight='none';
+      const target=Math.max(body.scrollHeight, 0);
+      body.style.maxHeight='0px';
+      requestAnimationFrame(()=>{body.style.maxHeight=`${target}px`;});
+    }else{
+      body.style.maxHeight=`${Math.max(body.scrollHeight, 0)}px`;
+      requestAnimationFrame(()=>{
+        panel.classList.add('collapsed');
+        body.style.maxHeight='0px';
+      });
+    }
+  }
+  if(persist)savePrefs();
+}
+function togglePanel(panelId){
+  setPanelOpen(panelId,!getPanelOpen(panelId));
+}
+function handlePanelKey(event,panelId){
+  if(event.key==='Enter' || event.key===' '){
+    event.preventDefault();
+    togglePanel(panelId);
+  }
+}
+function applyPanelPrefs(){
+  const prefs=readPrefs();
+  const panels={...PANEL_DEFAULTS,...(prefs.panels||{})};
+  Object.entries(panels).forEach(([panelId,isOpen])=>setPanelOpen(panelId,!!isOpen,false));
+}
+function applyPrefs(){
+  const prefs=readPrefs();
+  const fmt=prefs.format;
+  if(fmt){
+    document.querySelectorAll('.fmt-chip').forEach(chip=>chip.classList.toggle('on',chip.dataset.fmt===fmt));
+  }
+  const pdfMode=prefs.pdfMode||'balanced';
+  document.querySelectorAll('.pdf-mode-chip').forEach(chip=>chip.classList.toggle('on',chip.dataset.pdfMode===pdfMode));
+  const batch=prefs.batch||{};
+  if(document.getElementById('bt-suite-normal'))document.getElementById('bt-suite-normal').checked=batch.suiteNormal ?? true;
+  if(document.getElementById('bt-suite-edge'))document.getElementById('bt-suite-edge').checked=batch.suiteEdge ?? true;
+  if(document.getElementById('bt-strict'))document.getElementById('bt-strict').checked=!!batch.strict;
+  if(document.getElementById('bt-keywords'))document.getElementById('bt-keywords').checked=!!batch.keywords;
+  applyPanelPrefs();
+  requestAnimationFrame(syncCollapsibleHeights);
+}
+
+// Drag & drop
+const dz=document.getElementById('drop-zone');
+['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('over');}));
+['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('over');}));
+dz.addEventListener('drop',ev=>addFiles(Array.from(ev.dataTransfer.files)));
+document.getElementById('file-input').addEventListener('change',ev=>{addFiles(Array.from(ev.target.files));ev.target.value='';});
+
+function addFiles(list){
+  let added=0;
+  let replaced=0;
+  list.forEach(f=>{
+    const e=ext(f.name);
+    if(!TYPE[e]){log('WARN',`不支持的格式，已跳过: ${f.name}`);return;}
+    const existingIndex=files.findIndex(x=>x.name===f.name);
+    const nextFile={file:f,name:f.name,size:f.size,ext:e,status:'ready',result:null};
+    if(existingIndex>=0){
+      files[existingIndex]={...files[existingIndex],...nextFile};
+      replaced++;
+      return;
+    }
+    files.push(nextFile);
+    added++;
+  });
+  if(added || replaced){
+    renderFiles();updateRunBtn();updateBatchBar();
+    if(added)log('INFO',`已添加 ${added} 个文件，队列共 ${files.length} 个`);
+    if(replaced)log('INFO',`已覆盖 ${replaced} 个同名文件，重新处理后会替换旧结果`);
+  }
+}
+
+function clearAllFiles(){
+  if(!files.length)return;
+  files=[];activeIdx=-1;_lastResult=null;
+  renderFiles();updateRunBtn();updateBatchBar();
+  log('INFO','队列已清空');
+}
+
+function renderFiles(){
+  const list=document.getElementById('file-list');
+  const empty=document.getElementById('file-empty');
+  document.getElementById('file-count').textContent=files.length+' 个';
+  list.querySelectorAll('.file-item').forEach(el=>el.remove());
+  empty.style.display=files.length?'none':'block';
+  files.forEach((f,i)=>{
+    const t=TYPE[f.ext]||{icon:'📄'};
+    const chars=f.result?(f.result.stats?.char_count||f.result.stats?.chars||0):0;
+    const ms=f.result?(f.result.stats?.processing_ms||0):0;
+    const item=document.createElement('div');
+    let cls='file-item';
+    if(i===activeIdx)cls+=' active';
+    if(f.status==='proc')cls+=' processing';
+    if(f.status==='done')cls+=' done-item';
+    if(f.status==='error')cls+=' error-item';
+    if(f.status==='cancel')cls+=' error-item';
+    item.className=cls;
+    item.innerHTML=`
+      <span class="fi-icon">${t.icon}</span>
+      <div class="fi-body">
+        <div class="fi-name" title="${f.name}">${f.name}</div>
+        <div class="fi-meta">
+          <span>${f.ext.toUpperCase()}</span>
+          <span>${fmtSz(f.size)}</span>
+          ${f.status==='proc'?`<span>${Math.round(Number(f.progress_pct||0))}%</span>`:''}
+          ${chars?`<span class="fi-chars">${chars.toLocaleString()}字</span>`:''}
+          ${ms?`<span>${Math.round(ms)}ms</span>`:''}
+        </div>
+      </div>
+      <div class="fi-right">
+        <div class="fi-status ${f.status}"></div>
+        <button class="fi-del" title="移除">✕</button>
+      </div>
+      <div class="fi-prog" style="width:${Math.max(0,Math.min(100,Number(f.progress_pct||0)))}%"></div>`;
+    item.addEventListener('click',e=>{if(e.target.classList.contains('fi-del'))return;selectFile(i);});
+    item.querySelector('.fi-del').addEventListener('click',e=>{e.stopPropagation();removeFile(i);});
+    list.appendChild(item);
+  });
+  refreshModeComparePanel();
+}
+
+function removeFile(i){files.splice(i,1);if(activeIdx>=files.length)activeIdx=files.length-1;renderFiles();updateRunBtn();updateBatchBar();}
+function selectFile(i){activeIdx=i;renderFiles();if(files[i].result)showResult(files[i].result,files[i].name);}
+function setProcessActionState(mode='idle'){
+  const runBtn=document.getElementById('run-btn');
+  const cancelBtn=document.getElementById('process-cancel-btn');
+  if(!runBtn || !cancelBtn)return;
+  const stateMap={
+    idle:{
+      runDisabled:files.length===0 || _isModeComparing,
+      runText:files.some(f=>f.result)?'▶ 重新处理并覆盖结果':'▶ 开始处理',
+      cancelDisabled:true,
+      cancelText:'⏹ 取消处理',
+    },
+    running:{
+      runDisabled:true,
+      runText:'⏳ 处理中...',
+      cancelDisabled:false,
+      cancelText:'⏹ 取消处理',
+    },
+    cancelling:{
+      runDisabled:true,
+      runText:'⏳ 取消中...',
+      cancelDisabled:true,
+      cancelText:'取消中...',
+    },
+  };
+  const state=stateMap[mode]||stateMap.idle;
+  runBtn.disabled=state.runDisabled;
+  runBtn.textContent=state.runText;
+  cancelBtn.disabled=state.cancelDisabled;
+  cancelBtn.textContent=state.cancelText;
+}
+function updateRunBtn(){
+  if(_isProcessing){
+    setProcessActionState(_processCancelRequested?'cancelling':'running');
+    return;
+  }
+  setProcessActionState('idle');
+}
+
+function updateBatchBar(){
+  const done=files.filter(f=>f.status==='done');
+  const bar=document.getElementById('batch-bar');
+  if(done.length<2){bar.classList.remove('visible');return;}
+  bar.classList.add('visible');
+  const totalChars=done.reduce((a,f)=>a+(f.result?.stats?.char_count||f.result?.stats?.chars||0),0);
+  const totalTables=done.reduce((a,f)=>a+(f.result?.tables?.length||0),0);
+  const totalMs=done.reduce((a,f)=>a+(f.result?.stats?.processing_ms||0),0);
+  document.getElementById('b-files').textContent=done.length;
+  document.getElementById('b-chars').textContent=totalChars.toLocaleString();
+  document.getElementById('b-tables').textContent=totalTables;
+  document.getElementById('b-time').textContent=Math.round(totalMs)+'ms';
+}
+
+// Options
+document.querySelectorAll('.opt-item').forEach(el=>{
+  el.addEventListener('click',()=>{el.classList.toggle('on');el.querySelector('.opt-ck').textContent=el.classList.contains('on')?'✓':'';});
+});
+document.querySelectorAll('.fmt-chip').forEach(el=>{
+  el.addEventListener('click',()=>{document.querySelectorAll('.fmt-chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');savePrefs();});
+});
+document.querySelectorAll('.pdf-mode-chip').forEach(el=>{
+  el.addEventListener('click',()=>{document.querySelectorAll('.pdf-mode-chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');savePrefs();});
+});
+function getFormat(){const c=document.querySelector('.fmt-chip.on');return c?c.dataset.fmt:'txt';}
+function getPdfMode(){const c=document.querySelector('.pdf-mode-chip.on');return c?c.dataset.pdfMode:'balanced';}
+function getBatchSuites(){
+  const suites=[];
+  if(document.getElementById('bt-suite-normal')?.checked)suites.push('test_documents');
+  if(document.getElementById('bt-suite-edge')?.checked)suites.push('test_documents_edge_cases');
+  return suites;
+}
+['bt-suite-normal','bt-suite-edge','bt-strict','bt-keywords'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('change',savePrefs);
+});
+function setDependencyActionState(mode='idle'){
+  const checkBtn=document.getElementById('dep-check-btn');
+  const installBtn=document.getElementById('dep-install-btn');
+  const copyBtn=document.getElementById('dep-copy-btn');
+  const stateMap={
+    idle:{
+      checkDisabled:false,
+      checkText:'一键检查',
+      installDisabled:false,
+      installText:'一键安装',
+      copyDisabled:null,
+    },
+    checking:{
+      checkDisabled:true,
+      checkText:'检查中...',
+      installDisabled:true,
+      installText:'一键安装',
+      copyDisabled:true,
+    },
+    installing:{
+      checkDisabled:true,
+      checkText:'一键检查',
+      installDisabled:true,
+      installText:'安装中...',
+      copyDisabled:true,
+    },
+  };
+  const next=stateMap[mode]||stateMap.idle;
+  if(checkBtn){
+    checkBtn.disabled=!!next.checkDisabled;
+    checkBtn.textContent=next.checkText;
+  }
+  if(installBtn){
+    installBtn.disabled=!!next.installDisabled;
+    installBtn.textContent=next.installText;
+  }
+  if(copyBtn){
+    if(next.copyDisabled===null){
+      const info=summarizeMissingDependencies(_dependencyState);
+      copyBtn.disabled=!info.copyText;
+    }else{
+      copyBtn.disabled=!!next.copyDisabled;
+    }
+  }
+}
+function uniq(list){
+  return [...new Set((list||[]).filter(Boolean))];
+}
+function summarizeMissingDependencies(data){
+  const missing=(data?.items||[]).filter(item=>!item.installed);
+  const required=missing.filter(item=>!item.optional);
+  const optional=missing.filter(item=>item.optional);
+  const requiredPython=required.filter(item=>item.type==='python');
+  const optionalPython=optional.filter(item=>item.type==='python');
+  const requiredTools=required.filter(item=>item.type==='tool');
+  const optionalTools=optional.filter(item=>item.type==='tool');
+  const requiredPackages=uniq(requiredPython.map(item=>item.package||item.module));
+  const optionalPackages=uniq(optionalPython.map(item=>item.package||item.module).filter(pkg=>!requiredPackages.includes(pkg)));
+  const requiredCommand=requiredPackages.length?`pip install ${requiredPackages.join(' ')}`:'';
+  const optionalCommand=optionalPackages.length?`pip install ${optionalPackages.join(' ')}`:'';
+  const toolTips=[...requiredTools,...optionalTools].map(item=>`${item.label}: ${item.install||'请手动安装'}`);
+  const copyLines=[];
+  if(requiredCommand)copyLines.push(requiredCommand);
+  if(optionalCommand)copyLines.push(optionalCommand);
+  if(toolTips.length){
+    if(copyLines.length)copyLines.push('');
+    copyLines.push(...toolTips);
+  }
+  return {
+    missing,
+    required,
+    optional,
+    requiredPython,
+    optionalPython,
+    requiredTools,
+    optionalTools,
+    requiredCommand,
+    optionalCommand,
+    toolTips,
+    copyText:copyLines.join('\n'),
+  };
+}
+function statusText(status){
+  return ({ready:'正常',degraded:'降级',missing:'缺失',optional_missing:'可选缺失'})[status]||status||'未知';
+}
+function updateDependencyCommandBox(data, summary=null){
+  const box=document.getElementById('dep-command-box');
+  const text=document.getElementById('dep-command-text');
+  const copyBtn=document.getElementById('dep-copy-btn');
+  if(!box || !text || !copyBtn)return {missing:[],required:[],optional:[],copyText:''};
+  const info=summary||summarizeMissingDependencies(data);
+  const lines=[];
+  if(!info.missing.length){
+    lines.push('当前未检测到缺失依赖。');
+    lines.push('核心解析链路可以直接使用。');
+  }else{
+    if(info.requiredCommand){
+      lines.push('【必须安装】');
+      lines.push(info.requiredCommand);
+    }
+    if(info.optionalCommand){
+      if(lines.length)lines.push('');
+      lines.push('【可选增强】');
+      lines.push(info.optionalCommand);
+    }
+    if(info.toolTips.length){
+      if(lines.length)lines.push('');
+      lines.push('【系统工具】');
+      info.toolTips.forEach(item=>lines.push(`- ${item}`));
+    }
+  }
+  text.textContent=lines.join('\n');
+  copyBtn.disabled=!info.copyText;
+  requestAnimationFrame(syncCollapsibleHeights);
+  return info;
+}
+function updateBatchSummaryPanel(data){
+  const s=data?.summary||{};
+  const total=s.total??data?.total??0;
+  const success=s.success??0;
+  const failed=s.failed??Math.max((data?.completed_count||0)-success,0);
+  const rate=total?`${(((s.success_rate_pct??((success/total)*100))||0)).toFixed(1)}%`:'--';
+  document.getElementById('batch-stat-rate').textContent=rate;
+  document.getElementById('batch-stat-avg').textContent=s.avg_processing_ms!=null?String(s.avg_processing_ms):'--';
+  document.getElementById('batch-stat-okfail').textContent=`${success} / ${failed}`;
+  document.getElementById('batch-stat-expected').textContent=s.expected_checked?`${s.expected_matched||0}/${s.expected_checked}`:'--';
+  document.getElementById('batch-summary-last').textContent=s.generated_at||data?.state||'等待批测';
+  const formatBox=document.getElementById('batch-format-list');
+  const formatSummary=s.format_summary||{};
+  const formatEntries=Object.entries(formatSummary);
+  formatBox.innerHTML=formatEntries.length?formatEntries.map(([ext,item])=>
+    `<div class="batch-format-item"><span class="batch-format-name">${esc(ext)}</span><span class="batch-format-meta">${item.success}/${item.total} · ${item.success_rate_pct}%</span></div>`
+  ).join(''):'<div class="dep-empty">批测完成后显示各格式成功率</div>';
+  const errBox=document.getElementById('batch-error-summary');
+  const errEntries=Object.entries(s.error_category_counts||{});
+  errBox.innerHTML=errEntries.length?errEntries.map(([name,count])=>`<span class="batch-tag">${esc(name)} × ${count}</span>`).join(''):'<span class="dep-rec-item">错误分类会显示在这里</span>';
+  requestAnimationFrame(syncCollapsibleHeights);
+}
+function resetBatchSummaryPanel(){
+  updateBatchSummaryPanel({summary:{},total:0,state:'未开始'});
+}
+function renderDependencyStatus(data){
+  _dependencyState=data;
+  const summary=data.summary||{};
+  const env=data.environment||{};
+  document.getElementById('dep-overview').innerHTML=
+    `当前环境：Python ${esc(env.python||'--')} ｜ ${esc(env.platform||'--')}<br>`+
+    `状态：<span class="dep-badge ${esc(summary.overall_status||'missing')}">${statusText(summary.overall_status)}</span> `+
+    `已就绪 ${summary.ready_count||0}/${summary.total_items||0}，核心缺失 ${summary.critical_missing||0}，可选缺失 ${summary.optional_missing||0}`;
+  const profiles=Object.values(data.profiles||{});
+  document.getElementById('dep-profile-grid').innerHTML=profiles.map(item=>
+    `<div class="dep-card"><div class="dep-card-top"><span class="dep-card-label">${esc(item.label)}</span><span class="dep-pill ${esc(item.status)}">${statusText(item.status)}</span></div><div class="dep-card-msg">${esc(item.reason||'--')}</div></div>`
+  ).join('');
+  const items=data.items||[];
+  document.getElementById('dep-list').innerHTML=items.map(item=>
+    `<div class="dep-item">
+      <div class="dep-item-main">
+        <div class="dep-item-name">${esc(item.label)}</div>
+        <div class="dep-item-meta">${esc((item.type==='python'?(item.package||item.module):(item.path||'未检测到路径')))}${item.version?` · v${esc(item.version)}`:''}</div>
+        <div class="dep-item-msg">${esc(item.message||'')}</div>
+      </div>
+      <span class="dep-badge ${esc(item.status)}">${statusText(item.status)}</span>
+    </div>`
+  ).join('');
+  const recs=data.recommendations||[];
+  document.getElementById('dep-rec').innerHTML=recs.length?recs.map(item=>`<span class="dep-rec-item">${esc(item)}</span>`).join(''):'<span class="dep-rec-item">当前依赖建议已全部满足</span>';
+  updateDependencyCommandBox(data);
+  requestAnimationFrame(syncCollapsibleHeights);
+}
+async function loadDependencyStatus(showToast=false){
+  try{
+    const res=await fetch('/system/dependencies');
+    const data=await res.json();
+    if(!res.ok || !data.success)throw new Error(data.error||'依赖自检失败');
+    renderDependencyStatus(data);
+    if(showToast)toast('环境自检已刷新','var(--accent3)');
+    return data;
+  }catch(e){
+    document.getElementById('dep-overview').textContent=`依赖自检失败：${e.message}`;
+    document.getElementById('dep-profile-grid').innerHTML='';
+    document.getElementById('dep-list').innerHTML='<div class="dep-empty">暂时无法获取依赖状态</div>';
+    document.getElementById('dep-rec').innerHTML='';
+    const text=document.getElementById('dep-command-text');
+    const copyBtn=document.getElementById('dep-copy-btn');
+    if(text)text.textContent=`依赖检查失败：${e.message}`;
+    if(copyBtn)copyBtn.disabled=true;
+    requestAnimationFrame(syncCollapsibleHeights);
+    if(showToast)toast(`依赖自检失败: ${e.message}`,'#ff6b8a');
+    return null;
+  }
+}
+function buildDependencyCheckResult(data){
+  const depSummary=summarizeMissingDependencies(data);
+  const summary=data.summary||{};
+  const env=data.environment||{};
+  const checkedAt=data.checked_at?new Date(data.checked_at).toLocaleString():'--';
+  const lines=[
+    'DocFlow 缺失依赖检查报告',
+    '',
+    `检查时间：${checkedAt}`,
+    `Python：${env.python||'--'}`,
+    `平台：${env.platform||'--'}`,
+    `总体状态：${statusText(summary.overall_status)}`,
+    `已就绪：${summary.ready_count||0}/${summary.total_items||0}`,
+    `必须安装：${depSummary.required.length}`,
+    `可选增强：${depSummary.optional.length}`,
+    '',
+  ];
+  if(depSummary.missing.length){
+    lines.push('【缺失清单】');
+    depSummary.missing.forEach((item,index)=>{
+      const level=item.optional?'可选增强':'必须安装';
+      const depType=item.type==='python'?'Python 包':'系统工具';
+      const usage=(item.required_for||[]).join(', ')||'--';
+      lines.push(`${index+1}. ${item.label} [${level}]`);
+      lines.push(`   类型：${depType} ｜ 用途：${usage}`);
+      lines.push(`   安装：${item.install||'请手动安装'}`);
+    });
+    if(depSummary.requiredCommand){
+      lines.push('', '【必须安装命令】', depSummary.requiredCommand);
+    }
+    if(depSummary.optionalCommand){
+      lines.push('', '【可选增强命令】', depSummary.optionalCommand);
+    }
+    if(depSummary.toolTips.length){
+      lines.push('', '【系统工具】');
+      depSummary.toolTips.forEach(item=>lines.push(`- ${item}`));
+    }
+  }else{
+    lines.push('未发现缺失依赖，当前环境可以直接继续处理文档和批量测试。');
+  }
+  const rows=depSummary.missing.map(item=>[
+    item.label||'',
+    item.type==='python'?'Python 包':'系统工具',
+    item.optional?'可选':'必需',
+    (item.required_for||[]).join('/')||'--',
+    item.type==='python'?(item.package||item.module||'--'):(item.path||item.id||'系统工具'),
+    item.install||'',
+  ]);
+  return {
+    text:lines.join('\n'),
+    tables:rows.length?[[['名称','类型','级别','用途','目标','安装方式'],...rows]]:[],
+    stats:{
+      char_count:lines.join('\n').length,
+      processing_ms:0,
+      missing_count:depSummary.missing.length,
+      required_missing:depSummary.required.length,
+      optional_missing:depSummary.optional.length,
+    },
+    meta:{
+      '检查时间':checkedAt,
+      'Python':env.python||'--',
+      '平台':env.platform||'--',
+      '总体状态':statusText(summary.overall_status),
+      '已就绪':`${summary.ready_count||0}/${summary.total_items||0}`,
+      '必须安装':String(depSummary.required.length),
+      '可选增强':String(depSummary.optional.length),
+      '解释器':env.executable||'--',
+    },
+    file:{name:'dependency_check_report',size:0},
+    error:depSummary.required.length?'检测到必须安装的依赖缺失':'',
+    errorInfo:depSummary.required.length?{
+      code:'dependency_check',
+      category:'依赖缺失',
+      title:'运行环境不完整',
+      message:`仍有 ${depSummary.required.length} 项必需依赖未安装`,
+      hint:depSummary.requiredCommand||'请先安装缺失依赖后再继续批测或处理文件',
+      severity:'warning',
+      install_command:depSummary.requiredCommand,
+    }:null,
+  };
+}
+function buildDependencyInstallResult(data){
+  const summary=data.summary||{};
+  const after=data.after||{};
+  const env=after.environment||{};
+  const results=data.results||[];
+  const checkedAt=after.checked_at?new Date(after.checked_at).toLocaleString():'--';
+  const lines=[
+    'DocFlow 缺失依赖安装报告',
+    '',
+    `执行时间：${checkedAt}`,
+    `安装范围：${data.include_optional===false?'仅必需 Python 依赖':'全部缺失 Python 依赖'}`,
+    `执行结果：${data.install_ok?'已完成':'部分失败'}`,
+    `摘要：${data.message||'--'}`,
+    `请求安装：${summary.requested_count||0}`,
+    `安装成功：${summary.installed_count||0}`,
+    `安装失败：${summary.failed_count||0}`,
+    `剩余必需缺失：${summary.still_missing_required??'--'}`,
+    `剩余可选缺失：${summary.still_missing_optional??'--'}`,
+    `系统工具待手动安装：${summary.remaining_manual_tools||0}`,
+    '',
+  ];
+  if(results.length){
+    lines.push('【安装结果】');
+    results.forEach((item,index)=>{
+      lines.push(`${index+1}. ${item.label} (${item.package})`);
+      lines.push(`   状态：${item.installed?'成功':'失败'}${item.version?` · v${item.version}`:''}`);
+      lines.push(`   命令：${item.command||item.requested_install||'--'}`);
+      if(!item.installed && item.message){
+        lines.push(`   说明：${String(item.message).replace(/\s+/g,' ').slice(0,180)}`);
+      }
+    });
+  }else{
+    lines.push('当前没有需要自动安装的 Python 依赖。');
+  }
+  if((data.manual_actions||[]).length){
+    lines.push('', '【仍需手动处理】');
+    data.manual_actions.forEach(item=>lines.push(`- ${item}`));
+  }
+  const rows=results.map(item=>[
+    item.label||'',
+    item.package||'',
+    item.optional?'可选':'必需',
+    item.installed?'成功':'失败',
+    item.version||'--',
+    item.command||item.requested_install||'',
+  ]);
+  return {
+    text:lines.join('\n'),
+    tables:rows.length?[[['名称','包名','级别','结果','版本','执行命令'],...rows]]:[],
+    stats:{
+      char_count:lines.join('\n').length,
+      processing_ms:0,
+      requested_count:summary.requested_count||0,
+      installed_count:summary.installed_count||0,
+      failed_count:summary.failed_count||0,
+    },
+    meta:{
+      '执行时间':checkedAt,
+      '安装范围':data.include_optional===false?'仅必需 Python 依赖':'全部缺失 Python 依赖',
+      '执行结果':data.install_ok?'已完成':'部分失败',
+      '摘要':data.message||'--',
+      '请求安装':String(summary.requested_count||0),
+      '安装成功':String(summary.installed_count||0),
+      '安装失败':String(summary.failed_count||0),
+      '剩余必需缺失':String(summary.still_missing_required??'--'),
+      '剩余可选缺失':String(summary.still_missing_optional??'--'),
+      '解释器':env.executable||'--',
+    },
+    file:{name:'dependency_install_report',size:0},
+    error:summary.failed_count?`${summary.failed_count} 项依赖安装失败`:'',
+    errorInfo:summary.failed_count?{
+      code:'dependency_install_failed',
+      category:'依赖安装失败',
+      title:'自动安装未完全成功',
+      message:data.message||'部分依赖未安装成功',
+      hint:'请查看安装报告中的失败项与执行命令，必要时手动安装或检查网络环境',
+      severity:'warning',
+      install_command:'',
+    }:null,
+  };
+}
+async function copyDependencyInstallCommands(){
+  const info=summarizeMissingDependencies(_dependencyState);
+  if(!info.copyText){
+    toast('当前没有可复制的安装命令','#ffb340');
+    return;
+  }
+  try{
+    await navigator.clipboard.writeText(info.copyText);
+    toast('已复制安装命令','var(--accent3)');
+  }catch(e){
+    toast(`复制失败: ${e.message}`,'#ff6b8a');
+  }
+}
+async function runMissingDependencyCheck(){
+  setPanelOpen('dependency_check',true);
+  setDependencyActionState('checking');
+  log('INFO','开始检查缺失依赖');
+  try{
+    const data=await loadDependencyStatus(false);
+    if(!data)throw new Error('未能获取依赖状态');
+    const summary=updateDependencyCommandBox(data);
+    showResult(buildDependencyCheckResult(data),'缺失依赖检查');
+    document.getElementById('result-status').textContent=summary.missing.length?`${summary.missing.length} 项待补齐`:'依赖完整';
+    if(summary.missing.length){
+      const requiredText=summary.required.length?`必需 ${summary.required.length} 项`:'无必需项缺失';
+      const optionalText=summary.optional.length?`可选 ${summary.optional.length} 项`:'无可选项缺失';
+      log(summary.required.length?'WARN':'INFO',`依赖检查完成：${requiredText}，${optionalText}`);
+      summary.missing.slice(0,6).forEach(item=>{
+        log(item.optional?'INFO':'WARN',`${item.label} -> ${item.install||'请手动安装'}`);
+      });
+      toast(summary.required.length?`检测到缺失依赖：${requiredText}`:`建议补充增强依赖：${optionalText}`,summary.required.length?'#ffb340':'#7cb4ff');
+    }else{
+      log('INFO','依赖检查完成：未发现缺失项');
+      toast('依赖检查完成：当前环境完整','var(--accent3)');
+    }
+  }catch(e){
+    log('ERROR',`缺失依赖检查失败: ${e.message}`);
+    toast(`缺失依赖检查失败: ${e.message}`,'#ff6b8a');
+  }finally{
+    setDependencyActionState('idle');
+  }
+}
+async function runInstallMissingDependencies(){
+  setPanelOpen('dependency_check',true);
+  const latest=_dependencyState||await loadDependencyStatus(false);
+  if(!latest){
+    toast('请先完成依赖检查','#ff6b8a');
+    return;
+  }
+  const depSummary=summarizeMissingDependencies(latest);
+  const pythonMissing=[...depSummary.requiredPython,...depSummary.optionalPython];
+  if(!pythonMissing.length){
+    showResult(buildDependencyCheckResult(latest),'缺失依赖检查');
+    document.getElementById('result-status').textContent='无需安装';
+    toast(depSummary.toolTips.length?'当前仅剩系统工具需手动安装':'当前没有可自动安装的缺失依赖',depSummary.toolTips.length?'#7cb4ff':'var(--accent3)');
+    return;
+  }
+  const confirmText=`将尝试安装 ${pythonMissing.length} 个缺失的 Python 依赖。\n系统工具仍需你手动安装。\n是否继续？`;
+  if(!window.confirm(confirmText))return;
+  setDependencyActionState('installing');
+  document.getElementById('dep-command-text').textContent='正在自动安装缺失依赖，请稍候...';
+  log('INFO',`开始自动安装缺失依赖：共 ${pythonMissing.length} 项`);
+  try{
+    const res=await fetch('/system/dependencies/install',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({include_optional:true}),
+    });
+    const data=await res.json();
+    if(!res.ok || !data.success)throw new Error(data.error||'自动安装失败');
+    if(data.after)renderDependencyStatus(data.after);
+    const after=data.after||_dependencyState;
+    showResult(buildDependencyInstallResult(data),'缺失依赖自动安装');
+    const installCount=data.summary?.installed_count||0;
+    const failedCount=data.summary?.failed_count||0;
+    document.getElementById('result-status').textContent=failedCount?`${installCount} 成功 / ${failedCount} 失败`:`已安装 ${installCount} 项`;
+    (data.results||[]).slice(0,8).forEach(item=>{
+      log(item.installed?'INFO':'ERROR',`${item.label}: ${item.installed?'安装成功':'安装失败'}`);
+    });
+    (data.manual_actions||[]).slice(0,4).forEach(item=>log('WARN',`需手动处理：${item}`));
+    if(data.install_ok){
+      toast(data.message||'缺失依赖已安装','var(--accent3)');
+    }else{
+      toast(data.message||'部分依赖安装失败','#ffb340');
+    }
+    if(after)updateDependencyCommandBox(after);
+  }catch(e){
+    log('ERROR',`自动安装缺失依赖失败: ${e.message}`);
+    toast(`自动安装失败: ${e.message}`,'#ff6b8a');
+    await loadDependencyStatus(false);
+  }finally{
+    setDependencyActionState('idle');
+  }
+}
+function setBatchTestLinks(data){
+  const box=document.getElementById('batch-test-links');
+  if(!box)return;
+  const urls=data?.report_urls||{};
+  const links=[];
+  if(urls.html)links.push(`<a class="batch-link html" href="${esc(urls.html)}" target="_blank">HTML 汇总</a>`);
+  if(urls.markdown)links.push(`<a class="batch-link" href="${esc(urls.markdown)}" target="_blank">MD 报告</a>`);
+  if(urls.json)links.push(`<a class="batch-link secondary" href="${esc(urls.json)}" target="_blank">JSON</a>`);
+  if(urls.csv)links.push(`<a class="batch-link warn" href="${esc(urls.csv)}" target="_blank">CSV</a>`);
+  box.innerHTML=links.join('');
+}
+function setBatchActionState(mode='idle'){
+  const startBtn=document.getElementById('batch-test-btn');
+  const cancelBtn=document.getElementById('batch-cancel-btn');
+  if(!startBtn || !cancelBtn)return;
+  const states={
+    idle:{startDisabled:false,startText:'🧪 一键批测',cancelDisabled:true,cancelText:'⏹ 停止批测'},
+    starting:{startDisabled:true,startText:'⏳ 正在启动...',cancelDisabled:true,cancelText:'⏹ 停止批测'},
+    running:{startDisabled:true,startText:'⏳ 批测中...',cancelDisabled:false,cancelText:'⏹ 停止批测'},
+    cancelling:{startDisabled:true,startText:'⏳ 取消中...',cancelDisabled:true,cancelText:'取消中...'},
+  };
+  const state=states[mode]||states.idle;
+  startBtn.disabled=state.startDisabled;
+  startBtn.textContent=state.startText;
+  cancelBtn.disabled=state.cancelDisabled;
+  cancelBtn.textContent=state.cancelText;
+}
+function updateBatchProgressUI(data){
+  const status=document.getElementById('batch-test-status');
+  const last=document.getElementById('batch-test-last');
+  const fill=document.getElementById('batch-test-fill');
+  const current=document.getElementById('batch-test-current');
+  const total=data.total||0;
+  const completed=data.completed_count||0;
+  const progress=data.progress_pct||0;
+  fill.style.width=`${Math.max(0,Math.min(progress,100))}%`;
+  status.textContent=total?`${completed}/${total} · ${data.state||'queued'}`:(data.state||'queued');
+  if((data.state==='running' || data.state==='cancelling') && data.current_file){
+    current.textContent=data.state==='cancelling'?`正在取消：${data.current_file}`:`当前：${data.current_file}`;
+  }else if(data.state==='queued'){
+    current.textContent='任务排队中...';
+  }else if(data.state==='cancelling'){
+    current.textContent='正在取消任务，请稍候...';
+  }else if(data.state==='completed'){
+    current.textContent='已完成，可点击下方链接查看报告';
+  }else if(data.state==='cancelled'){
+    current.textContent=data.error||'任务已取消';
+  }else if(data.state==='failed'){
+    current.textContent=data.error||'任务失败';
+  }else{
+    current.textContent='';
+  }
+  last.textContent=data.summary?.generated_at || (data.updated_at?new Date(data.updated_at*1000).toLocaleTimeString():'');
+  updateBatchSummaryPanel(data);
+}
+function buildBatchSummaryText(data){
+  const s=data.summary||{};
+  const lines=[
+    'DocFlow 批量测试报告',
+    '',
+    `任务状态: ${data.state||'--'}`,
+    `生成时间: ${s.generated_at||'--'}`,
+    `测试集: ${((data.suites||[]).map(v=>v.split(/[\\\\/]/).pop()).join(', '))||'--'}`,
+    `PDF模式: ${data.pdf_mode||'balanced'}`,
+    `总数: ${s.total ?? data.total ?? '--'}`,
+    `成功/失败: ${(s.success ?? '--')}/${(s.failed ?? '--')}`,
+    `成功率: ${s.success_rate_pct!=null?`${s.success_rate_pct}%`:'--'}`,
+    `平均耗时: ${s.avg_processing_ms ?? '--'} ms`,
+    `预期匹配: ${s.expected_checked?`${s.expected_matched}/${s.expected_checked}`:'--'}`,
+    `返回码: ${data.return_code ?? '--'}`,
+  ];
+  if(Object.keys(s.error_category_counts||{}).length){
+    lines.push('', '错误分类：');
+    Object.entries(s.error_category_counts||{}).forEach(([name,count])=>lines.push(`- ${name}: ${count}`));
+  }
+  if(data.current_file){
+    lines.push(`当前文件: ${data.current_file}`);
+  }
+  if((data.unexpected_cases||[]).length){
+    lines.push('', '不符合预期：');
+    data.unexpected_cases.forEach(item=>lines.push(`- ${item.filename}: 预期 ${item.expected_success} / 实际 ${item.success}`));
+  }
+  if((data.failed_cases||[]).length){
+    lines.push('', '失败样本：');
+    data.failed_cases.slice(0,10).forEach(item=>lines.push(`- ${item.filename}: ${item.error||'未知错误'}`));
+  }
+  return lines.join('\n');
+}
+function buildBatchResult(data){
+  const text=buildBatchSummaryText(data);
+  const failRows=(data.failed_cases||[]).map(item=>[
+    item.filename||'',
+    String(item.expected_success),
+    String(item.success),
+    (item.error||'').replace(/\s+/g,' ').slice(0,120),
+  ]);
+  const tables=failRows.length?[[['文件','预期','实际','错误'],...failRows]]:[];
+  const s=data.summary||{};
+  return {
+    text,
+    tables,
+    stats:{
+      char_count:text.length,
+      processing_ms:Math.round((data.finished_at&&data.started_at?(data.finished_at-data.started_at)*1000:0)),
+      file_count:s.total||data.total||0,
+      failed_count:s.failed||0,
+    },
+    meta:{
+      '任务状态':data.state||'--',
+      'PDF模式':data.pdf_mode||'balanced',
+      '报告目录':data.report_dir||'--',
+      '测试集':((data.suites||[]).map(v=>v.split(/[\\\\/]/).pop()).join(', '))||'--',
+      '生成时间':s.generated_at||'--',
+      '成功':s.success??'--',
+      '失败':s.failed??'--',
+      '成功率':s.success_rate_pct!=null?`${s.success_rate_pct}%`:'--',
+      '平均耗时(ms)':s.avg_processing_ms??'--',
+      '预期匹配':s.expected_checked?`${s.expected_matched}/${s.expected_checked}`:'--',
+      '执行返回码':data.return_code??'--',
+    },
+    file:{name:'batch_test_report',size:0},
+  };
+}
+function stopBatchPolling(){
+  if(_batchPollTimer){
+    clearTimeout(_batchPollTimer);
+    _batchPollTimer=null;
+  }
+}
+function syncBatchLogs(data){
+  const logs=data.logs||[];
+  logs.filter(item=>item.id>_lastBatchLogId).forEach(item=>{
+    log(item.level||'INFO', item.message||'');
+    _lastBatchLogId=item.id;
+  });
+}
+function finishBatchTest(data){
+  stopBatchPolling();
+  _lastBatchReport=data;
+  syncBatchLogs(data);
+  updateBatchProgressUI(data);
+  setBatchTestLinks(data);
+  showResult(buildBatchResult(data),'批量测试报告');
+  document.getElementById('result-status').textContent=`${data.completed_count||0}/${data.total||0}`;
+  _activeBatchJobId=null;
+  setBatchActionState('idle');
+  if(data.state==='completed'){
+    toast('批量测试完成','var(--accent3)');
+  }else if(data.state==='cancelled'){
+    toast('批量测试已取消','#ffb340');
+  }else{
+    toast(`批量测试失败: ${data.error||'未知错误'}`,'#ff6b8a');
+  }
+}
+async function pollBatchTest(jobId){
+  try{
+    const res=await fetch(`/run-batch-tests/${jobId}`);
+    const data=await res.json();
+    if(!res.ok || !data.success)throw new Error(data.error||'获取批测状态失败');
+    _lastBatchReport=data;
+    syncBatchLogs(data);
+    updateBatchProgressUI(data);
+    if(data.state==='cancelling'){
+      setBatchActionState('cancelling');
+    }else if(data.state==='queued' || data.state==='running'){
+      setBatchActionState('running');
+    }
+    if(data.state==='completed' || data.state==='failed' || data.state==='cancelled'){
+      finishBatchTest(data);
+      return;
+    }
+    _batchPollTimer=setTimeout(()=>pollBatchTest(jobId),1000);
+  }catch(e){
+    stopBatchPolling();
+    _activeBatchJobId=null;
+    setBatchActionState('idle');
+    document.getElementById('batch-test-status').textContent='轮询失败';
+    log('ERROR',`批量测试轮询失败: ${e.message}`);
+    toast(`批量测试轮询失败: ${e.message}`,'#ff6b8a');
+  }
+}
+async function cancelBatchTests(){
+  if(!_activeBatchJobId){toast('当前没有可取消的批测任务','#ffb340');return;}
+  setBatchActionState('cancelling');
+  log('WARN',`请求取消批测任务：${_activeBatchJobId}`);
+  try{
+    const res=await fetch(`/run-batch-tests/${_activeBatchJobId}/cancel`,{method:'POST'});
+    const data=await res.json();
+    if(!res.ok || !data.success)throw new Error(data.error||'取消批量测试失败');
+    _lastBatchReport=data;
+    syncBatchLogs(data);
+    updateBatchProgressUI(data);
+    if(data.state==='completed' || data.state==='failed' || data.state==='cancelled'){
+      finishBatchTest(data);
+      return;
+    }
+    setBatchActionState(data.state==='cancelling'?'cancelling':'running');
+  }catch(e){
+    setBatchActionState('running');
+    log('ERROR',`取消批量测试失败: ${e.message}`);
+    toast(`取消批量测试失败: ${e.message}`,'#ff6b8a');
+  }
+}
+async function runBatchTests(){
+  const suites=getBatchSuites();
+  const pdfMode=getPdfMode();
+  if(!suites.length){toast('⚠ 请至少选择一个测试集','#ffb340');return;}
+  savePrefs();
+  stopBatchPolling();
+  _lastBatchLogId=0;
+  _activeBatchJobId=null;
+  _lastBatchReport=null;
+  setBatchActionState('starting');
+  document.getElementById('batch-test-status').textContent='提交中...';
+  document.getElementById('batch-test-last').textContent='';
+  document.getElementById('batch-test-current').textContent='';
+  document.getElementById('batch-test-fill').style.width='0%';
+  setBatchTestLinks(null);
+  resetBatchSummaryPanel();
+  log('INFO',`开始批测：${suites.join(', ')} ｜ PDF模式：${pdfMode}`);
+  try{
+    const res=await fetch('/run-batch-tests',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        suites,
+        strict:document.getElementById('bt-strict')?.checked,
+        keywords:document.getElementById('bt-keywords')?.checked,
+        pdf_mode:pdfMode,
+      })
+    });
+    const data=await res.json();
+    if(!res.ok || !data.success)throw new Error(data.error||'批量测试启动失败');
+    _activeBatchJobId=data.job_id;
+    setBatchActionState('running');
+    document.getElementById('batch-test-status').textContent=`0/${data.total||0} · queued`;
+    document.getElementById('batch-test-current').textContent='任务已创建，等待执行...';
+    log('INFO',`批测任务已创建：${data.job_id}`);
+    await pollBatchTest(data.job_id);
+  }catch(e){
+    _activeBatchJobId=null;
+    setBatchActionState('idle');
+    document.getElementById('batch-test-status').textContent='启动失败';
+    log('ERROR',`批量测试失败: ${e.message}`);
+    toast(`批量测试失败: ${e.message}`,'#ff6b8a');
+  }
+}
+
+// Tabs
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// Log
+function log(level,msg){
+  const body=document.getElementById('log-body');
+  const line=document.createElement('div');
+  line.className='log-line log-'+level;
+  line.innerHTML=`<span class="log-t">${nowStr()}</span><span class="log-lv">${level}</span><span class="log-msg">${msg}</span>`;
+  body.appendChild(line);body.scrollTop=body.scrollHeight;
+}
+function buildClientErrorInfo(message){
+  return {
+    code:'client_error',
+    category:'请求失败',
+    title:'前端请求或服务响应失败',
+    message:message||'未知错误',
+    hint:'请确认后端服务已启动，并查看日志面板排查具体原因。',
+    severity:'error',
+    install_command:'',
+  };
+}
+function buildUiResult(file,data={},errorInfo=null){
+  const stats={...(data.statistics||{})};
+  if(data.processing_ms!=null && stats.processing_ms==null)stats.processing_ms=data.processing_ms;
+  return {
+    text:data.formatted_output||data.text||'',
+    tables:data.tables||[],
+    stats,
+    meta:data.metadata||{},
+    file,
+    error:data.error||'',
+    errorInfo:errorInfo||data.error_info||null,
+  };
+}
+function isPdfResult(result){
+  const fileExt=(result?.file?.ext||ext(result?.file?.name||'')).toLowerCase();
+  const meta=result?.meta||{};
+  return fileExt==='pdf' || Array.isArray(meta.page_sources) || meta.pdf_mode || meta.primary_engine==='ocr';
+}
+function getPdfSourceInfo(source){
+  const value=String(source||'').toLowerCase();
+  if(value==='ocr')return {label:'OCR',cls:'ocr'};
+  if(value==='pdfplumber')return {label:'文本层 · pdfplumber',cls:'text'};
+  if(value==='pymupdf')return {label:'文本层 · PyMuPDF',cls:'text'};
+  if(!value)return {label:'未标记',cls:'empty'};
+  return {label:value,cls:'other'};
+}
+function extractPdfPagePreviewMap(rawText=''){
+  const previewMap={};
+  const re=/\[第\s*(\d+)\s*页\]\s*([\s\S]*?)(?=(?:\n\s*\[第\s*\d+\s*页\])|$)/g;
+  let match;
+  while((match=re.exec(rawText))!==null){
+    const pageNo=Number(match[1]);
+    const preview=(match[2]||'').replace(/\s+/g,' ').trim();
+    if(pageNo)previewMap[pageNo]=preview.slice(0,120);
+  }
+  return previewMap;
+}
+function formatMetaValue(value){
+  if(value==null || value==='')return '—';
+  if(Array.isArray(value)){
+    if(!value.length)return '[]';
+    if(typeof value[0]==='object')return `共 ${value.length} 项`;
+    return value.slice(0,6).map(v=>String(v)).join(' / ')+(value.length>6?' …':'');
+  }
+  if(typeof value==='object'){
+    const entries=Object.entries(value);
+    if(!entries.length)return '{}';
+    return entries.slice(0,3).map(([k,v])=>{
+      const text=(v!=null && typeof v==='object')?(Array.isArray(v)?`[${v.length}]`:'{...}'):String(v);
+      return `${k}: ${text}`;
+    }).join(' ｜ ')+(entries.length>3?' …':'');
+  }
+  return String(value);
+}
+function renderPdfCompare(result,rawText=''){
+  const card=document.getElementById('pdf-compare-card');
+  const grid=document.getElementById('pdf-compare-grid');
+  const track=document.getElementById('pdf-compare-track');
+  const legend=document.getElementById('pdf-compare-legend');
+  const hints=document.getElementById('pdf-hints');
+  const pageList=document.getElementById('pdf-page-list');
+  const sub=document.getElementById('pdf-compare-sub');
+  if(!card || !grid || !track || !legend || !hints || !pageList || !sub)return;
+  if(!isPdfResult(result)){
+    card.style.display='none';
+    return;
+  }
+  const meta=result.meta||{};
+  const pageSources=Array.isArray(meta.page_sources)?meta.page_sources:[];
+  const totalPages=Number(meta.pages||meta.page_count||pageSources.length||0)||pageSources.length||0;
+  const filledPages=pageSources.filter(item=>Number(item?.chars||0)>0).length;
+  const textPages=Number(meta.text_pages ?? pageSources.filter(item=>Number(item?.chars||0)>0 && String(item?.source||'').toLowerCase()!=='ocr').length);
+  const ocrPages=Number(meta.ocr_pages ?? pageSources.filter(item=>Number(item?.chars||0)>0 && String(item?.source||'').toLowerCase()==='ocr').length);
+  const tablePages=Number(meta.table_pages ?? pageSources.filter(item=>Number(item?.tables||0)>0).length);
+  const emptyPages=Math.max(totalPages-filledPages,0);
+  const previewMap=extractPdfPagePreviewMap(rawText);
+  const parseMethod=meta['解析方式']||meta.primary_engine||'—';
+  const modeLabel=meta.pdf_runtime_label||meta.pdf_mode_label||meta.pdf_mode||'—';
+  const primaryEngine=meta.primary_engine||'—';
+  const ocrEngine=meta.ocr_engine||'—';
+  const coveragePct=totalPages?Math.round((filledPages/totalPages)*100):0;
+  const ocrPct=totalPages?Math.round((ocrPages/totalPages)*100):0;
+  sub.textContent=`${parseMethod} ｜ 模式：${modeLabel} ｜ 主引擎：${primaryEngine}${ocrPages?` ｜ OCR：${ocrEngine}`:''}`;
+  grid.innerHTML=[
+    `<div class="pdf-mini-card"><div class="pdf-mini-lbl">页覆盖率</div><div class="pdf-mini-val">${coveragePct}%</div><div class="pdf-mini-sub">${filledPages}/${totalPages||0} 页成功提取出内容</div></div>`,
+    `<div class="pdf-mini-card"><div class="pdf-mini-lbl">文本层页</div><div class="pdf-mini-val">${textPages}</div><div class="pdf-mini-sub">直接读取文字层的页数</div></div>`,
+    `<div class="pdf-mini-card"><div class="pdf-mini-lbl">OCR 页</div><div class="pdf-mini-val">${ocrPages}</div><div class="pdf-mini-sub">${ocrPages?`${ocrPct}% 页面依赖 OCR`:'当前未触发 OCR'}</div></div>`,
+    `<div class="pdf-mini-card"><div class="pdf-mini-lbl">表格 / 空白页</div><div class="pdf-mini-val">${tablePages} / ${emptyPages}</div><div class="pdf-mini-sub">${tablePages?`检测到 ${tablePages} 个含表格页`:'暂无表格页'}${emptyPages?` ｜ ${emptyPages} 页内容较弱`:''}</div></div>`,
+  ].join('');
+  const seg = (count, cls) => count>0?`<div class="pdf-track-seg ${cls}" style="width:${totalPages?((count/Math.max(totalPages,1))*100):0}%"></div>`:'';
+  track.innerHTML = `${seg(textPages,'pdf-track-text')}${seg(ocrPages,'pdf-track-ocr')}${seg(emptyPages,'pdf-track-empty')}`;
+  legend.innerHTML=[
+    `<span class="pdf-legend-chip"><span class="pdf-legend-dot text"></span>文本层 ${textPages}</span>`,
+    `<span class="pdf-legend-chip"><span class="pdf-legend-dot ocr"></span>OCR ${ocrPages}</span>`,
+    `<span class="pdf-legend-chip"><span class="pdf-legend-dot empty"></span>弱内容/空白 ${emptyPages}</span>`,
+  ].join('');
+  const tipList=[];
+  if(ocrPages===0 && textPages>0)tipList.push('文本层质量较好，当前模式已足够');
+  if(ocrPages>0 && ocrPct>=50)tipList.push('OCR 页占比较高，扫描版 PDF 可优先尝试高精度模式');
+  if(emptyPages>0)tipList.push(`仍有 ${emptyPages} 页内容较弱，可尝试更清晰扫描件或重新导出 PDF`);
+  if(ocrPages>0 && String(ocrEngine).toLowerCase().includes('tesseract'))tipList.push('当前 OCR 走 Tesseract，速度稳，复杂版面可再尝试 EasyOCR');
+  if(meta.fallback_reason)tipList.push('主解析器曾触发回退，说明文档结构较复杂');
+  hints.innerHTML=tipList.length?tipList.map(item=>`<span class="pdf-hint">${esc(item)}</span>`).join(''):'<span class="pdf-hint">当前 PDF 提取链路表现稳定</span>';
+  if(pageSources.length){
+    pageList.innerHTML=pageSources.map(item=>{
+      const info=getPdfSourceInfo(item.source);
+      const pageNo=item.page||'—';
+      const pageChars=Number(item.chars||0);
+      const pageTables=Number(item.tables||0);
+      const preview=previewMap[pageNo] || (pageChars?rawText.replace(/\s+/g,' ').slice(0,80):'');
+      return `
+        <div class="pdf-page-row">
+          <div class="pdf-page-no">P.${esc(pageNo)}</div>
+          <div class="pdf-page-main">
+            <div class="pdf-page-top">
+              <span class="pdf-source-badge ${info.cls}">${esc(info.label)}</span>
+              <div class="pdf-page-metrics">
+                <span>${pageChars.toLocaleString()} 字符</span>
+                <span>${pageTables} 表格</span>
+                ${item.error?`<span>有回退</span>`:''}
+              </div>
+            </div>
+            <div class="pdf-page-preview">${preview?esc(preview):'该页未提取到有效文本'}</div>
+            ${item.error?`<div class="pdf-page-error">${esc(item.error)}</div>`:''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }else{
+    pageList.innerHTML='<div class="pdf-hint">当前结果没有逐页明细，建议重新处理 PDF 后再查看。</div>';
+  }
+  card.style.display='block';
+}
+function renderErrorCenter(result){
+  const card=document.getElementById('error-card');
+  const rows=document.getElementById('error-rows');
+  const info=result?.errorInfo||null;
+  if(!info && !result?.error){
+    card.style.display='none';
+    rows.innerHTML='';
+    return;
+  }
+  card.style.display='block';
+  rows.innerHTML=`
+    <div class="detail-row"><span class="detail-key">错误类型</span><span class="detail-val">${esc(info?.category||'解析失败')}</span></div>
+    <div class="detail-row"><span class="detail-key">错误说明</span><span class="detail-val">${esc(info?.message||result?.error||'未知错误')}</span></div>
+    <div class="detail-row"><span class="detail-key">修复建议</span><span class="detail-val">${esc(info?.hint||'请检查输入文件与依赖环境。')}</span></div>
+    ${(info?.install_command)?`<div class="detail-row"><span class="detail-key">安装命令</span><span class="detail-val">${esc(info.install_command)}</span></div>`:''}
+  `;
+}
+
+function getPdfModeLabel(mode){
+  return ({accurate:'高精度',balanced:'平衡',fast:'快速'})[mode]||String(mode||'balanced');
+}
+
+function getModeCompareCandidate(){
+  if(activeIdx>=0 && files[activeIdx]?.ext==='pdf')return files[activeIdx];
+  return files.find(item=>item.ext==='pdf')||null;
+}
+
+function setModeCompareActionState(mode='idle'){
+  const runBtn=document.getElementById('mode-compare-run-btn');
+  const cancelBtn=document.getElementById('mode-compare-cancel-btn');
+  const clearBtn=document.getElementById('mode-compare-clear-btn');
+  if(!runBtn || !cancelBtn || !clearBtn)return;
+  const candidate=!!getModeCompareCandidate();
+  const stateMap={
+    idle:{
+      runDisabled:!candidate || _isProcessing,
+      runText:'🧪 开始实验',
+      cancelDisabled:true,
+      cancelText:'⏹ 停止实验',
+      clearDisabled:!_lastModeCompareReport,
+      clearText:'清空',
+    },
+    running:{
+      runDisabled:true,
+      runText:'⏳ 实验中...',
+      cancelDisabled:false,
+      cancelText:'⏹ 停止实验',
+      clearDisabled:true,
+      clearText:'清空',
+    },
+    cancelling:{
+      runDisabled:true,
+      runText:'⏳ 取消中...',
+      cancelDisabled:true,
+      cancelText:'取消中...',
+      clearDisabled:true,
+      clearText:'清空',
+    },
+  };
+  const next=stateMap[mode]||stateMap.idle;
+  runBtn.disabled=next.runDisabled;
+  runBtn.textContent=next.runText;
+  cancelBtn.disabled=next.cancelDisabled;
+  cancelBtn.textContent=next.cancelText;
+  clearBtn.disabled=next.clearDisabled;
+  clearBtn.textContent=next.clearText;
+}
+
+function refreshModeComparePanel(){
+  const target=document.getElementById('mode-compare-target');
+  const status=document.getElementById('mode-compare-status');
+  const last=document.getElementById('mode-compare-last');
+  const reco=document.getElementById('mode-compare-reco');
+  const current=document.getElementById('mode-compare-current');
+  const fill=document.getElementById('mode-compare-fill');
+  const candidate=getModeCompareCandidate();
+  if(target){
+    if(candidate){
+      const isSelected=activeIdx>=0 && files[activeIdx]===candidate;
+      target.textContent=isSelected?`当前实验对象：${candidate.name}`:`当前实验对象：${candidate.name}（来自队列中的首个 PDF）`;
+    }else{
+      target.textContent='请选择一个 PDF 文件作为实验对象';
+    }
+  }
+  if(_isModeComparing){
+    setModeCompareActionState(_modeCompareCancelRequested?'cancelling':'running');
+    return;
+  }
+  if(!_lastModeCompareReport){
+    if(status)status.textContent='未执行';
+    if(last)last.textContent='';
+    if(current)current.textContent=candidate?'点击“开始实验”后依次运行三种 PDF 模式':'请先添加或选中一个 PDF 文件';
+    if(fill && !fill.style.width)fill.style.width='0%';
+    if(reco)reco.innerHTML='<span class="dep-rec-item">实验完成后会给出推荐模式和原因</span>';
+  }else{
+    if(status)status.textContent=_lastModeCompareReport.summary?.cancelled?'已取消 · 保留部分结果':`已完成 · 推荐 ${_lastModeCompareReport.summary?.recommended_label||'无推荐'}`;
+    if(last)last.textContent=_lastModeCompareReport.generated_at_label||'';
+    if(current)current.textContent=_lastModeCompareReport.summary?.reason||'实验已完成，可在右侧统计页查看详细报告';
+    if(fill)fill.style.width=`${_lastModeCompareReport.summary?.cancelled?Math.max(0,Math.min(100,Number(_lastModeCompareReport.summary?.progress_pct||0))):100}%`;
+    if(reco){
+      const tags=[];
+      if(_lastModeCompareReport.summary?.cancelled)tags.push('<span class="batch-tag">实验已取消</span>');
+      if(_lastModeCompareReport.summary?.recommended_label && !_lastModeCompareReport.summary?.cancelled)tags.push(`<span class="batch-tag">推荐：${esc(_lastModeCompareReport.summary.recommended_label)}</span>`);
+      if(_lastModeCompareReport.summary?.fastest_label)tags.push(`<span class="batch-tag">最快：${esc(_lastModeCompareReport.summary.fastest_label)}</span>`);
+      if(_lastModeCompareReport.summary?.best_quality_label)tags.push(`<span class="batch-tag">质量领先：${esc(_lastModeCompareReport.summary.best_quality_label)}</span>`);
+      reco.innerHTML=tags.join('')||'<span class="dep-rec-item">实验已完成</span>';
+    }
+  }
+  setModeCompareActionState('idle');
+}
+
+function clearModeCompareReport(silent=false){
+  if(_isModeComparing)return;
+  _lastModeCompareReport=null;
+  renderModeCompareReport(null);
+  const fill=document.getElementById('mode-compare-fill');
+  if(fill)fill.style.width='0%';
+  refreshModeComparePanel();
+  if(!silent)toast('已清空模式实验报告');
+}
+
+function buildModeCompareMetrics(mode,result,errorMessage=''){
+  const label=getPdfModeLabel(mode);
+  const uiResult=result||{text:'',tables:[],stats:{},meta:{},error:errorMessage||''};
+  const meta=uiResult.meta||{};
+  const pageSources=Array.isArray(meta.page_sources)?meta.page_sources:[];
+  const totalPages=Number(meta.pages||meta.page_count||pageSources.length||0)||pageSources.length||0;
+  const filledPages=pageSources.filter(item=>Number(item?.chars||0)>0).length;
+  const textPages=Number(meta.text_pages ?? pageSources.filter(item=>Number(item?.chars||0)>0 && String(item?.source||'').toLowerCase()!=='ocr').length);
+  const ocrPages=Number(meta.ocr_pages ?? pageSources.filter(item=>Number(item?.chars||0)>0 && String(item?.source||'').toLowerCase()==='ocr').length);
+  const tablePages=Number(meta.table_pages ?? pageSources.filter(item=>Number(item?.tables||0)>0).length);
+  const chars=Number(uiResult.stats?.char_count||uiResult.stats?.chars||((uiResult.text||'').replace(/<[^>]+>/g,'').length)||0);
+  const processingMs=Number(uiResult.stats?.processing_ms||0)||0;
+  const success=!errorMessage && !uiResult.error;
+  return {
+    mode,
+    label,
+    success,
+    error:errorMessage||uiResult.error||'',
+    chars,
+    processing_ms:processingMs,
+    tables:(uiResult.tables||[]).length,
+    pages:totalPages,
+    filled_pages:filledPages,
+    coverage_pct:totalPages?Math.round((filledPages/totalPages)*100):0,
+    text_pages:textPages,
+    ocr_pages:ocrPages,
+    table_pages:tablePages,
+    empty_pages:Math.max(totalPages-filledPages,0),
+    primary_engine:meta.primary_engine||'—',
+    ocr_engine:meta.ocr_engine||'—',
+    runtime_label:meta.pdf_runtime_label||meta.pdf_mode_label||meta.pdf_mode||label,
+    large_pdf_optimized:!!meta.large_pdf_optimized,
+    table_note:meta.table_extraction_note||'',
+  };
+}
+
+function buildModeCompareReport(file,entries,options={}){
+  const orderedModes=['accurate','balanced','fast'];
+  const entryMap=Object.fromEntries((entries||[]).map(item=>[item.mode,item]));
+  const normalized=orderedModes.map(mode=>entryMap[mode]||buildModeCompareMetrics(mode,null,'未执行'));
+  const successEntries=normalized.filter(item=>item.success);
+  const cancelled=!!options.cancelled;
+  const progressPct=Math.max(0,Math.min(100,Number(options.progress_pct||0)));
+  let recommended=null;
+  let fastest=null;
+  let bestQuality=null;
+  let reason='';
+
+  if(cancelled){
+    fastest=successEntries.length?[...successEntries].sort((a,b)=>(a.processing_ms-b.processing_ms)||(b.chars-a.chars))[0]:null;
+    bestQuality=successEntries.length?[...successEntries].sort((a,b)=>(b.coverage_pct-a.coverage_pct)||(b.chars-a.chars)||(a.processing_ms-b.processing_ms))[0]:null;
+    reason=successEntries.length?'模式实验已取消，以下结果仅包含已完成的模式，不自动给出最终推荐。':'模式实验已取消，尚未形成可参考的结果。';
+  }else if(successEntries.length){
+    fastest=[...successEntries].sort((a,b)=>(a.processing_ms-b.processing_ms)||(b.chars-a.chars))[0];
+    bestQuality=[...successEntries].sort((a,b)=>(b.coverage_pct-a.coverage_pct)||(b.chars-a.chars)||(a.processing_ms-b.processing_ms))[0];
+    const textLayerStrong=successEntries.every(item=>item.ocr_pages===0);
+    const nearBest=successEntries.filter(item=>item.coverage_pct>=bestQuality.coverage_pct-2 && item.chars>=bestQuality.chars*0.92);
+    if(textLayerStrong){
+      recommended=fastest;
+      reason='当前 PDF 主要依赖文字层提取，快速模式已经足够，且耗时最低。';
+    }else if(nearBest.length){
+      recommended=[...nearBest].sort((a,b)=>(a.processing_ms-b.processing_ms)||(b.coverage_pct-a.coverage_pct)||(b.chars-a.chars))[0];
+      if(recommended.mode===bestQuality.mode){
+        if(recommended.mode==='accurate')reason='高精度模式在本次实验中覆盖率或字符量领先，适合优先保证识别质量。';
+        else if(recommended.mode==='balanced')reason='平衡模式在质量与耗时之间表现最稳，适合作为默认选择。';
+        else reason='快速模式在当前文件上已经取得最佳结果，说明文档文本层质量较好。';
+      }else{
+        reason=`${recommended.label}与最佳质量结果接近，但耗时更低，更适合作为当前文件的默认模式。`;
+      }
+    }else{
+      recommended=bestQuality;
+      reason='当前文件不同模式差异较大，优先选择提取质量更好的模式。';
+    }
+  }else{
+    reason='三种模式均未成功，建议先检查 PDF 依赖、OCR 环境和源文件质量。';
+  }
+
+  return {
+    generated_at:new Date().toISOString(),
+    generated_at_label:new Date().toLocaleString(),
+    file:{name:file?.name||'未命名 PDF',size:file?.size||0,ext:file?.ext||'pdf'},
+    entries:normalized,
+    summary:{
+      cancelled,
+      progress_pct:progressPct,
+      recommended_mode:recommended?.mode||'',
+      recommended_label:cancelled?'未完成':(recommended?.label||'无推荐'),
+      fastest_mode:fastest?.mode||'',
+      fastest_label:fastest?.label||'—',
+      best_quality_mode:bestQuality?.mode||'',
+      best_quality_label:bestQuality?.label||'—',
+      success_count:successEntries.length,
+      reason,
+      note:'结论基于当前文件的本次实验结果推断，不代表所有 PDF 都适用。',
+    },
+  };
+}
+
+function renderModeCompareReport(report){
+  const card=document.getElementById('mode-compare-report-card');
+  const sub=document.getElementById('mode-compare-report-sub');
+  const grid=document.getElementById('mode-compare-grid');
+  const summary=document.getElementById('mode-compare-summary');
+  const summaryText=document.getElementById('mode-compare-summary-text');
+  const table=document.getElementById('mode-compare-table');
+  const applyBtn=document.getElementById('mode-compare-apply-btn');
+  if(!card || !grid || !summary || !summaryText || !table)return;
+  if(!report){
+    card.style.display='none';
+    grid.innerHTML='';
+    summary.innerHTML='';
+    summaryText.textContent='';
+    table.innerHTML='';
+    if(applyBtn)applyBtn.disabled=true;
+    return;
+  }
+  const recommendedMode=report.summary?.recommended_mode||'';
+  const fastestMode=report.summary?.fastest_mode||'';
+  const bestQualityMode=report.summary?.best_quality_mode||'';
+  card.style.display='block';
+  if(applyBtn)applyBtn.disabled=!recommendedMode;
+  if(sub)sub.textContent=`${report.file.name} ｜ 生成时间：${report.generated_at_label} ｜ 统一使用 TXT 输出进行实验`;
+  grid.innerHTML=report.entries.map(entry=>{
+    const badges=[];
+    if(entry.mode===recommendedMode)badges.push('<span class="mode-badge rec">推荐</span>');
+    if(entry.mode===fastestMode)badges.push('<span class="mode-badge fastest">最快</span>');
+    if(entry.mode===bestQualityMode)badges.push('<span class="mode-badge best">质量领先</span>');
+    return `
+      <div class="mode-report-card${entry.mode===recommendedMode?' recommended':''}">
+        <div class="mode-report-head">
+          <div class="mode-report-title">${esc(entry.label)}</div>
+          <div class="mode-report-badges">${badges.join('')}</div>
+        </div>
+        <div class="mode-report-metrics">
+          <div class="mode-metric">
+            <div class="mode-metric-lbl">字符数</div>
+            <div class="mode-metric-val">${entry.success?entry.chars.toLocaleString():'—'}</div>
+            <div class="mode-metric-sub">${entry.success?`${entry.pages||0} 页 ｜ 覆盖 ${entry.coverage_pct}%`:'本轮未成功提取'}</div>
+          </div>
+          <div class="mode-metric">
+            <div class="mode-metric-lbl">总耗时</div>
+            <div class="mode-metric-val">${entry.success?`${Math.round(entry.processing_ms)}ms`:'—'}</div>
+            <div class="mode-metric-sub">${entry.success?`文本层 ${entry.text_pages} ｜ OCR ${entry.ocr_pages}`:'请查看错误信息'}</div>
+          </div>
+        </div>
+        <div class="mode-report-note">运行标签：${esc(entry.runtime_label)}${entry.large_pdf_optimized?' ｜ 已启用大文件优化':''}</div>
+        ${entry.success?`<div class="mode-report-note">主引擎：${esc(entry.primary_engine)}${entry.ocr_pages?` ｜ OCR：${esc(entry.ocr_engine||'—')}`:''}${entry.table_note?` ｜ ${esc(entry.table_note)}`:''}</div>`:`<div class="mode-report-error">${esc(entry.error||'处理失败')}</div>`}
+      </div>
+    `;
+  }).join('');
+  const chips=[
+    `<span class="batch-tag">推荐：${esc(report.summary?.recommended_label||'无推荐')}</span>`,
+    `<span class="batch-tag">最快：${esc(report.summary?.fastest_label||'—')}</span>`,
+    `<span class="batch-tag">质量领先：${esc(report.summary?.best_quality_label||'—')}</span>`,
+    `<span class="batch-tag">成功模式：${Number(report.summary?.success_count||0)}/${report.entries.length}</span>`,
+  ];
+  summary.innerHTML=chips.join('');
+  summaryText.textContent=`推荐模式（基于本次文件推断）：${report.summary?.recommended_label||'无推荐'}。${report.summary?.reason||''} ${report.summary?.note||''}`.trim();
+  const entryMap=Object.fromEntries(report.entries.map(entry=>[entry.mode,entry]));
+  const renderRow=(label,pick)=>{
+    const cells=['accurate','balanced','fast'].map(mode=>{
+      const entry=entryMap[mode];
+      const val=pick(entry);
+      return `<div class="mode-table-cell${mode===recommendedMode?' recommended':''}">${esc(val)}</div>`;
+    }).join('');
+    return `<div class="mode-table-row"><div class="mode-table-cell mode-table-label">${esc(label)}</div>${cells}</div>`;
+  };
+  table.innerHTML=[
+    `<div class="mode-table-row mode-table-head">
+      <div class="mode-table-cell">指标</div>
+      <div class="mode-table-cell${recommendedMode==='accurate'?' recommended':''}">高精度</div>
+      <div class="mode-table-cell${recommendedMode==='balanced'?' recommended':''}">平衡</div>
+      <div class="mode-table-cell${recommendedMode==='fast'?' recommended':''}">快速</div>
+    </div>`,
+    renderRow('状态',entry=>entry.success?'成功':'失败'),
+    renderRow('总耗时',entry=>entry.success?`${Math.round(entry.processing_ms)} ms`:'—'),
+    renderRow('字符数',entry=>entry.success?entry.chars.toLocaleString():'—'),
+    renderRow('覆盖率',entry=>entry.success?`${entry.coverage_pct}%`:'—'),
+    renderRow('文本层页',entry=>entry.success?`${entry.text_pages}`:'—'),
+    renderRow('OCR 页',entry=>entry.success?`${entry.ocr_pages}`:'—'),
+    renderRow('表格数',entry=>entry.success?`${entry.tables}`:'—'),
+    renderRow('运行标签',entry=>entry.runtime_label||'—'),
+  ].join('');
+}
+
+function switchToStatsTab(){
+  const tab=[...document.querySelectorAll('.tab')].find(item=>item.textContent.includes('统计'));
+  if(tab)switchTab('stats',tab);
+}
+
+function downloadModeCompareReport(fmt){
+  if(!_lastModeCompareReport){toast('⚠ 暂无模式实验报告','#ffb340');return;}
+  const report=_lastModeCompareReport;
+  let content='';
+  let mime='text/plain';
+  let ext2='txt';
+  if(fmt==='json'){
+    content=JSON.stringify(report,null,2);
+    mime='application/json';
+    ext2='json';
+  }else{
+    const lines=[
+      '# PDF 模式对比实验报告',
+      '',
+      `- 文件：${report.file.name}`,
+      `- 生成时间：${report.generated_at_label}`,
+      `- 推荐模式：${report.summary?.recommended_label||'无推荐'}`,
+      `- 推荐原因：${report.summary?.reason||'—'}`,
+      '',
+      '| 指标 | 高精度 | 平衡 | 快速 |',
+      '| --- | --- | --- | --- |',
+    ];
+    const entryMap=Object.fromEntries(report.entries.map(entry=>[entry.mode,entry]));
+    const row=(label,pick)=>`| ${label} | ${pick(entryMap.accurate)} | ${pick(entryMap.balanced)} | ${pick(entryMap.fast)} |`;
+    lines.push(row('状态',entry=>entry.success?'成功':'失败'));
+    lines.push(row('总耗时',entry=>entry.success?`${Math.round(entry.processing_ms)} ms`:'—'));
+    lines.push(row('字符数',entry=>entry.success?entry.chars.toLocaleString():'—'));
+    lines.push(row('覆盖率',entry=>entry.success?`${entry.coverage_pct}%`:'—'));
+    lines.push(row('文本层页',entry=>entry.success?`${entry.text_pages}`:'—'));
+    lines.push(row('OCR 页',entry=>entry.success?`${entry.ocr_pages}`:'—'));
+    lines.push(row('表格数',entry=>entry.success?`${entry.tables}`:'—'));
+    lines.push('');
+    lines.push(`> ${report.summary?.note||''}`);
+    content=lines.join('\n');
+    mime='text/markdown';
+    ext2='md';
+  }
+  const blob=new Blob(['\ufeff'+content],{type:`${mime};charset=utf-8`});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`pdf_mode_compare_${Date.now()}.${ext2}`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`✓ 已下载模式实验报告（.${ext2}）`,'var(--accent3)');
+}
+
+function applyRecommendedPdfMode(){
+  const mode=_lastModeCompareReport?.summary?.recommended_mode;
+  if(!mode){toast('⚠ 当前报告没有推荐模式','#ffb340');return;}
+  document.querySelectorAll('.pdf-mode-chip').forEach(chip=>chip.classList.toggle('on',chip.dataset.pdfMode===mode));
+  savePrefs();
+  toast(`已将 PDF 模式切换为：${getPdfModeLabel(mode)}`,'var(--accent3)');
+}
+
+function updateModeCompareProgress(modeIndex,totalModes,mode,jobData,fileName=''){
+  const fill=document.getElementById('mode-compare-fill');
+  const status=document.getElementById('mode-compare-status');
+  const current=document.getElementById('mode-compare-current');
+  const last=document.getElementById('mode-compare-last');
+  const currentPct=Math.max(0,Math.min(100,Number(jobData?.progress_pct||0)));
+  const overallPct=Math.max(0,Math.min(100,((modeIndex+(currentPct/100))/Math.max(totalModes,1))*100));
+  if(fill)fill.style.width=`${overallPct}%`;
+  if(status)status.textContent=`${modeIndex+1}/${totalModes} · ${getPdfModeLabel(mode)} · ${Math.round(currentPct)}%`;
+  if(current)current.textContent=`${getPdfModeLabel(mode)} ｜ ${buildProcessHint(jobData,fileName)}`;
+  if(last)last.textContent=`当前模式：${getPdfModeLabel(mode)}`;
+}
+
+async function runPdfModeCompare(){
+  if(_isProcessing){toast('⚠ 当前正在处理文件，请稍后再做模式实验','#ffb340');return;}
+  if(_isModeComparing)return;
+  const candidate=getModeCompareCandidate();
+  if(!candidate){toast('⚠ 请先添加或选中一个 PDF 文件','#ffb340');return;}
+  const modes=['accurate','balanced','fast'];
+  const entries=[];
+  _isModeComparing=true;
+  _modeCompareCancelRequested=false;
+  _activeModeCompareJobId=null;
+  updateRunBtn();
+  setModeCompareActionState('running');
+  setPanelOpen('mode_compare',true);
+  document.getElementById('mode-compare-fill').style.width='0%';
+  document.getElementById('mode-compare-status').textContent='准备中...';
+  document.getElementById('mode-compare-last').textContent='';
+  document.getElementById('mode-compare-current').textContent='即将对同一 PDF 依次运行三种模式';
+  document.getElementById('mode-compare-reco').innerHTML='<span class="dep-rec-item">实验进行中，完成后自动生成推荐结论</span>';
+  log('INFO',`开始 PDF 模式实验：${candidate.name}`);
+  try{
+    let cancelled=false;
+    for(let index=0;index<modes.length;index++){
+      if(_modeCompareCancelRequested){
+        cancelled=true;
+        break;
+      }
+      const mode=modes[index];
+      const label=getPdfModeLabel(mode);
+      _activeModeCompareMode=mode;
+      log('INFO',`[模式实验 ${index+1}/${modes.length}] ${candidate.name} ｜ ${label}`);
+      try{
+        const startData=await startProcessJob(candidate.file,'txt',mode);
+        _activeModeCompareJobId=startData.job_id;
+        updateModeCompareProgress(index,modes.length,mode,startData,candidate.name);
+        const data=await pollProcessJob(startData.job_id,(jobData)=>{
+          updateModeCompareProgress(index,modes.length,mode,jobData,candidate.name);
+        });
+        if(data.state==='cancelled'){
+          cancelled=true;
+          entries.push(buildModeCompareMetrics(mode,null,data.error||data.result?.error||'任务已取消'));
+          log('WARN',`[模式实验] ${label} 已取消`);
+          break;
+        }
+        const resultPayload=data.result||{};
+        const errorMessage=(data.state==='completed' && resultPayload.success)?'':(data.error||resultPayload.error||'处理失败');
+        const uiResult=buildUiResult(candidate,resultPayload,resultPayload.error_info||null);
+        const metrics=buildModeCompareMetrics(mode,uiResult,errorMessage);
+        entries.push(metrics);
+        if(metrics.success){
+          log('INFO',`[模式实验] ${label} 完成：${metrics.chars.toLocaleString()} 字符，${Math.round(metrics.processing_ms)}ms`);
+        }else{
+          log('WARN',`[模式实验] ${label} 失败：${metrics.error}`);
+        }
+      }catch(e){
+        const metrics=buildModeCompareMetrics(mode,null,e.message);
+        entries.push(metrics);
+        log('ERROR',`[模式实验] ${label} 失败：${e.message}`);
+      }finally{
+        _activeModeCompareJobId=null;
+        _activeModeCompareMode='';
+      }
+    }
+    const currentFill=Math.max(0,Math.min(100,Number(document.getElementById('mode-compare-fill').style.width.replace('%','')||0)));
+    const report=buildModeCompareReport(candidate,entries,{cancelled,progress_pct:currentFill});
+    _lastModeCompareReport=report;
+    renderModeCompareReport(report);
+    document.getElementById('mode-compare-fill').style.width=`${cancelled?currentFill:100}%`;
+    document.getElementById('mode-compare-status').textContent=cancelled?'已取消 · 保留部分结果':`已完成 · 推荐 ${report.summary?.recommended_label||'无推荐'}`;
+    document.getElementById('mode-compare-last').textContent=report.generated_at_label||'';
+    document.getElementById('mode-compare-current').textContent=report.summary?.reason||'实验已完成';
+    refreshModeComparePanel();
+    switchToStatsTab();
+    if(cancelled){
+      log('WARN',`PDF 模式实验已取消：${candidate.name}`);
+      toast('PDF 模式实验已取消，已保留部分结果','#ffb340');
+    }else{
+      log('INFO',`PDF 模式实验完成：${candidate.name} ｜ 推荐 ${report.summary?.recommended_label||'无推荐'}`);
+      toast(`PDF 模式实验完成：推荐 ${report.summary?.recommended_label||'无推荐'}`,_lastModeCompareReport.summary?.success_count?'var(--accent3)':'#ffb340');
+    }
+  }finally{
+    _isModeComparing=false;
+    _modeCompareCancelRequested=false;
+    _activeModeCompareJobId=null;
+    _activeModeCompareMode='';
+    updateRunBtn();
+    refreshModeComparePanel();
+  }
+}
+
+function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+
+function buildProcessHint(data,fileName=''){
+  const stage=String(data?.stage||'').toLowerCase();
+  const msg=String(data?.message||'').trim();
+  const cur=Number(data?.current_page||0);
+  const totalPages=Number(data?.total_pages||0);
+  const stageTextMap={
+    queued:'📦 文件已入队，马上开始',
+    running:'🚀 任务已启动',
+    prepare:'🧭 正在检查文件内容',
+    parser_ready:'🧩 已识别文件类型',
+    parsing:'📄 正在解析文档内容',
+    parsed:'🧾 文档解析完成，准备整理',
+    pdf_prepare:'📚 正在读取 PDF 结构',
+    pdf_open:'📖 已打开 PDF，开始逐页处理',
+    pdf_page_prepare:'🔎 正在读取当前页文字层',
+    pdf_page_ocr:'🧠 文字层较弱，启动 OCR 增强',
+    pdf_ocr_render:'🖼 正在渲染 OCR 图像',
+    pdf_ocr_variant:'🤖 正在尝试更合适的 OCR 方案',
+    pdf_page_done:'✅ 当前页处理完成',
+    pdf_finalize:'🧷 正在汇总 PDF 页结果',
+    analyzing:'🧪 正在分析关键词和摘要',
+    formatting:'🎁 正在生成最终输出',
+    image_prepare:'🖼 正在读取图片',
+    image_easyocr:'🤖 正在尝试 EasyOCR',
+    image_tesseract:'🔤 正在尝试 Tesseract',
+    image_finalize:'🧾 正在整理 OCR 结果',
+    cancelling:'⏳ 正在取消任务',
+    cancelled:'⏹ 任务已取消',
+    done:'✅ 处理完成',
+    error:'⚠ 处理失败',
+  };
+  const stageText=stageTextMap[stage]||'⏳ 正在处理中';
+  const pageText=(cur&&totalPages)?`｜第 ${cur}/${totalPages} 页`:(cur?`｜第 ${cur} 页`:'');
+  const safeMsg=msg && msg!==stageText ? msg : '';
+  const fileText=fileName?`《${fileName}》`:'';
+  return [stageText,fileText,pageText,safeMsg?`｜${safeMsg}`:''].join('').trim();
+}
+
+function updateRealtimeProgressUI(completedBefore,totalFiles,jobData,fileName=''){
+  const gbar=document.getElementById('gbar');
+  const progRow=document.getElementById('progress-row');
+  const progFill=document.getElementById('prog-fill');
+  const progLabel=document.getElementById('prog-label');
+  const progHint=document.getElementById('prog-hint');
+  const resultStatus=document.getElementById('result-status');
+  const resultFile=document.getElementById('result-file');
+  const currentProgress=Math.max(0,Math.min(100,Number(jobData?.progress_pct||0)));
+  const overallPct=Math.max(0,Math.min(100,((completedBefore+(currentProgress/100))/Math.max(totalFiles,1))*100));
+  const fileIndex=Math.min(completedBefore+1,totalFiles);
+  const currentPage=Number(jobData?.current_page||0);
+  const totalPages=Number(jobData?.total_pages||0);
+  gbar.classList.remove('ind');
+  gbar.style.width=`${overallPct}%`;
+  progRow.classList.add('visible');
+  progFill.style.width=`${overallPct}%`;
+  progLabel.textContent=totalFiles>1?`${fileIndex}/${totalFiles} · ${Math.round(currentProgress)}%`:`${Math.round(currentProgress)}%`;
+  progHint.textContent=buildProcessHint(jobData,fileName);
+  if(resultFile && fileName)resultFile.textContent=fileName;
+  if(resultStatus){
+    const state=String(jobData?.state||'').toLowerCase();
+    let prefix=(state==='cancelling'?'取消中':(state==='cancelled'?'已取消':'处理中'));
+    let statusText=totalFiles>1?`${prefix} ${fileIndex}/${totalFiles}`:prefix;
+    if(currentPage && totalPages)statusText+=` · 第 ${currentPage}/${totalPages} 页`;
+    statusText+=` · ${Math.round(currentProgress)}%`;
+    resultStatus.textContent=statusText;
+  }
+}
+
+async function startProcessJob(file,fmt,pdfMode){
+  const fd=new FormData();
+  fd.append('file',file);
+  fd.append('format',fmt);
+  fd.append('pdf_mode',pdfMode);
+  const res=await fetch('/process/start',{method:'POST',body:fd});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok || !data.success || !data.job_id){
+    throw new Error(data.error||'启动处理任务失败，请确认后端已重启');
+  }
+  return data;
+}
+
+async function cancelProcessJob(jobId){
+  const res=await fetch(`/process/${jobId}/cancel`,{method:'POST'});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok || !data.success){
+    throw new Error(data.error||'取消处理任务失败');
+  }
+  return data;
+}
+
+async function pollProcessJob(jobId,onUpdate){
+  let retryCount=0;
+  while(true){
+    try{
+      const res=await fetch(`/process/${jobId}`,{cache:'no-store'});
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok || !data.success){
+        throw new Error(data.error||'查询处理进度失败');
+      }
+      retryCount=0;
+      if(typeof onUpdate==='function')onUpdate(data);
+      if(data.state==='completed' || data.state==='failed' || data.state==='cancelled')return data;
+    }catch(e){
+      retryCount++;
+      if(retryCount>=3)throw e;
+    }
+    await sleep(350);
+  }
+}
+
+async function cancelCurrentProcessing(){
+  if(!_isProcessing){toast('当前没有可取消的处理任务','#ffb340');return;}
+  if(_processCancelRequested)return;
+  _processCancelRequested=true;
+  updateRunBtn();
+  log('WARN',_activeProcessJobId?`请求取消处理任务：${_activeProcessJobId}`:'请求取消当前处理队列');
+  document.getElementById('prog-hint').textContent='⏳ 正在取消当前处理任务...';
+  if(!_activeProcessJobId)return;
+  try{
+    await cancelProcessJob(_activeProcessJobId);
+  }catch(e){
+    _processCancelRequested=false;
+    updateRunBtn();
+    log('ERROR',`取消处理任务失败: ${e.message}`);
+    toast(`取消处理任务失败: ${e.message}`,'#ff6b8a');
+  }
+}
+
+async function cancelModeCompare(){
+  if(!_isModeComparing){toast('当前没有可取消的模式实验','#ffb340');return;}
+  if(_modeCompareCancelRequested)return;
+  _modeCompareCancelRequested=true;
+  setModeCompareActionState('cancelling');
+  document.getElementById('mode-compare-current').textContent='正在取消模式实验，请稍候...';
+  log('WARN',_activeModeCompareJobId?`请求取消模式实验任务：${_activeModeCompareJobId}`:'请求取消模式实验');
+  if(!_activeModeCompareJobId)return;
+  try{
+    const data=await cancelProcessJob(_activeModeCompareJobId);
+    if(data.state==='cancelled'){
+      document.getElementById('mode-compare-current').textContent='当前模式已取消，正在结束实验...';
+      return;
+    }
+    updateModeCompareProgress(0,1,_activeModeCompareMode||getPdfMode(),data,data.file_name||'');
+  }catch(e){
+    _modeCompareCancelRequested=false;
+    setModeCompareActionState('running');
+    log('ERROR',`取消模式实验失败: ${e.message}`);
+    toast(`取消模式实验失败: ${e.message}`,'#ff6b8a');
+  }
+}
+
+// Process
+async function runProcess(){
+  if(!files.length)return;
+  if(_isModeComparing){toast('⚠ 模式实验进行中，请稍后再开始正式处理','#ffb340');return;}
+  if(_isProcessing)return;
+  _isProcessing=true;
+  _processCancelRequested=false;
+  updateRunBtn();
+  setModeCompareActionState('idle');
+  if(_processProgressHideTimer){clearTimeout(_processProgressHideTimer);_processProgressHideTimer=null;}
+  if(_processProgressCollapseTimer){clearTimeout(_processProgressCollapseTimer);_processProgressCollapseTimer=null;}
+  const gbar=document.getElementById('gbar');
+  gbar.classList.remove('ind');
+  gbar.style.width='0%';
+  const progRow=document.getElementById('progress-row');
+  const progFill=document.getElementById('prog-fill');
+  const progLabel=document.getElementById('prog-label');
+  const progHint=document.getElementById('prog-hint');
+  progRow.classList.add('visible');
+  progFill.style.width='0%';
+  progLabel.textContent='0%';
+  progHint.textContent='📦 正在准备处理队列…';
+  const fmt=getFormat();
+  const pdfMode=getPdfMode();
+  const total=files.length;
+  let done=0;
+  let cancelled=false;
+  try{
+    files.forEach(f=>{f.status='ready';f.progress_pct=0;});
+    renderFiles();
+    log('INFO',`开始处理 ${total} 个文件（会覆盖旧结果）｜ PDF模式：${pdfMode}`);
+    for(let i=0;i<files.length;i++){
+      if(_processCancelRequested){
+        cancelled=true;
+        break;
+      }
+      const f=files[i];
+      f.status='proc';f.progress_pct=0;activeIdx=i;
+      updateRealtimeProgressUI(i,total,{progress_pct:0,stage:'queued',message:'文件已进入处理队列'},f.name);
+      renderFiles();
+      log('INFO',`[${i+1}/${total}] → ${f.name}`);
+      try{
+        const startData=await startProcessJob(f.file,fmt,pdfMode);
+        _activeProcessJobId=startData.job_id;
+        updateRealtimeProgressUI(i,total,startData,f.name);
+        const data=await pollProcessJob(startData.job_id,(jobData)=>{
+          const nextProgress=Math.max(0,Math.min(100,Number(jobData?.progress_pct||0)));
+          const roundedNext=Math.round(nextProgress);
+          const roundedPrev=Math.round(Number(f.progress_pct||0));
+          f.progress_pct=nextProgress;
+          if(roundedPrev!==roundedNext || f.progress_stage!==jobData?.stage){
+            f.progress_stage=jobData?.stage||'';
+            renderFiles();
+          }
+          updateRealtimeProgressUI(i,total,jobData,f.name);
+        });
+        if(data.state==='cancelled'){
+          cancelled=true;
+          f.progress_pct=Math.max(0,Math.min(100,Number(data.progress_pct||f.progress_pct||0)));
+          f.result=buildUiResult(f,data.result||{error:data.error||'任务已取消'},data.result?.error_info||buildClientErrorInfo(data.error||'任务已取消'));
+          f.status='cancel';
+          log('WARN',`⏹ ${f.name}: ${data.error||'任务已取消'}`);
+          showResult(f.result,f.name);
+          updateRealtimeProgressUI(i,total,{...data,stage:'cancelled',message:data.error||'任务已取消'},f.name);
+          break;
+        }
+        const resultPayload=data.result||{};
+        if(data.state!=='completed' || !resultPayload.success){
+          f.progress_pct=100;
+          f.result=buildUiResult(f,resultPayload,resultPayload.error_info||buildClientErrorInfo(data.error||resultPayload.error||'处理失败'));
+          f.status='error';
+          log('ERROR',`✗ ${f.name}: ${data.error||resultPayload.error||'处理失败'}`);
+          showResult(f.result,f.name);
+          updateRealtimeProgressUI(i,total,{...data,progress_pct:100,stage:'error'},f.name);
+          continue;
+        }
+        f.progress_pct=100;
+        f.result=buildUiResult(f,resultPayload);
+        f.status='done';done++;
+        const chars=resultPayload.statistics?.char_count||0;
+        const ms=resultPayload.processing_ms||resultPayload.statistics?.processing_ms||0;
+        updateRealtimeProgressUI(i,total,{...data,progress_pct:100,stage:'done',message:'处理完成'},f.name);
+        log('INFO',`✓ ${f.name} — ${chars.toLocaleString()} 字符，${Math.round(ms)}ms`);
+        showResult(f.result,f.name);
+        saveToHistory(f,f.result);
+      }catch(e){
+        f.progress_pct=100;
+        f.status='error';
+        f.result=buildUiResult(f,{error:e.message},buildClientErrorInfo(e.message));
+        log('ERROR',`✗ ${f.name}: ${e.message}`);
+        showResult(f.result,f.name);
+        updateRealtimeProgressUI(i,total,{progress_pct:100,stage:'error',message:e.message},f.name);
+      }finally{
+        _activeProcessJobId=null;
+      }
+      renderFiles();updateBatchBar();
+    }
+    if(cancelled){
+      progHint.textContent='⏹ 处理已取消，可重新开始或查看当前结果';
+      progLabel.textContent=`${done}/${total}`;
+      document.getElementById('result-status').textContent=`${done}/${total} 完成 · 已取消`;
+      log('WARN',`处理队列已取消：已完成 ${done}/${total} 个文件`);
+      toast(`处理已取消：已完成 ${done}/${total} 个文件`,'#ffb340');
+    }else{
+      progFill.style.width='100%';progLabel.textContent=`${done}/${total}`;
+      progHint.textContent=done===total?'🎉 本轮文件已全部处理完成':'📌 本轮处理结束，可查看失败项日志';
+      gbar.style.width='100%';
+      document.getElementById('result-status').textContent=`${done}/${total} 完成`;
+      const totalChars=files.filter(f=>f.status==='done').reduce((a,f)=>a+(f.result?.stats?.char_count||f.result?.stats?.chars||0),0);
+      log('INFO',`全部完成 ✓  共提取 ${totalChars.toLocaleString()} 字符`);
+      toast(`✓ ${done}/${total} 处理完成，共提取 ${totalChars.toLocaleString()} 字符`);
+    }
+    _processProgressHideTimer=setTimeout(()=>{
+      gbar.style.transition='width 1s';
+      gbar.style.width='0%';
+      _processProgressCollapseTimer=setTimeout(()=>{
+        gbar.style.transition='';
+        progRow.classList.remove('visible');
+        progHint.textContent='等待开始…';
+        _processProgressCollapseTimer=null;
+      },1100);
+      _processProgressHideTimer=null;
+    },1000);
+  }finally{
+    _isProcessing=false;
+    _processCancelRequested=false;
+    updateRunBtn();
+    refreshModeComparePanel();
+  }
+}
+
+// Show result
+function showResult(result,fname){
+  _lastResult=result;
+  document.getElementById('search-input').value='';
+  document.getElementById('search-count').textContent='';
+  _searchMatches=[];_searchIdx=-1;
+  const rawText=(result.text||'').replace(/<[^>]+>/g,'');
+  _rawText=rawText;
+  const to=document.getElementById('text-out'),ph=document.getElementById('ph-text');
+  if(rawText){to.textContent=rawText;to.style.display='block';ph.style.display='none';}
+  else if(result.error){to.textContent=`[处理失败]\n${result.error}`;to.style.display='block';ph.style.display='none';}
+  else{to.style.display='none';ph.style.display='flex';}
+  const chars=result.stats?.char_count||result.stats?.chars||rawText.length||0;
+  document.getElementById('tb-chars').textContent=chars>0?chars.toLocaleString():'—';
+  // Tables
+  const tbl=document.getElementById('table-out'),pht=document.getElementById('ph-table');
+  tbl.innerHTML='';
+  if(result.tables&&result.tables.length){
+    result.tables.forEach((rows,ti)=>{
+      const lbl=document.createElement('div');lbl.className='tbl-label';
+      lbl.textContent=`表格 ${ti+1}   (${rows.length} 行 × ${(rows[0]||[]).length} 列)`;
+      tbl.appendChild(lbl);
+      const t=document.createElement('table');
+      rows.forEach((row,ri)=>{
+        const tr=document.createElement('tr');
+        (row||[]).forEach(cell=>{const el=document.createElement(ri===0?'th':'td');el.textContent=cell??'';tr.appendChild(el);});
+        t.appendChild(tr);
+      });
+      tbl.appendChild(t);
+    });
+    tbl.style.display='block';pht.style.display='none';
+    document.getElementById('tb-tables').textContent=result.tables.length;
+  }else{tbl.style.display='none';pht.style.display='flex';document.getElementById('tb-tables').textContent='0';}
+  // Stats — enhanced
+  const s=result.stats||{};
+  const zhCount=(rawText.match(/[\u4e00-\u9fa5]/g)||[]).length;
+  const enCount=(rawText.match(/\b[a-zA-Z]+\b/g)||[]).length;
+  const punctCount=(rawText.match(/[，。！？；：、""''（）《》【】…—]/g)||[]).length;
+  const totalCharCount=s.char_count||s.chars||chars||0;
+  const fileSizeKB=result.file?result.file.size/1024:0;
+  const density=fileSizeKB>0?Math.round(totalCharCount/fileSizeKB):0;
+  const readMins=zhCount>enCount?(zhCount/400):(enCount/200);
+  const readTimeStr=readMins<1?'< 1 分钟':readMins<60?`${Math.ceil(readMins)} 分钟`:`${(readMins/60).toFixed(1)} 小时`;
+  const pages=result.meta?.pages||result.meta?.page_count||result.meta?.slide_count||result.meta?.['页数']||result.meta?.['幻灯片数']||s.page_count||'—';
+  document.getElementById('s-chars').textContent=totalCharCount.toLocaleString();
+  document.getElementById('s-zh').textContent=zhCount.toLocaleString();
+  document.getElementById('s-en').textContent=enCount.toLocaleString();
+  document.getElementById('s-para').textContent=s.paragraph_count||s.paras||'—';
+  document.getElementById('s-readtime').textContent=readTimeStr;
+  document.getElementById('s-pages').textContent=String(pages);
+  document.getElementById('s-tables').textContent=(result.tables||[]).length;
+  document.getElementById('s-time').textContent=s.processing_ms?Math.round(s.processing_ms):'—';
+  document.getElementById('s-size').textContent=result.file?fmtSz(result.file.size):'—';
+  document.getElementById('s-files').textContent=files.filter(f=>f.status==='done').length;
+  document.getElementById('s-density').textContent=density>0?density.toLocaleString():'—';
+  document.getElementById('s-punct').textContent=punctCount.toLocaleString();
+  // Keywords
+  const kwCloud=document.getElementById('kw-cloud');
+  const kws=s.keywords||[];
+  if(kws.length){
+    kwCloud.innerHTML=kws.slice(0,18).map(item=>{
+      const word=Array.isArray(item)?item[0]:item;
+      const count=Array.isArray(item)?item[1]:'';
+      return `<span class="kw-tag">${word}<span class="kw-cnt">${count}</span></span>`;
+    }).join('');
+  }else kwCloud.innerHTML='<span style="color:var(--dim);font-size:11px">暂无关键词</span>';
+  // Summary
+  const sumCard=document.getElementById('summary-card');
+  if(s.summary){sumCard.style.display='block';document.getElementById('summary-text').textContent=s.summary;}
+  else sumCard.style.display='none';
+  renderPdfCompare(result,rawText);
+  renderErrorCenter(result);
+  // Metadata
+  const detCard=document.getElementById('detail-card');
+  const meta=result.meta||{};
+  if(Object.keys(meta).length){
+    detCard.style.display='block';
+    document.getElementById('detail-rows').innerHTML=Object.entries(meta)
+      .filter(([k])=>k!=='page_sources')
+      .slice(0,16).map(([k,v])=>
+      `<div class="detail-row"><span class="detail-key">${esc(k)}</span><span class="detail-val">${esc(formatMetaValue(v))}</span></div>`
+    ).join('');
+  }else detCard.style.display='none';
+  document.getElementById('result-file').textContent=fname||'—';
+}
+
+// Search
+let _rawText='',_searchMatches=[],_searchIdx=-1;
+function doSearch(q){
+  const to=document.getElementById('text-out'),cnt=document.getElementById('search-count');
+  _searchMatches=[];_searchIdx=-1;
+  if(!q.trim()||!_rawText){to.textContent=_rawText;cnt.textContent='';return;}
+  const escaped=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const re=new RegExp(escaped,'gi');
+  let m,positions=[];
+  while((m=re.exec(_rawText))!==null)positions.push(m.index);
+  _searchMatches=positions;
+  cnt.textContent=positions.length?`${positions.length} 处`:'无结果';
+  if(!positions.length){to.textContent=_rawText;return;}
+  let html='',last=0;
+  positions.forEach((pos,i)=>{
+    html+=esc(_rawText.slice(last,pos));
+    html+=`<mark class="hl${i===0?' current':''}">${esc(_rawText.slice(pos,pos+q.length))}</mark>`;
+    last=pos+q.length;
+  });
+  html+=esc(_rawText.slice(last));
+  to.innerHTML=html;_searchIdx=0;scrollToMatch(0);
+}
+function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m]));}
+function navSearch(dir){
+  if(!_searchMatches.length)return;
+  _searchIdx=(_searchIdx+dir+_searchMatches.length)%_searchMatches.length;
+  document.querySelectorAll('mark.hl').forEach(m=>m.classList.remove('current'));
+  scrollToMatch(_searchIdx);
+  document.getElementById('search-count').textContent=`${_searchIdx+1}/${_searchMatches.length}`;
+}
+function scrollToMatch(i){
+  const marks=document.querySelectorAll('mark.hl');
+  if(marks[i]){marks[i].classList.add('current');marks[i].scrollIntoView({block:'center',behavior:'smooth'});}
+}
+
+// History
+function saveToHistory(f,result){
+  history=history.filter(item=>!(item.name===f.name && item.ext===f.ext));
+  const entry={
+    id:Date.now(),name:f.name,ext:f.ext,size:f.size,
+    chars:result.stats?.char_count||result.stats?.chars||0,
+    tables:(result.tables||[]).length,
+    time:new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),
+    result,  // 内存中保留完整 result
+  };
+  history.unshift(entry);
+  if(history.length>50)history=history.slice(0,50);
+  _persistHistory();
+  renderHistory();
+}
+function _persistHistory(){
+  try{
+    // 存储时精简 result：只保留 text/tables/stats/meta，去掉 formatted_output（太大）
+    const slim=history.map(h=>({
+      ...h,
+      result: h.result ? {
+        text: h.result.text||'',
+        tables: h.result.tables||[],
+        stats: h.result.stats||{},
+        meta: h.result.meta||{},
+        file: {name:h.name,size:h.size},
+      } : null,
+    }));
+    localStorage.setItem('df_history', JSON.stringify(slim));
+  }catch(e){
+    // localStorage 满了就只存元信息
+    try{
+      localStorage.setItem('df_history', JSON.stringify(history.map(h=>({...h,result:null}))));
+    }catch(e2){}
+  }
+}
+function renderHistory(){
+  const list=document.getElementById('hist-list');
+  const empty=document.getElementById('hist-empty');
+  list.querySelectorAll('.hist-item').forEach(el=>el.remove());
+  empty.style.display=history.length?'none':'block';
+  history.forEach((h,i)=>{
+    const t=TYPE[h.ext]||{icon:'📄'};
+    const item=document.createElement('div');
+    item.className='hist-item';
+    item.innerHTML=`
+      <span class="hi-icon">${t.icon}</span>
+      <div class="hi-info">
+        <div class="hi-name" title="${h.name}">${h.name}</div>
+        <div class="hi-meta">${h.time} · ${(h.chars||0).toLocaleString()}字 · ${h.tables}表格</div>
+      </div>
+      <button class="hi-del" title="删除">✕</button>`;
+    item.addEventListener('click',e=>{
+      if(e.target.classList.contains('hi-del'))return;
+      document.querySelectorAll('.hist-item').forEach(el=>el.classList.remove('active-hist'));
+      item.classList.add('active-hist');
+      if(h.result)showResult(h.result,h.name);
+      else toast('⚠ 历史结果已过期，请重新处理','#ffb340');
+    });
+    item.querySelector('.hi-del').addEventListener('click',e=>{
+      e.stopPropagation();history.splice(i,1);
+      _persistHistory();
+      renderHistory();
+    });
+    list.appendChild(item);
+  });
+  requestAnimationFrame(syncCollapsibleHeights);
+}
+function clearHistory(){history=[];try{localStorage.removeItem('df_history');}catch(e){}renderHistory();toast('历史已清空');}
+
+
+// Download
+function dl(fmt){
+  if(!_lastResult){toast('⚠ 请先处理文件','#ffb340');return;}
+  const rawText=(_lastResult.text||'').replace(/<[^>]+>/g,'');
+  let content,mime,ext2;
+  if(fmt==='json'){
+    content=JSON.stringify({exported_at:new Date().toISOString(),files:files.filter(f=>f.status==='done').map(f=>f.name),text:rawText,tables:_lastResult.tables,statistics:_lastResult.stats,metadata:_lastResult.meta},null,2);
+    mime='application/json';ext2='json';
+  }else if(fmt==='md'){
+    const s=_lastResult.stats||{};
+    content=`# DocFlow 提取结果\n\n> 导出时间：${new Date().toLocaleString()}\n\n## 文本内容\n\n${rawText}\n\n## 统计\n\n- 字符数：${s.char_count||s.chars||0}\n- 段落数：${s.paragraph_count||s.paras||0}\n- 表格数：${(_lastResult.tables||[]).length}\n`;
+    mime='text/markdown';ext2='md';
+  }else if(fmt==='csv'){
+    const rows=(_lastResult.tables||[]).flatMap((t,i)=>[['--- 表格 '+(i+1)+' ---'],...t,[]]);
+    content=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+    mime='text/csv';ext2='csv';
+  }else{
+    content=rawText;mime='text/plain';ext2='txt';
+  }
+  const blob=new Blob(['\ufeff'+content],{type:mime+';charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`docflow_${Date.now()}.${ext2}`;a.click();
+  URL.revokeObjectURL(url);
+  toast(`✓ 已下载 .${ext2} 文件`,'var(--accent3)');
+}
+
+// Copy
+function copyOut(){
+  const pane=document.querySelector('.tab-pane.active');
+  const text=pane.innerText;
+  if(!text.trim()||text.includes('上传文件后')){toast('⚠ 暂无内容','#ffb340');return;}
+  navigator.clipboard.writeText(text).then(()=>toast('✓ 已复制到剪贴板'));
+}
+
+// Toast
+function toast(msg,color){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.style.borderColor=color||'var(--accent)';el.style.color=color||'var(--accent)';
+  el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2600);
+}
+
+applyPrefs();
+renderHistory();
+renderModeCompareReport(null);
+refreshModeComparePanel();
+resetBatchSummaryPanel();
+loadDependencyStatus();
+window.addEventListener('resize',()=>requestAnimationFrame(syncCollapsibleHeights));
+log('INFO','💡 多文件：处理完成后点击文件列表条目可切换查看各自的结果');
+log('INFO','💡 搜索：在搜索框输入关键词，↑↓ 键跳转匹配位置');
+</script>
+</body>
+</html>

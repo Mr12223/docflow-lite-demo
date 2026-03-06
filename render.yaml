@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: docflow-lite-demo
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    autoDeployTrigger: commit
+    buildFilter:
+      ignoredPaths:
+        - reports/**
+        - uploads_temp/**
+        - test_documents/**
+        - test_documents_edge_cases/**
+        - evaluation_set/**
+        - .tmp_wheels/**
+        - __pycache__/**
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
