@@ -43,6 +43,8 @@ BATCH_SUITE_ALIASES = {
     "test_documents": SAMPLE_DATA_DIR / "test_documents",
     "test_documents_edge_cases": SAMPLE_DATA_DIR / "test_documents_edge_cases",
 }
+_EASYOCR_READER_CACHE = None
+_EASYOCR_READER_ERROR = None
 
 
 def _get_default_pdf_mode() -> str:
@@ -56,6 +58,96 @@ DEFAULT_PDF_MODE = _get_default_pdf_mode()
 def _normalize_pdf_mode(value: str) -> str:
     value = str(value or "").strip().lower()
     return value if value in {"accurate", "balanced", "fast"} else DEFAULT_PDF_MODE
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = str(os.getenv(name, "")).strip().lower()
+    if not value:
+        return default
+    return value in {"1", "true", "yes", "on"}
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        value = int(str(os.getenv(name, "")).strip())
+        return value if value > 0 else default
+    except Exception:
+        return default
+
+
+def _get_image_ocr_order() -> list[str]:
+    raw = str(os.getenv("DOCFLOW_IMAGE_OCR_ORDER", "tesseract,easyocr")).strip().lower()
+    engines = [item.strip() for item in raw.split(",") if item.strip()]
+    valid = [item for item in engines if item in {"tesseract", "easyocr"}]
+    return valid or ["tesseract", "easyocr"]
+
+
+def _get_easyocr_reader():
+    global _EASYOCR_READER_CACHE, _EASYOCR_READER_ERROR
+    if _EASYOCR_READER_CACHE is not None:
+        return _EASYOCR_READER_CACHE
+    if _EASYOCR_READER_ERROR is not None:
+        raise _EASYOCR_READER_ERROR
+
+    try:
+        easyocr = import_with_base_fallback("easyocr")
+        _EASYOCR_READER_CACHE = easyocr.Reader(["ch_sim", "en"], verbose=False)
+        return _EASYOCR_READER_CACHE
+    except Exception as exc:
+        _EASYOCR_READER_ERROR = exc
+        raise
+
+
+def _prepare_image_for_tesseract(image_path: str):
+    from PIL import Image, ImageOps
+
+    max_long_edge = _env_int("DOCFLOW_IMAGE_OCR_MAX_LONG_EDGE", 1600)
+    huge_trigger = _env_int("DOCFLOW_IMAGE_OCR_FAST_EDGE_TRIGGER", 2400)
+    huge_long_edge = _env_int("DOCFLOW_IMAGE_OCR_HUGE_LONG_EDGE", 1280)
+    apply_gray = _env_flag("DOCFLOW_IMAGE_OCR_GRAYSCALE", True)
+    apply_autocontrast = _env_flag("DOCFLOW_IMAGE_OCR_AUTOCONTRAST", True)
+
+    with Image.open(image_path) as source:
+        image = ImageOps.exif_transpose(source)
+        if image.mode not in ("RGB", "L"):
+            image = image.convert("RGB")
+
+        original_size = image.size
+        width, height = image.size
+        long_edge = max(width, height)
+        target_long_edge = huge_long_edge if long_edge >= huge_trigger else max_long_edge
+
+        if long_edge > target_long_edge:
+            scale = target_long_edge / max(long_edge, 1)
+            image = image.resize(
+                (max(1, int(width * scale)), max(1, int(height * scale))),
+                Image.LANCZOS,
+            )
+
+        if apply_gray and image.mode != "L":
+            image = ImageOps.grayscale(image)
+        if apply_autocontrast:
+            image = ImageOps.autocontrast(image)
+
+        prepared = image.copy()
+
+    return prepared, {
+        "original_size": original_size,
+        "prepared_size": prepared.size,
+        "long_edge_target": target_long_edge,
+        "grayscale": prepared.mode == "L",
+    }
+
+
+def _build_image_tesseract_config(base_config: str = "") -> str:
+    parts = [str(base_config or "").strip()]
+    psm = _env_int("DOCFLOW_IMAGE_OCR_PSM", 6)
+    oem = os.getenv("DOCFLOW_IMAGE_OCR_OEM", "").strip()
+    if psm:
+        parts.append(f"--psm {psm}")
+    if oem:
+        parts.append(f"--oem {oem}")
+    return " ".join(part for part in parts if part).strip()
 
 # ── 创建 Flask 应用
 app = Flask(__name__)
@@ -903,44 +995,49 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
     engine_used = ""
     easyocr_error = ""
     tesseract_error = ""
+    prepared_meta = {}
+    engine_order = _get_image_ocr_order()
 
-    # 方案一：easyocr（推荐，中英文都好用）
-    try:
-        ensure_not_cancelled()
-        emit(24, "image_easyocr", "正在尝试 EasyOCR 识别")
-        easyocr = import_with_base_fallback("easyocr")
-        reader = easyocr.Reader(['ch_sim', 'en'], verbose=False)
-        results = reader.readtext(image_path, detail=0)
-        text = "\n".join(results)
-        engine_used = "EasyOCR"
-    except ImportError:
-        pass
-    except Exception as e:
-        easyocr_error = str(e)
+    for engine_name in engine_order:
+        if text or engine_used:
+            break
 
-    # 方案二：pytesseract（备用）
-    if not text and not engine_used:
-        try:
-            ensure_not_cancelled()
-            emit(56, "image_tesseract", "正在尝试 Tesseract 识别")
-            import pytesseract
-            from PIL import Image
-            prepared = prepare_pytesseract()
-            img = Image.open(image_path)
+        if engine_name == "tesseract":
             try:
                 ensure_not_cancelled()
-                text = pytesseract.image_to_string(
-                    img,
-                    lang=prepared.get("lang", "chi_sim+eng"),
-                    config=prepared.get("config", ""),
-                )
-            finally:
-                img.close()
-            engine_used = "Tesseract"
-        except ImportError:
-            pass
-        except Exception as e:
-            tesseract_error = str(e)
+                emit(24, "image_preprocess", "正在优化图片尺寸与对比度")
+                import pytesseract
+
+                prepared = prepare_pytesseract()
+                img, prepared_meta = _prepare_image_for_tesseract(image_path)
+                try:
+                    ensure_not_cancelled()
+                    emit(58, "image_tesseract", "正在尝试 Tesseract 识别")
+                    text = pytesseract.image_to_string(
+                        img,
+                        lang=prepared.get("lang", "chi_sim+eng"),
+                        config=_build_image_tesseract_config(prepared.get("config", "")),
+                    )
+                finally:
+                    img.close()
+                engine_used = "Tesseract"
+            except ImportError:
+                pass
+            except Exception as e:
+                tesseract_error = str(e)
+
+        elif engine_name == "easyocr":
+            try:
+                ensure_not_cancelled()
+                emit(72, "image_easyocr", "正在尝试 EasyOCR 识别")
+                reader = _get_easyocr_reader()
+                results = reader.readtext(image_path, detail=0)
+                text = "\n".join(results)
+                engine_used = "EasyOCR"
+            except ImportError:
+                pass
+            except Exception as e:
+                easyocr_error = str(e)
 
     # 两种都没装：返回提示
     if not engine_used:
@@ -979,7 +1076,7 @@ OCR 引擎: {engine_used}
         "format": "image",
         "text": text,
         "tables": [],
-        "metadata": {"engine": engine_used, "file": filename},
+        "metadata": {"engine": engine_used, "file": filename, "ocr_preprocess": prepared_meta},
         "statistics": {
             "char_count": char_count,
             "paragraph_count": len(text.splitlines()),
