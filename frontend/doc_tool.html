@@ -30,8 +30,10 @@ nav{position:relative;z-index:20;display:flex;align-items:center;gap:16px;paddin
 .gbar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent3));transition:width .4s ease}
 .gbar-fill.ind{width:35%!important;animation:ind 1.4s ease-in-out infinite}
 @keyframes ind{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
-.app{position:relative;z-index:1;flex:1;display:grid;grid-template-columns:var(--left-w) var(--mid-w) 1fr;min-height:0}
-.col{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;min-height:0}
+.app{position:relative;z-index:1;flex:1;display:grid;grid-template-columns:var(--left-w) var(--mid-w) 1fr;grid-template-areas:"files opts result";min-height:0}
+.col{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;min-height:0;min-width:0}
+.files-col{grid-area:files}
+.opts-col{grid-area:opts}
 .col-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--s1)}
 .col-title{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);flex:1}
 .col-badge{font-family:var(--mono);font-size:10px;padding:2px 7px;background:var(--s3);border:1px solid var(--border2);border-radius:10px;color:var(--dim)}
@@ -217,7 +219,7 @@ nav{position:relative;z-index:20;display:flex;align-items:center;gap:16px;paddin
 .hi-del:hover{color:var(--accent2);background:rgba(255,106,142,.1)}
 .hist-empty{padding:20px 14px;text-align:center;color:var(--muted);font-size:11px;font-family:var(--mono)}
 /* Result col */
-.result-col{display:flex;flex-direction:column;min-height:0;border-right:none}
+.result-col{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:none;grid-area:result}
 .result-head{display:flex;align-items:center;gap:8px;padding:0 14px;height:44px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--s1)}
 .result-title{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);flex-shrink:0}
 .result-file{font-size:12px;font-weight:500;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 8px}
@@ -375,6 +377,88 @@ tr:hover td{background:rgba(124,106,255,.04)}
 .copy-btn{padding:5px 11px;font-family:var(--mono);font-size:10.5px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--dim);cursor:pointer;transition:all .15s}
 .copy-btn:hover{border-color:var(--border2);color:var(--text)}
 /* Toast */
+@media (max-width: 1480px){
+  :root{--left-w:256px;--mid-w:280px}
+  .mode-report-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width: 1180px){
+  :root{--left-w:244px;--mid-w:244px}
+  .app{
+    grid-template-columns:minmax(244px,320px) minmax(0,1fr);
+    grid-template-rows:minmax(260px,38vh) minmax(0,1fr);
+    grid-template-areas:
+      "files result"
+      "opts result";
+  }
+  .result-head{flex-wrap:wrap;height:auto;padding:10px 14px}
+  .result-file{flex-basis:100%;margin:0;white-space:normal;overflow-wrap:anywhere}
+  .search-bar{flex-wrap:wrap}
+  .search-wrap{min-width:100%}
+  .tab-bar{overflow-x:auto;padding-bottom:6px}
+  .tab-bar::-webkit-scrollbar{height:4px}
+  .tab-bar::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+  .pdf-mode-row{flex-wrap:wrap}
+  .pdf-mode-chip{min-width:140px}
+  .stat-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dep-profile-grid,.batch-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mode-table-row{grid-template-columns:120px repeat(3,minmax(120px,1fr))}
+}
+@media (max-width: 860px){
+  html,body{height:auto;overflow:auto}
+  body{min-height:100vh}
+  nav{height:auto;min-height:52px;padding:10px 14px;flex-wrap:wrap;row-gap:8px}
+  .nav-pill{width:100%;text-align:center}
+  .app{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto auto auto;
+    grid-template-areas:
+      "result"
+      "files"
+      "opts";
+    min-height:auto;
+  }
+  .col,.result-col{border-right:none;border-bottom:1px solid var(--border);overflow:visible;min-height:auto}
+  .col-body{overflow:visible}
+  .result-col{min-height:72vh}
+  .result-body{min-height:420px}
+  .result-head,.search-bar,.result-foot,.collapsible-head,.dep-command-head{flex-wrap:wrap}
+  .search-wrap{min-width:100%}
+  .search-count{margin-left:0;text-align:left}
+  .search-nav{margin-left:auto}
+  .collapsible-actions{width:100%;justify-content:flex-start;flex-wrap:wrap}
+  .drop-actions,.process-actions,.mode-compare-actions,.mode-report-actions,.dl-group{display:flex;flex-wrap:wrap;width:100%}
+  .drop-btn,.process-actions .run-btn,.process-cancel-btn,.mode-compare-actions .panel-action-btn,.mode-report-actions .panel-action-btn,.copy-btn{flex:1 1 160px}
+  .opt-grid,.dep-profile-grid,.batch-stats-grid,.mode-report-grid{grid-template-columns:1fr}
+  .stat-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mode-report-table{overflow-x:auto;padding-bottom:4px}
+  .mode-table-row{min-width:580px}
+}
+@media (max-width: 640px){
+  nav{padding:10px 12px}
+  .logo{font-size:16px}
+  .nav-pill{display:none}
+  .col-head,.result-head{padding:10px 12px}
+  .drop-zone{margin:8px;padding:14px 10px}
+  .opts-section{padding:10px 12px 6px}
+  .opts-divider{margin:6px 12px}
+  .fmt-chips{padding:0 12px 10px}
+  .pdf-mode-box,.mode-compare-box,.batch-test-box,.dep-box,.batch-summary-box,.history-panel{margin:0 12px 10px}
+  .pdf-mode-row{flex-direction:column}
+  .pdf-mode-chip{min-width:0}
+  .search-bar,.tab-bar,.result-foot{padding-left:8px;padding-right:8px}
+  .search-wrap input{font-size:11px}
+  .tab{padding:6px 10px}
+  .table-scroll,.stats-body,.log-body{padding:10px}
+  .stat-row,.mode-report-metrics{grid-template-columns:1fr}
+  .dl-label,.foot-sep{display:none}
+  .dl-btn,.copy-btn{width:100%;justify-content:center}
+  .toast{width:min(calc(100vw - 20px),420px);white-space:normal;text-align:center}
+}
+@media (max-width: 420px){
+  .file-item{grid-template-columns:18px 1fr}
+  .fi-right{display:none}
+  .drop-actions{flex-direction:column}
+}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--s2);border:1px solid var(--accent);color:var(--accent);font-family:var(--mono);font-size:11.5px;padding:9px 22px;border-radius:8px;opacity:0;pointer-events:none;transition:all .25s;z-index:999;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -389,7 +473,7 @@ tr:hover td{background:rgba(124,106,255,.04)}
 <div class="app">
 
 <!-- COL 1: FILE QUEUE -->
-<div class="col">
+<div class="col files-col">
   <div class="col-head">
     <span class="col-title">文件队列</span>
     <span class="col-badge" id="file-count">0 个</span>
@@ -434,7 +518,7 @@ tr:hover td{background:rgba(124,106,255,.04)}
 </div>
 
 <!-- COL 2: OPTIONS + HISTORY -->
-<div class="col">
+<div class="col opts-col">
   <div class="col-head"><span class="col-title">选项 &amp; 历史</span></div>
   <div class="col-body">
     <div class="opts-section">
