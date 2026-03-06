@@ -11,8 +11,6 @@ reports/
 .tmp_pymupdf.json
 docflow_*.txt
 
-sample_data/
-
 .claude/
 .DS_Store
 Thumbs.db

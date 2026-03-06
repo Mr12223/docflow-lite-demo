@@ -1,0 +1,4 @@
+﻿UTF-8 BOM 测试
+第一行：中文
+Second line: English
+12345

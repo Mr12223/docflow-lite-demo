@@ -1,0 +1,29 @@
+{
+  "project": "DocFlow",
+  "purpose": "格式识别与内容提取测试",
+  "date": "2026-03-06",
+  "tags": [
+    "pdf",
+    "docx",
+    "xlsx",
+    "pptx",
+    "ocr",
+    "utf-8"
+  ],
+  "summary": {
+    "zh": "用于验证多格式文档提取结果是否正常。",
+    "en": "Used to verify multi-format document extraction."
+  },
+  "records": [
+    {
+      "id": 1,
+      "name": "张三",
+      "score": 92
+    },
+    {
+      "id": 2,
+      "name": "李四",
+      "score": 88
+    }
+  ]
+}

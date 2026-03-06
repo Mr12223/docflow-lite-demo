@@ -1,0 +1,44 @@
+{
+  "name": "DocFlow 毕设演示评价集",
+  "description": "用于答辩演示与论文测试章节的基础评价清单，可继续扩展为真实样本评价集。",
+  "items": [
+    {
+      "path": "test_documents/sample.txt",
+      "expected_success": true,
+      "min_char_count": 80,
+      "must_contain": ["DocFlow", "parser", "testing"],
+      "notes": "纯文本基础样本"
+    },
+    {
+      "path": "test_documents/sample.md",
+      "expected_success": true,
+      "min_char_count": 80,
+      "must_contain": ["DocFlow", "records"],
+      "notes": "Markdown 样本"
+    },
+    {
+      "path": "test_documents/sample.json",
+      "expected_success": true,
+      "min_char_count": 30,
+      "must_contain": ["DocFlow", "records", "2026-03-06"],
+      "notes": "JSON 样本"
+    },
+    {
+      "path": "test_documents/sample.csv",
+      "expected_success": true,
+      "min_char_count": 20,
+      "must_contain": ["001", "Notes"],
+      "notes": "CSV 样本"
+    },
+    {
+      "path": "test_documents_edge_cases/11_invalid.json",
+      "expected_success": false,
+      "notes": "非法 JSON 应失败"
+    },
+    {
+      "path": "test_documents_edge_cases/70_unsupported.bin",
+      "expected_success": false,
+      "notes": "不支持格式应失败"
+    }
+  ]
+}

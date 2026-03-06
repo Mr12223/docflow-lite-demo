@@ -12,7 +12,6 @@ services:
       ignoredPaths:
         - reports/**
         - uploads_temp/**
-        - sample_data/**
         - .tmp_wheels/**
         - __pycache__/**
     envVars:

@@ -1,0 +1,30 @@
+{
+  "case": "nested",
+  "items": [
+    {
+      "id": 1,
+      "value": "项目-1"
+    },
+    {
+      "id": 2,
+      "value": "项目-2"
+    },
+    {
+      "id": 3,
+      "value": "项目-3"
+    },
+    {
+      "id": 4,
+      "value": "项目-4"
+    },
+    {
+      "id": 5,
+      "value": "项目-5"
+    }
+  ],
+  "meta": {
+    "empty": "",
+    "null": null,
+    "bool": true
+  }
+}
