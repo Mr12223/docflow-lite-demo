@@ -7,6 +7,7 @@ app.py — DocFlow 后端服务
 import os
 import sys
 import base64
+import hashlib
 import json
 import time
 import subprocess
@@ -45,6 +46,10 @@ BATCH_SUITE_ALIASES = {
 }
 _EASYOCR_READER_CACHE = None
 _EASYOCR_READER_ERROR = None
+IMAGE_OCR_CACHE_VERSION = "v1"
+IMAGE_OCR_CACHE_DIR = PROJECT_ROOT / "uploads_temp" / "ocr_cache"
+IMAGE_OCR_MEMORY_CACHE = {}
+IMAGE_OCR_CACHE_LOCK = threading.Lock()
 
 
 def _get_default_pdf_mode() -> str:
@@ -149,13 +154,206 @@ def _build_image_tesseract_config(base_config: str = "") -> str:
         parts.append(f"--oem {oem}")
     return " ".join(part for part in parts if part).strip()
 
+
+def _clone_json_payload(payload):
+    return json.loads(json.dumps(payload, ensure_ascii=False))
+
+
+def _is_image_ocr_cache_enabled() -> bool:
+    return _env_flag("DOCFLOW_ENABLE_IMAGE_OCR_CACHE", True)
+
+
+def _compute_file_sha256(file_path: str) -> str:
+    digest = hashlib.sha256()
+    with open(file_path, "rb") as file_obj:
+        while True:
+            chunk = file_obj.read(1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _get_image_ocr_profile() -> dict:
+    result = {
+        "version": IMAGE_OCR_CACHE_VERSION,
+        "order": _get_image_ocr_order(),
+        "max_long_edge": _env_int("DOCFLOW_IMAGE_OCR_MAX_LONG_EDGE", 1600),
+        "fast_edge_trigger": _env_int("DOCFLOW_IMAGE_OCR_FAST_EDGE_TRIGGER", 2400),
+        "huge_long_edge": _env_int("DOCFLOW_IMAGE_OCR_HUGE_LONG_EDGE", 1280),
+        "grayscale": _env_flag("DOCFLOW_IMAGE_OCR_GRAYSCALE", True),
+        "autocontrast": _env_flag("DOCFLOW_IMAGE_OCR_AUTOCONTRAST", True),
+        "psm": _env_int("DOCFLOW_IMAGE_OCR_PSM", 6),
+        "oem": os.getenv("DOCFLOW_IMAGE_OCR_OEM", "").strip(),
+    }
+    return result
+
+
+def _build_image_ocr_cache_key(image_path: str) -> tuple[str, str, dict]:
+    file_sha256 = _compute_file_sha256(image_path)
+    profile = _get_image_ocr_profile()
+    profile_json = json.dumps(profile, ensure_ascii=False, sort_keys=True)
+    cache_key = hashlib.sha256(f"{file_sha256}|{profile_json}".encode("utf-8")).hexdigest()
+    return cache_key, file_sha256, profile
+
+
+def _get_image_ocr_cache_file(cache_key: str) -> Path:
+    return IMAGE_OCR_CACHE_DIR / f"{cache_key}.json"
+
+
+def _load_image_ocr_cache(cache_key: str) -> Optional[dict]:
+    if not _is_image_ocr_cache_enabled():
+        return None
+
+    with IMAGE_OCR_CACHE_LOCK:
+        cached_payload = IMAGE_OCR_MEMORY_CACHE.get(cache_key)
+    if cached_payload:
+        return _clone_json_payload(cached_payload)
+
+    cache_file = _get_image_ocr_cache_file(cache_key)
+    if not cache_file.exists():
+        return None
+
+    try:
+        payload = json.loads(cache_file.read_text(encoding="utf-8"))
+        if payload.get("version") != IMAGE_OCR_CACHE_VERSION:
+            return None
+        result = payload.get("result")
+        if not isinstance(result, dict):
+            return None
+    except Exception:
+        return None
+
+    with IMAGE_OCR_CACHE_LOCK:
+        IMAGE_OCR_MEMORY_CACHE[cache_key] = payload
+    return _clone_json_payload(payload)
+
+
+def _save_image_ocr_cache(cache_key: str, file_sha256: str, profile: dict, result: dict) -> None:
+    if not _is_image_ocr_cache_enabled():
+        return
+    if not isinstance(result, dict):
+        return
+    if result.get("metadata", {}).get("engine") not in {"Tesseract", "EasyOCR"}:
+        return
+
+    payload = {
+        "version": IMAGE_OCR_CACHE_VERSION,
+        "saved_at": time.time(),
+        "file_sha256": file_sha256,
+        "profile": profile,
+        "result": _clone_json_payload(result),
+    }
+    cache_file = _get_image_ocr_cache_file(cache_key)
+    try:
+        cache_file.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        with IMAGE_OCR_CACHE_LOCK:
+            IMAGE_OCR_MEMORY_CACHE[cache_key] = payload
+    except Exception:
+        return
+
+
+def _format_image_ocr_output(
+    filename: str,
+    engine_used: str,
+    char_count: int,
+    elapsed_ms: float,
+    text: str,
+    *,
+    cache_hit: bool = False,
+    cache_original_processing_ms: Optional[float] = None,
+) -> str:
+    cache_lines = [f"缓存命中: {'是' if cache_hit else '否'}"]
+    if cache_hit and cache_original_processing_ms is not None:
+        cache_lines.append(f"原始OCR耗时: {cache_original_processing_ms:.0f}ms")
+
+    return f"""[图片 OCR 结果] {filename}
+{'━' * 40}
+OCR 引擎: {engine_used}
+识别字符数: {char_count}
+处理耗时: {elapsed_ms:.0f}ms
+{chr(10).join(cache_lines)}
+
+识别内容:
+{'━' * 20}
+{text}
+"""
+
 # ── 创建 Flask 应用
+def _build_image_ocr_cache_meta(
+    *,
+    cache_hit: bool,
+    file_sha256: str = "",
+    profile: Optional[dict] = None,
+    saved_at: Optional[float] = None,
+    original_processing_ms: Optional[float] = None,
+) -> dict:
+    payload = {
+        "enabled": _is_image_ocr_cache_enabled(),
+        "hit": bool(cache_hit),
+        "file_sha256": file_sha256,
+        "profile": profile or {},
+    }
+    if saved_at is not None:
+        payload["saved_at"] = saved_at
+    if original_processing_ms is not None:
+        payload["original_processing_ms"] = round(float(original_processing_ms), 2)
+    return payload
+
+
+def _restore_cached_image_ocr_result(filename: str, cached_payload: dict, elapsed_ms: float) -> Optional[dict]:
+    if not isinstance(cached_payload, dict):
+        return None
+
+    cached_result = cached_payload.get("result")
+    if not isinstance(cached_result, dict):
+        return None
+
+    result = _clone_json_payload(cached_result)
+    metadata = result.setdefault("metadata", {})
+    statistics = result.setdefault("statistics", {})
+    engine_used = str(metadata.get("engine") or "")
+    text = str(result.get("text") or "")
+    char_count = int(statistics.get("char_count") or len(text))
+    original_processing_ms = result.get("processing_ms")
+    if original_processing_ms is None:
+        original_processing_ms = statistics.get("processing_ms")
+
+    result["success"] = True
+    result["file"] = filename
+    result["error"] = ""
+    result["processing_ms"] = elapsed_ms
+    statistics["char_count"] = char_count
+    statistics["paragraph_count"] = int(statistics.get("paragraph_count") or len(text.splitlines()))
+    statistics["table_count"] = int(statistics.get("table_count") or 0)
+    statistics["processing_ms"] = elapsed_ms
+    metadata["file"] = filename
+    metadata["image_ocr_cache"] = _build_image_ocr_cache_meta(
+        cache_hit=True,
+        file_sha256=str(cached_payload.get("file_sha256") or ""),
+        profile=cached_payload.get("profile") if isinstance(cached_payload.get("profile"), dict) else {},
+        saved_at=cached_payload.get("saved_at"),
+        original_processing_ms=original_processing_ms,
+    )
+    result["formatted_output"] = _format_image_ocr_output(
+        filename,
+        engine_used,
+        char_count,
+        elapsed_ms,
+        text,
+        cache_hit=True,
+        cache_original_processing_ms=original_processing_ms,
+    )
+    return result
+
+
 app = Flask(__name__)
 CORS(app)  # 允许网页跨域访问
 
 # ── 上传文件临时存放的文件夹
 UPLOAD_FOLDER = str(PROJECT_ROOT / "uploads_temp")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(IMAGE_OCR_CACHE_DIR, exist_ok=True)
 REPORTS_FOLDER = str(PROJECT_ROOT / "reports")
 os.makedirs(REPORTS_FOLDER, exist_ok=True)
 BATCH_TEST_JOBS = {}
@@ -286,7 +484,7 @@ def _is_process_job_cancel_requested(job_id: str) -> bool:
 
 def _build_cancelled_process_result(file_name: str, file_ext: str) -> dict:
     message = "任务已取消"
-    return {
+    result = {
         "success": False,
         "cancelled": True,
         "error": message,
@@ -997,6 +1195,26 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
     tesseract_error = ""
     prepared_meta = {}
     engine_order = _get_image_ocr_order()
+    cache_key = ""
+    file_sha256 = ""
+    cache_profile = {}
+
+    if _is_image_ocr_cache_enabled():
+        try:
+            emit(12, "image_cache_lookup", "正在检查图片 OCR 缓存")
+            cache_key, file_sha256, cache_profile = _build_image_ocr_cache_key(image_path)
+            cached_payload = _load_image_ocr_cache(cache_key)
+            if cached_payload:
+                elapsed = (time.time() - start) * 1000
+                ensure_not_cancelled()
+                emit(90, "image_cache_hit", "命中图片 OCR 缓存，正在返回结果")
+                cached_result = _restore_cached_image_ocr_result(filename, cached_payload, elapsed)
+                if cached_result:
+                    return cached_result
+        except Exception:
+            cache_key = ""
+            file_sha256 = ""
+            cache_profile = {}
 
     for engine_name in engine_order:
         if text or engine_used:
@@ -1070,23 +1288,43 @@ OCR 引擎: {engine_used}
 {'─' * 20}
 {text}
 """
-    return {
+    result = {
         "success": True,
         "file": filename,
         "format": "image",
         "text": text,
         "tables": [],
-        "metadata": {"engine": engine_used, "file": filename, "ocr_preprocess": prepared_meta},
+        "metadata": {
+            "engine": engine_used,
+            "file": filename,
+            "ocr_preprocess": prepared_meta,
+            "image_ocr_cache": _build_image_ocr_cache_meta(
+                cache_hit=False,
+                file_sha256=file_sha256,
+                profile=cache_profile,
+            ),
+        },
         "statistics": {
             "char_count": char_count,
             "paragraph_count": len(text.splitlines()),
             "table_count": 0,
             "keywords": [],
+            "processing_ms": elapsed,
         },
         "processing_ms": elapsed,
-        "formatted_output": formatted,
+        "formatted_output": _format_image_ocr_output(
+            filename,
+            engine_used,
+            char_count,
+            elapsed,
+            text,
+            cache_hit=False,
+        ),
         "error": "",
     }
+    if cache_key and file_sha256 and cache_profile and engine_used in {"Tesseract", "EasyOCR"}:
+        _save_image_ocr_cache(cache_key, file_sha256, cache_profile, result)
+    return result
 
 
 # ────────────────────────────────────────
