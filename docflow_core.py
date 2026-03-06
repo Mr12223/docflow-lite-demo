@@ -32,6 +32,21 @@ logging.basicConfig(
 logger = logging.getLogger("DocFlow")
 
 
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = str(os.getenv(name, "")).strip().lower()
+    if not value:
+        return default
+    return value in {"1", "true", "yes", "on"}
+
+
+def _default_pdf_mode() -> str:
+    value = str(os.getenv("DOCFLOW_DEFAULT_PDF_MODE", "balanced")).strip().lower()
+    return value if value in {"accurate", "balanced", "fast"} else "balanced"
+
+
+DEFAULT_PDF_MODE = _default_pdf_mode()
+
+
 class DocFlowCancelledError(Exception):
     pass
 
@@ -193,7 +208,7 @@ class PDFParser(BaseParser):
         return result
 
     def _resolve_pdf_mode(self, value: Optional[str]) -> str:
-        return value if value in {"accurate", "balanced", "fast"} else "balanced"
+        return value if value in {"accurate", "balanced", "fast"} else DEFAULT_PDF_MODE
 
     def _get_pdf_mode_config(self, pdf_mode: str) -> dict:
         configs = {
@@ -251,9 +266,9 @@ class PDFParser(BaseParser):
         except Exception:
             pass
 
-        large_by_pages = page_count >= 40
-        large_by_size = file_size_mb >= 18
-        huge_pdf = page_count >= 120 or file_size_mb >= 60
+        large_by_pages = page_count >= 32
+        large_by_size = file_size_mb >= 14
+        huge_pdf = page_count >= 90 or file_size_mb >= 40
         is_large_pdf = large_by_pages or large_by_size
 
         config.update(
@@ -285,7 +300,8 @@ class PDFParser(BaseParser):
                 config["max_long_edge"] = min(config["max_long_edge"], 1350)
                 config["variant_break_threshold"] = min(config["variant_break_threshold"], 58)
                 config["score_break_threshold"] = min(config["score_break_threshold"], 72)
-                config["table_page_cap"] = 18 if has_pdfplumber else 0
+                config["extract_tables"] = False
+                config["table_page_cap"] = 0
                 config["runtime_label"] = "大文件优化 / 平衡"
             elif pdf_mode == "fast":
                 config["render_scales"] = (1.2,)
@@ -307,6 +323,10 @@ class PDFParser(BaseParser):
                 config["table_page_cap"] = 0
             config["runtime_label"] = f"{config['runtime_label']}（超大文档）"
 
+        if _env_flag("DOCFLOW_DISABLE_PDF_TABLES", False) and pdf_mode != "accurate":
+            config["extract_tables"] = False
+            config["table_page_cap"] = 0
+
         return config
 
     def _should_extract_tables(self, page_index: int, mode_config: dict) -> bool:
@@ -317,7 +337,7 @@ class PDFParser(BaseParser):
             return True
         return page_index < int(table_page_cap)
 
-    def _parse_mixed(self, file_path: str, pdf_mode: str = "balanced", progress_callback=None, cancel_callback=None) -> tuple[str, list, dict]:
+    def _parse_mixed(self, file_path: str, pdf_mode: str = DEFAULT_PDF_MODE, progress_callback=None, cancel_callback=None) -> tuple[str, list, dict]:
         mode_config = self._get_pdf_mode_config(pdf_mode)
         text_parts = []
         all_tables = []
@@ -1633,7 +1653,7 @@ class DocFlowProcessor:
         file_path: str,
         extract_keywords: bool = True,
         output_format: str = "txt",   # "txt" | "json" | "markdown" | "csv"
-        pdf_mode: str = "balanced",
+        pdf_mode: str = DEFAULT_PDF_MODE,
         progress_callback=None,
         cancel_callback=None,
     ) -> dict:
@@ -1751,8 +1771,8 @@ def main():
     parser.add_argument(
         "--pdf-mode",
         choices=["accurate", "balanced", "fast"],
-        default="balanced",
-        help="PDF 解析模式（默认: balanced）",
+        default=DEFAULT_PDF_MODE,
+        help=f"PDF 解析模式（默认: {DEFAULT_PDF_MODE}）",
     )
 
     args = parser.parse_args()

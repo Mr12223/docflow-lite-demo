@@ -44,6 +44,19 @@ BATCH_SUITE_ALIASES = {
     "test_documents_edge_cases": SAMPLE_DATA_DIR / "test_documents_edge_cases",
 }
 
+
+def _get_default_pdf_mode() -> str:
+    value = str(os.getenv("DOCFLOW_DEFAULT_PDF_MODE", "balanced")).strip().lower()
+    return value if value in {"accurate", "balanced", "fast"} else "balanced"
+
+
+DEFAULT_PDF_MODE = _get_default_pdf_mode()
+
+
+def _normalize_pdf_mode(value: str) -> str:
+    value = str(value or "").strip().lower()
+    return value if value in {"accurate", "balanced", "fast"} else DEFAULT_PDF_MODE
+
 # ── 创建 Flask 应用
 app = Flask(__name__)
 CORS(app)  # 允许网页跨域访问
@@ -380,7 +393,7 @@ def _run_batch_test_job(job_id: str) -> None:
         suites = list(job["suites"])
         keywords = bool(job["keywords"])
         strict = bool(job["strict"])
-        pdf_mode = job.get("pdf_mode", "balanced")
+        pdf_mode = _normalize_pdf_mode(job.get("pdf_mode", DEFAULT_PDF_MODE))
 
     reports_dir = Path(REPORTS_FOLDER)
     before = {p.name for p in reports_dir.glob("batch_test_*") if p.is_dir()}
@@ -624,7 +637,7 @@ def start_process_file():
     file.save(save_path)
 
     output_format = request.form.get("format", "txt")
-    pdf_mode = request.form.get("pdf_mode", "balanced")
+    pdf_mode = _normalize_pdf_mode(request.form.get("pdf_mode", DEFAULT_PDF_MODE))
     file_ext = Path(safe_name).suffix.lower()
     now = time.time()
 
@@ -726,7 +739,7 @@ def process_file():
     file.save(save_path)
 
     output_format = request.form.get("format", "txt")
-    pdf_mode = request.form.get("pdf_mode", "balanced")
+    pdf_mode = _normalize_pdf_mode(request.form.get("pdf_mode", DEFAULT_PDF_MODE))
     ext = os.path.splitext(file.filename)[1].lower()
 
     # 图片走 OCR 流程
@@ -756,7 +769,7 @@ def run_batch_tests():
     suites = _resolve_batch_suites(payload.get("suites") or ["test_documents", "test_documents_edge_cases"])
     keywords = bool(payload.get("keywords"))
     strict = bool(payload.get("strict"))
-    pdf_mode = payload.get("pdf_mode", "balanced")
+    pdf_mode = _normalize_pdf_mode(payload.get("pdf_mode", DEFAULT_PDF_MODE))
 
     if not suites:
         return _error_response("未选择有效的测试目录")

@@ -4,7 +4,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PORT=8000 \
-    TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+    TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata \
+    DOCFLOW_DEFAULT_PDF_MODE=fast \
+    DOCFLOW_DISABLE_PDF_TABLES=1 \
+    WEB_CONCURRENCY=2 \
+    GUNICORN_THREADS=4
 
 WORKDIR /app
 
@@ -29,4 +33,4 @@ USER appuser
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "gunicorn -w 1 -k gthread --threads 6 --timeout 1800 --bind 0.0.0.0:${PORT:-8000} app:app"]
+CMD ["sh", "-c", "gunicorn -w ${WEB_CONCURRENCY:-2} -k gthread --threads ${GUNICORN_THREADS:-4} --timeout 1800 --bind 0.0.0.0:${PORT:-8000} app:app"]

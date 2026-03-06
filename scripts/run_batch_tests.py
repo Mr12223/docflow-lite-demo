@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime
@@ -112,7 +113,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--pdf-mode",
         choices=["accurate", "balanced", "fast"],
-        default="balanced",
+        default=os.getenv("DOCFLOW_DEFAULT_PDF_MODE", "balanced"),
         help="PDF 解析模式：高精度 / 平衡 / 快速",
     )
     return parser.parse_args()

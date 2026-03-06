@@ -465,11 +465,11 @@ tr:hover td{background:rgba(124,106,255,.04)}
             <div class="pdf-mode-name">高精度</div>
             <div class="pdf-mode-desc">更高分辨率与更多预处理，最慢但更稳</div>
           </div>
-          <div class="pdf-mode-chip on" data-pdf-mode="balanced">
+          <div class="pdf-mode-chip" data-pdf-mode="balanced">
             <div class="pdf-mode-name">平衡</div>
             <div class="pdf-mode-desc">推荐默认模式，速度和效果均衡</div>
           </div>
-          <div class="pdf-mode-chip" data-pdf-mode="fast">
+          <div class="pdf-mode-chip on" data-pdf-mode="fast">
             <div class="pdf-mode-name">快速</div>
             <div class="pdf-mode-desc">更少 OCR 尝试，适合大文件快速预览</div>
           </div>
@@ -816,7 +816,7 @@ function applyPrefs(){
   if(fmt){
     document.querySelectorAll('.fmt-chip').forEach(chip=>chip.classList.toggle('on',chip.dataset.fmt===fmt));
   }
-  const pdfMode=prefs.pdfMode||'balanced';
+  const pdfMode=prefs.pdfMode||'fast';
   document.querySelectorAll('.pdf-mode-chip').forEach(chip=>chip.classList.toggle('on',chip.dataset.pdfMode===pdfMode));
   const batch=prefs.batch||{};
   if(document.getElementById('bt-suite-normal'))document.getElementById('bt-suite-normal').checked=batch.suiteNormal ?? true;
@@ -971,7 +971,7 @@ document.querySelectorAll('.pdf-mode-chip').forEach(el=>{
   el.addEventListener('click',()=>{document.querySelectorAll('.pdf-mode-chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');savePrefs();});
 });
 function getFormat(){const c=document.querySelector('.fmt-chip.on');return c?c.dataset.fmt:'txt';}
-function getPdfMode(){const c=document.querySelector('.pdf-mode-chip.on');return c?c.dataset.pdfMode:'balanced';}
+function getPdfMode(){const c=document.querySelector('.pdf-mode-chip.on');return c?c.dataset.pdfMode:'fast';}
 function getBatchSuites(){
   const suites=[];
   if(document.getElementById('bt-suite-normal')?.checked)suites.push('test_documents');
@@ -1491,7 +1491,7 @@ function buildBatchSummaryText(data){
     `任务状态: ${data.state||'--'}`,
     `生成时间: ${s.generated_at||'--'}`,
     `测试集: ${((data.suites||[]).map(v=>v.split(/[\\\\/]/).pop()).join(', '))||'--'}`,
-    `PDF模式: ${data.pdf_mode||'balanced'}`,
+    `PDF模式: ${data.pdf_mode||'fast'}`,
     `总数: ${s.total ?? data.total ?? '--'}`,
     `成功/失败: ${(s.success ?? '--')}/${(s.failed ?? '--')}`,
     `成功率: ${s.success_rate_pct!=null?`${s.success_rate_pct}%`:'--'}`,
@@ -1537,7 +1537,7 @@ function buildBatchResult(data){
     },
     meta:{
       '任务状态':data.state||'--',
-      'PDF模式':data.pdf_mode||'balanced',
+      'PDF模式':data.pdf_mode||'fast',
       '报告目录':data.report_dir||'--',
       '测试集':((data.suites||[]).map(v=>v.split(/[\\\\/]/).pop()).join(', '))||'--',
       '生成时间':s.generated_at||'--',
