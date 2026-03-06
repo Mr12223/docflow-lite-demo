@@ -13,10 +13,9 @@ __pycache__
 
 reports
 uploads_temp
-
-evaluation_set
-test_documents
-test_documents_edge_cases
+sample_data
+docs
+tools
 
 node_modules
 .DS_Store

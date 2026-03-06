@@ -29,8 +29,8 @@ from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation
 
 
-ROOT = Path(__file__).resolve().parent
-OUTPUT_DIR = ROOT / "test_documents_edge_cases"
+ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_DIR = ROOT / "sample_data" / "test_documents_edge_cases"
 
 
 def ensure_output_dir() -> None:

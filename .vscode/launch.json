@@ -5,19 +5,19 @@
       "name": "DocFlow: Commit And Push",
       "type": "node-terminal",
       "request": "launch",
-      "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}\\git_auto_push.ps1\" \"${input:commitMessage}\""
+      "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}\\tools\\git_auto_push.ps1\" \"${input:commitMessage}\""
     },
     {
       "name": "DocFlow: Commit Only",
       "type": "node-terminal",
       "request": "launch",
-      "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}\\git_auto_push.ps1\" \"${input:commitMessage}\" -NoPush"
+      "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}\\tools\\git_auto_push.ps1\" \"${input:commitMessage}\" -NoPush"
     },
     {
       "name": "DocFlow: Push Dry Run",
       "type": "node-terminal",
       "request": "launch",
-      "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}\\git_auto_push.ps1\" \"${input:commitMessage}\" -DryRun"
+      "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}\\tools\\git_auto_push.ps1\" \"${input:commitMessage}\" -DryRun"
     }
   ],
   "inputs": [

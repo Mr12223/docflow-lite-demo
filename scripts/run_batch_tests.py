@@ -16,18 +16,27 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from collections import Counter, defaultdict
 from datetime import datetime
 from html import escape
 from pathlib import Path
 from typing import Iterable
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+ROOT = SCRIPT_DIR.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from app import IMAGE_EXTS, process_image_ocr
 from docflow_core import DocFlowProcessor
 from docflow_support import build_error_info, summarize_error_records
 
-
-ROOT = Path(__file__).resolve().parent
+SAMPLE_DATA_DIR = ROOT / "sample_data"
+SUITE_ALIASES = {
+    "test_documents": SAMPLE_DATA_DIR / "test_documents",
+    "test_documents_edge_cases": SAMPLE_DATA_DIR / "test_documents_edge_cases",
+}
 DEFAULT_SUITES = ["test_documents", "test_documents_edge_cases"]
 DEFAULT_REPORT_ROOT = ROOT / "reports"
 
@@ -107,6 +116,19 @@ def parse_args() -> argparse.Namespace:
         help="PDF 解析模式：高精度 / 平衡 / 快速",
     )
     return parser.parse_args()
+
+
+def resolve_suite_path(suite: str) -> Path:
+    suite_name = str(suite or "").strip()
+    if suite_name in SUITE_ALIASES:
+        return SUITE_ALIASES[suite_name]
+
+    suite_path = Path(suite_name)
+    if suite_path.is_absolute():
+        return suite_path
+    if (ROOT / suite_path).exists():
+        return ROOT / suite_path
+    return suite_path
 
 
 def iter_files(suite_paths: Iterable[Path]) -> list[tuple[str, Path]]:
@@ -837,7 +859,7 @@ def write_html_dashboard(report_dir: Path, summary: dict, records: list[dict], s
 def main() -> int:
     args = parse_args()
 
-    suite_paths = [ROOT / suite for suite in args.suites]
+    suite_paths = [resolve_suite_path(suite) for suite in args.suites]
     suite_paths = [path for path in suite_paths if path.exists() and path.is_dir()]
     if not suite_paths:
         print("未找到可测试目录。")

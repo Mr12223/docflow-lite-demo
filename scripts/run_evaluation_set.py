@@ -2,16 +2,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import datetime
 from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+ROOT = SCRIPT_DIR.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from app import IMAGE_EXTS, process_image_ocr
 from docflow_core import DocFlowProcessor
 from docflow_support import build_error_info
 
-
-ROOT = Path(__file__).resolve().parent
-DEFAULT_MANIFEST = ROOT / "evaluation_set" / "sample_manifest.json"
+DEFAULT_MANIFEST = ROOT / "sample_data" / "evaluation_set" / "sample_manifest.json"
 DEFAULT_REPORT_ROOT = ROOT / "reports"
 
 
@@ -203,7 +207,9 @@ def main() -> int:
     args = parse_args()
     manifest_path = Path(args.manifest)
     if not manifest_path.is_absolute():
-        manifest_path = ROOT / manifest_path
+        project_relative = ROOT / manifest_path
+        sample_data_relative = ROOT / "sample_data" / manifest_path
+        manifest_path = sample_data_relative if sample_data_relative.exists() else project_relative
     if not manifest_path.exists():
         print(f"未找到评价集清单：{manifest_path}")
         return 1

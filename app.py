@@ -35,14 +35,23 @@ from docflow_support import (
     prepare_pytesseract,
 )
 
+PROJECT_ROOT = Path(__file__).resolve().parent
+FRONTEND_DIR = PROJECT_ROOT / "frontend"
+SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+SAMPLE_DATA_DIR = PROJECT_ROOT / "sample_data"
+BATCH_SUITE_ALIASES = {
+    "test_documents": SAMPLE_DATA_DIR / "test_documents",
+    "test_documents_edge_cases": SAMPLE_DATA_DIR / "test_documents_edge_cases",
+}
+
 # ── 创建 Flask 应用
 app = Flask(__name__)
 CORS(app)  # 允许网页跨域访问
 
 # ── 上传文件临时存放的文件夹
-UPLOAD_FOLDER = "uploads_temp"
+UPLOAD_FOLDER = str(PROJECT_ROOT / "uploads_temp")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-REPORTS_FOLDER = "reports"
+REPORTS_FOLDER = str(PROJECT_ROOT / "reports")
 os.makedirs(REPORTS_FOLDER, exist_ok=True)
 BATCH_TEST_JOBS = {}
 BATCH_TEST_PROCESSES = {}
@@ -59,10 +68,30 @@ IMAGE_EXTS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.webp'}
 
 def _resolve_batch_suites(suites) -> list[str]:
     resolved = []
+    seen = set()
     for suite in suites or []:
-        suite_path = Path(suite)
-        if suite_path.exists() and suite_path.is_dir():
-            resolved.append(str(suite_path))
+        suite_name = str(suite or "").strip()
+        if not suite_name:
+            continue
+
+        candidates = []
+        if suite_name in BATCH_SUITE_ALIASES:
+            candidates.append(BATCH_SUITE_ALIASES[suite_name])
+        suite_path = Path(suite_name)
+        candidates.extend([suite_path, PROJECT_ROOT / suite_path])
+
+        for candidate in candidates:
+            try:
+                resolved_path = candidate.resolve()
+            except Exception:
+                resolved_path = candidate
+            key = os.path.normcase(str(resolved_path))
+            if key in seen:
+                continue
+            if resolved_path.exists() and resolved_path.is_dir():
+                resolved.append(str(resolved_path))
+                seen.add(key)
+                break
     return resolved
 
 
@@ -355,7 +384,7 @@ def _run_batch_test_job(job_id: str) -> None:
 
     reports_dir = Path(REPORTS_FOLDER)
     before = {p.name for p in reports_dir.glob("batch_test_*") if p.is_dir()}
-    cmd = [sys.executable, "-u", "run_batch_tests.py", *suites]
+    cmd = [sys.executable, "-u", str(SCRIPTS_DIR / "run_batch_tests.py"), *suites]
     if keywords:
         cmd.append("--keywords")
     if strict:
@@ -558,7 +587,7 @@ def _serialize_batch_job(job_id: str) -> Optional[dict]:
 # ────────────────────────────────────────
 @app.route("/")
 def index():
-    return send_from_directory(".", "doc_tool.html")
+    return send_from_directory(FRONTEND_DIR, "doc_tool.html")
 
 
 @app.route("/reports/<path:report_path>")

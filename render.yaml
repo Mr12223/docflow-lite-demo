@@ -12,9 +12,7 @@ services:
       ignoredPaths:
         - reports/**
         - uploads_temp/**
-        - test_documents/**
-        - test_documents_edge_cases/**
-        - evaluation_set/**
+        - sample_data/**
         - .tmp_wheels/**
         - __pycache__/**
     envVars:

@@ -24,8 +24,8 @@ from pptx.util import Inches, Pt
 from PIL import Image, ImageDraw, ImageFont
 
 
-ROOT = Path(__file__).resolve().parent
-OUTPUT_DIR = ROOT / "test_documents"
+ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_DIR = ROOT / "sample_data" / "test_documents"
 
 TITLE_ZH = "DocFlow 综合测试样本"
 TITLE_EN = "DocFlow End-to-End Sample Pack"

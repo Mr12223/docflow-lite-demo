@@ -9,7 +9,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\git_auto_push.ps1",
+        "${workspaceFolder}\\tools\\git_auto_push.ps1",
         "${input:commitMessage}"
       ],
       "problemMatcher": [],
@@ -31,7 +31,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\git_auto_push.ps1",
+        "${workspaceFolder}\\tools\\git_auto_push.ps1",
         "${input:commitMessage}",
         "-NoPush"
       ],
@@ -50,7 +50,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\git_auto_push.ps1",
+        "${workspaceFolder}\\tools\\git_auto_push.ps1",
         "${input:commitMessage}",
         "-DryRun"
       ],

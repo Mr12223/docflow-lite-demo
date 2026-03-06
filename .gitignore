@@ -11,9 +11,7 @@ reports/
 .tmp_pymupdf.json
 docflow_*.txt
 
-test_documents/
-test_documents_edge_cases/
-evaluation_set/
+sample_data/
 
 .claude/
 .DS_Store
