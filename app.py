@@ -9,6 +9,7 @@ import sys
 import base64
 import hashlib
 import json
+import logging
 import time
 import subprocess
 import threading
@@ -40,6 +41,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
 SAMPLE_DATA_DIR = PROJECT_ROOT / "sample_data"
+logger = logging.getLogger("DocFlow")
 BATCH_SUITE_ALIASES = {
     "test_documents": SAMPLE_DATA_DIR / "test_documents",
     "test_documents_edge_cases": SAMPLE_DATA_DIR / "test_documents_edge_cases",
@@ -100,6 +102,28 @@ def _get_image_ocr_order() -> list[str]:
     engines = [item.strip() for item in raw.split(",") if item.strip()]
     valid = [item for item in engines if item in {"rapidocr", "paddleocr", "tesseract", "easyocr"}]
     return valid or default_order.split(",")
+
+
+def _describe_ocr_engine(engine_name: str) -> str:
+    return {
+        "rapidocr": "RapidOCR",
+        "paddleocr": "PaddleOCR",
+        "tesseract": "Tesseract",
+        "easyocr": "EasyOCR",
+    }.get(str(engine_name or "").strip().lower(), str(engine_name or "").strip() or "未知引擎")
+
+
+def _get_next_ocr_engine(engine_order: list[str], current_name: str) -> str:
+    normalized = [str(item or "").strip().lower() for item in engine_order]
+    current = str(current_name or "").strip().lower()
+    try:
+        index = normalized.index(current)
+    except ValueError:
+        return ""
+    for candidate in normalized[index + 1 :]:
+        if candidate:
+            return candidate
+    return ""
 
 
 def _get_image_ocr_resize_config() -> dict:
@@ -1805,8 +1829,21 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
                 else:
                     prepared_meta = candidate_meta
                     rapidocr_error = "RapidOCR 未识别到有效文本"
+                    next_engine = _get_next_ocr_engine(engine_order, "rapidocr")
+                    logger.warning(
+                        "图片OCR回退: %s RapidOCR 未识别到有效文本，转%s",
+                        filename,
+                        _describe_ocr_engine(next_engine) if next_engine else "后续引擎",
+                    )
             except Exception as e:
                 rapidocr_error = str(e)
+                next_engine = _get_next_ocr_engine(engine_order, "rapidocr")
+                logger.warning(
+                    "图片OCR回退: %s RapidOCR 失败，转%s，原因: %s",
+                    filename,
+                    _describe_ocr_engine(next_engine) if next_engine else "后续引擎",
+                    rapidocr_error,
+                )
 
         elif engine_name == "paddleocr":
             try:
