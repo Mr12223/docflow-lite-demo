@@ -80,11 +80,50 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _is_cloud_runtime() -> bool:
+    markers = (
+        "RENDER",
+        "RENDER_SERVICE_ID",
+        "RENDER_INSTANCE_ID",
+        "DOCFLOW_CLOUD_DEPLOYMENT",
+    )
+    return any(str(os.getenv(name, "")).strip() for name in markers)
+
+
 def _get_image_ocr_order() -> list[str]:
     raw = str(os.getenv("DOCFLOW_IMAGE_OCR_ORDER", "tesseract,easyocr")).strip().lower()
     engines = [item.strip() for item in raw.split(",") if item.strip()]
     valid = [item for item in engines if item in {"tesseract", "easyocr"}]
     return valid or ["tesseract", "easyocr"]
+
+
+def _get_image_ocr_resize_config() -> dict:
+    config = {
+        "max_long_edge": _env_int("DOCFLOW_IMAGE_OCR_MAX_LONG_EDGE", 1600),
+        "fast_edge_trigger": _env_int("DOCFLOW_IMAGE_OCR_FAST_EDGE_TRIGGER", 2400),
+        "huge_long_edge": _env_int("DOCFLOW_IMAGE_OCR_HUGE_LONG_EDGE", 1280),
+        "grayscale": _env_flag("DOCFLOW_IMAGE_OCR_GRAYSCALE", True),
+        "autocontrast": _env_flag("DOCFLOW_IMAGE_OCR_AUTOCONTRAST", True),
+        "cloud_downsample_enabled": _env_flag("DOCFLOW_CLOUD_IMAGE_OCR_DOWNSAMPLE", _is_cloud_runtime()),
+    }
+
+    if config["cloud_downsample_enabled"]:
+        config["max_long_edge"] = min(
+            config["max_long_edge"],
+            _env_int("DOCFLOW_CLOUD_IMAGE_OCR_MAX_LONG_EDGE", 1100),
+        )
+        config["fast_edge_trigger"] = min(
+            config["fast_edge_trigger"],
+            _env_int("DOCFLOW_CLOUD_IMAGE_OCR_FAST_EDGE_TRIGGER", 1800),
+        )
+        config["huge_long_edge"] = min(
+            config["huge_long_edge"],
+            _env_int("DOCFLOW_CLOUD_IMAGE_OCR_HUGE_LONG_EDGE", 900),
+        )
+
+    config["huge_long_edge"] = min(config["huge_long_edge"], config["max_long_edge"])
+    config["fast_edge_trigger"] = max(config["fast_edge_trigger"], config["max_long_edge"])
+    return config
 
 
 def _get_easyocr_reader():
@@ -106,11 +145,12 @@ def _get_easyocr_reader():
 def _prepare_image_for_tesseract(image_path: str):
     from PIL import Image, ImageOps
 
-    max_long_edge = _env_int("DOCFLOW_IMAGE_OCR_MAX_LONG_EDGE", 1600)
-    huge_trigger = _env_int("DOCFLOW_IMAGE_OCR_FAST_EDGE_TRIGGER", 2400)
-    huge_long_edge = _env_int("DOCFLOW_IMAGE_OCR_HUGE_LONG_EDGE", 1280)
-    apply_gray = _env_flag("DOCFLOW_IMAGE_OCR_GRAYSCALE", True)
-    apply_autocontrast = _env_flag("DOCFLOW_IMAGE_OCR_AUTOCONTRAST", True)
+    resize_config = _get_image_ocr_resize_config()
+    max_long_edge = resize_config["max_long_edge"]
+    huge_trigger = resize_config["fast_edge_trigger"]
+    huge_long_edge = resize_config["huge_long_edge"]
+    apply_gray = resize_config["grayscale"]
+    apply_autocontrast = resize_config["autocontrast"]
 
     with Image.open(image_path) as source:
         image = ImageOps.exif_transpose(source)
@@ -141,6 +181,7 @@ def _prepare_image_for_tesseract(image_path: str):
         "prepared_size": prepared.size,
         "long_edge_target": target_long_edge,
         "grayscale": prepared.mode == "L",
+        "cloud_downsample_enabled": resize_config["cloud_downsample_enabled"],
     }
 
 
@@ -175,14 +216,16 @@ def _compute_file_sha256(file_path: str) -> str:
 
 
 def _get_image_ocr_profile() -> dict:
+    resize_config = _get_image_ocr_resize_config()
     result = {
         "version": IMAGE_OCR_CACHE_VERSION,
         "order": _get_image_ocr_order(),
-        "max_long_edge": _env_int("DOCFLOW_IMAGE_OCR_MAX_LONG_EDGE", 1600),
-        "fast_edge_trigger": _env_int("DOCFLOW_IMAGE_OCR_FAST_EDGE_TRIGGER", 2400),
-        "huge_long_edge": _env_int("DOCFLOW_IMAGE_OCR_HUGE_LONG_EDGE", 1280),
-        "grayscale": _env_flag("DOCFLOW_IMAGE_OCR_GRAYSCALE", True),
-        "autocontrast": _env_flag("DOCFLOW_IMAGE_OCR_AUTOCONTRAST", True),
+        "max_long_edge": resize_config["max_long_edge"],
+        "fast_edge_trigger": resize_config["fast_edge_trigger"],
+        "huge_long_edge": resize_config["huge_long_edge"],
+        "grayscale": resize_config["grayscale"],
+        "autocontrast": resize_config["autocontrast"],
+        "cloud_downsample_enabled": resize_config["cloud_downsample_enabled"],
         "psm": _env_int("DOCFLOW_IMAGE_OCR_PSM", 6),
         "oem": os.getenv("DOCFLOW_IMAGE_OCR_OEM", "").strip(),
     }
