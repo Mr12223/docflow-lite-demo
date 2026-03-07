@@ -155,6 +155,42 @@ def _module_exists(module_name: str) -> bool:
         return False
 
 
+def _try_import_module(module_name: str) -> tuple[bool, str]:
+    try:
+        importlib.import_module(module_name)
+        return True, ""
+    except Exception as exc:
+        return False, f"{exc.__class__.__name__}: {exc}"
+
+
+def _probe_python_dependency(spec: dict[str, Any]) -> tuple[bool, str]:
+    module_name = str(spec.get("module") or "").strip()
+    dep_id = str(spec.get("id") or "").strip()
+
+    if not module_name:
+        return False, "未提供模块名"
+
+    if dep_id == "rapidocr":
+        ok, error = _try_import_module("onnxruntime")
+        if not ok:
+            return False, f"onnxruntime 导入失败：{error}"
+        ok, error = _try_import_module("cv2")
+        if not ok:
+            return False, f"cv2 导入失败：{error}"
+        ok, error = _try_import_module(module_name)
+        if not ok:
+            return False, f"rapidocr 导入失败：{error}"
+        try:
+            module = importlib.import_module(module_name)
+            if getattr(module, "RapidOCR", None) is None:
+                return False, "rapidocr 包内未找到 RapidOCR 类"
+        except Exception as exc:
+            return False, f"{exc.__class__.__name__}: {exc}"
+        return True, ""
+
+    return _try_import_module(module_name)
+
+
 def _safe_version(package_name: str | None) -> str:
     if not package_name:
         return ""
@@ -430,6 +466,177 @@ def collect_dependency_status() -> dict[str, Any]:
             "overall_status": overall_status,
             "total_items": len(items),
             "ready_count": sum(1 for item in items if item["installed"]),
+            "critical_missing": critical_missing,
+            "optional_missing": optional_missing,
+        },
+        "profiles": profiles,
+        "items": items,
+        "recommendations": recommendations[:8],
+    }
+
+
+def _item_available(item: dict[str, Any]) -> bool:
+    return bool(item.get("available", item.get("installed")))
+
+
+def _derive_profile_status(dep_map: dict[str, dict[str, Any]], tool_map: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    rapid_ready = _item_available(dep_map["onnxruntime"]) and _item_available(dep_map["rapidocr"])
+    easyocr_ready = _item_available(dep_map["easyocr"])
+    pytesseract_ready = _item_available(dep_map["pytesseract"])
+    tesseract_ready = _item_available(tool_map["tesseract"])
+    pdfplumber_ready = _item_available(dep_map["pdfplumber"])
+    pymupdf_ready = _item_available(dep_map["pymupdf"])
+    pdf_fallback_ready = _item_available(dep_map["pypdfium2"]) and _item_available(dep_map["pillow"]) and _item_available(dep_map["numpy"]) and (
+        rapid_ready or easyocr_ready or (pytesseract_ready and tesseract_ready)
+    )
+
+    def pack(label: str, status: str, reason: str) -> dict[str, Any]:
+        return {"label": label, "status": status, "reason": reason}
+
+    return {
+        "pdf": pack(
+            "PDF",
+            "ready" if pdfplumber_ready or pymupdf_ready else ("degraded" if pdf_fallback_ready else "missing"),
+            "pdfplumber 可直接解析文本层" if pdfplumber_ready else (
+                "PyMuPDF 可作为文本层备用解析器" if pymupdf_ready else (
+                    "主解析器缺失，但 OCR 兜底可用" if pdf_fallback_ready else "缺少 PDF 文本解析器，且 OCR 兜底链路不完整"
+                )
+            ),
+        ),
+        "word": pack(
+            "Word",
+            "ready" if _item_available(dep_map["python_docx"]) else "missing",
+            "python-docx 已安装" if _item_available(dep_map["python_docx"]) else "缺少 python-docx",
+        ),
+        "excel": pack(
+            "Excel",
+            "ready" if _item_available(dep_map["openpyxl"]) else "missing",
+            "openpyxl 已安装" if _item_available(dep_map["openpyxl"]) else "缺少 openpyxl",
+        ),
+        "powerpoint": pack(
+            "PPT",
+            "ready" if _item_available(dep_map["python_pptx"]) else "missing",
+            "python-pptx 已安装" if _item_available(dep_map["python_pptx"]) else "缺少 python-pptx",
+        ),
+        "image_ocr": pack(
+            "图片 OCR",
+            "ready" if rapid_ready or easyocr_ready or (pytesseract_ready and tesseract_ready) else "missing",
+            "RapidOCR 可用" if rapid_ready else (
+                "EasyOCR 可用" if easyocr_ready else (
+                    "pytesseract + tesseract 可用" if pytesseract_ready and tesseract_ready else "OCR 引擎链路不完整"
+                )
+            ),
+        ),
+        "legacy_doc_fallback": pack(
+            "旧版 DOC 兜底",
+            "ready" if _item_available(tool_map["soffice"]) else "degraded",
+            "LibreOffice/soffice 可用" if _item_available(tool_map["soffice"]) else "未检测到 soffice，仅使用内置 DOC 解析",
+        ),
+        "text_json_csv": pack("文本/JSON/CSV", "ready", "内置支持"),
+    }
+
+
+def collect_dependency_status() -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    dep_map: dict[str, dict[str, Any]] = {}
+    tool_map: dict[str, dict[str, Any]] = {}
+
+    for spec in DEPENDENCY_SPECS:
+        installed = _module_exists(spec["module"])
+        runtime_ready = False
+        runtime_error = ""
+        if installed:
+            runtime_ready, runtime_error = _probe_python_dependency(spec)
+
+        available = installed and runtime_ready
+        item = {
+            "id": spec["id"],
+            "type": "python",
+            "label": spec["label"],
+            "module": spec["module"],
+            "package": spec["package"],
+            "install": spec["install"],
+            "required_for": spec["required_for"],
+            "optional": spec["optional"],
+            "installed": installed,
+            "available": available,
+            "runtime_ready": runtime_ready,
+            "runtime_error": runtime_error,
+            "status": (
+                "ready"
+                if available
+                else ("degraded" if installed else ("optional_missing" if spec["optional"] else "missing"))
+            ),
+            "version": _safe_version(spec["package"]) if installed else "",
+            "message": (
+                "已安装并可用"
+                if available
+                else (
+                    f"已安装但运行失败：{runtime_error}"
+                    if installed
+                    else ("未安装（可选）" if spec["optional"] else "未安装")
+                )
+            ),
+        }
+        dep_map[spec["id"]] = item
+        items.append(item)
+
+    for tool_id, candidates in TOOL_CANDIDATES.items():
+        tool_path = resolve_tool_path(tool_id)
+        available = bool(tool_path)
+        tool_item = {
+            "id": tool_id,
+            "type": "tool",
+            "label": "LibreOffice / soffice" if tool_id == "soffice" else "Tesseract 可执行程序",
+            "path": tool_path,
+            "installed": available,
+            "available": available,
+            "status": "ready" if available else "optional_missing",
+            "required_for": ["doc"] if tool_id == "soffice" else ["ocr", "image"],
+            "optional": True,
+            "install": "安装 LibreOffice 并确保 soffice 可执行" if tool_id == "soffice" else "安装 Tesseract OCR 并加入 PATH",
+            "version": "",
+            "message": tool_path or "未检测到可执行程序",
+        }
+        tool_map[tool_id] = tool_item
+        items.append(tool_item)
+
+    profiles = _derive_profile_status(dep_map, tool_map)
+    critical_missing = sum(
+        1
+        for item in items
+        if item["type"] == "python" and not item["optional"] and not _item_available(item)
+    )
+    optional_missing = sum(1 for item in items if item["optional"] and not _item_available(item))
+
+    if critical_missing == 0 and optional_missing == 0:
+        overall_status = "ready"
+    elif critical_missing == 0:
+        overall_status = "degraded"
+    else:
+        overall_status = "missing"
+
+    recommendations = []
+    for item in items:
+        if item["status"] in {"missing", "optional_missing", "degraded"}:
+            prefix = (
+                "建议修复"
+                if item["status"] == "degraded"
+                else ("建议安装" if item["status"] == "missing" else "可选安装")
+            )
+            recommendations.append(f"{prefix}：{item['label']}（{item['install']}）")
+
+    return {
+        "checked_at": datetime.now().isoformat(timespec="seconds"),
+        "environment": {
+            "python": sys.version.split()[0],
+            "platform": platform.platform(),
+            "executable": sys.executable,
+        },
+        "summary": {
+            "overall_status": overall_status,
+            "total_items": len(items),
+            "ready_count": sum(1 for item in items if _item_available(item)),
             "critical_missing": critical_missing,
             "optional_missing": optional_missing,
         },

@@ -29,6 +29,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    libgomp1 \
     tesseract-ocr \
     tesseract-ocr-chi-sim \
     tesseract-ocr-eng \
@@ -37,7 +40,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements-cloud.txt ./
 
 RUN python -m pip install --upgrade pip && \
-    pip install -r requirements-cloud.txt
+    pip install -r requirements-cloud.txt && \
+    python -c "import cv2, onnxruntime, rapidocr; from rapidocr import RapidOCR; print('RapidOCR build probe OK:', getattr(rapidocr, '__version__', 'unknown'))"
 
 COPY . .
 

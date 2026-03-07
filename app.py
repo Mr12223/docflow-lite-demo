@@ -42,6 +42,9 @@ FRONTEND_DIR = PROJECT_ROOT / "frontend"
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
 SAMPLE_DATA_DIR = PROJECT_ROOT / "sample_data"
 logger = logging.getLogger("DocFlow")
+if not logging.getLogger().handlers:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger.setLevel(logging.INFO)
 BATCH_SUITE_ALIASES = {
     "test_documents": SAMPLE_DATA_DIR / "test_documents",
     "test_documents_edge_cases": SAMPLE_DATA_DIR / "test_documents_edge_cases",
@@ -124,6 +127,11 @@ def _get_next_ocr_engine(engine_order: list[str], current_name: str) -> str:
         if candidate:
             return candidate
     return ""
+
+
+def _format_ocr_engine_chain(engine_names: list[str]) -> str:
+    labels = [_describe_ocr_engine(item) for item in engine_names if str(item or "").strip()]
+    return " -> ".join(labels)
 
 
 def _get_image_ocr_resize_config() -> dict:
@@ -873,6 +881,44 @@ OCR 引擎: {engine_used}
 """
 
 # ── 创建 Flask 应用
+def _format_image_ocr_output(
+    filename: str,
+    engine_used: str,
+    char_count: int,
+    elapsed_ms: float,
+    text: str,
+    *,
+    cache_hit: bool = False,
+    cache_original_processing_ms: Optional[float] = None,
+    engine_order: Optional[list[str]] = None,
+    attempted_engines: Optional[list[str]] = None,
+    fallback_notes: Optional[list[str]] = None,
+) -> str:
+    details = [f"缓存命中: {'是' if cache_hit else '否'}"]
+    if cache_hit and cache_original_processing_ms is not None:
+        details.append(f"原始OCR耗时: {cache_original_processing_ms:.0f}ms")
+    if engine_order:
+        details.append(f"引擎顺序: {_format_ocr_engine_chain(engine_order)}")
+    if attempted_engines:
+        details.append(f"尝试链路: {_format_ocr_engine_chain(attempted_engines)}")
+    if fallback_notes:
+        notes = " | ".join(str(item) for item in fallback_notes if str(item).strip())
+        if notes:
+            details.append(f"回退说明: {notes}")
+
+    return f"""[图片 OCR 结果] {filename}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OCR 引擎: {engine_used}
+识别字符数: {char_count}
+处理耗时: {elapsed_ms:.0f}ms
+{chr(10).join(details)}
+
+识别内容:
+━━━━━━━━━━━━━━━━━━━━
+{text}
+"""
+
+
 def _build_image_ocr_cache_meta(
     *,
     cache_hit: bool,
@@ -907,6 +953,9 @@ def _restore_cached_image_ocr_result(filename: str, cached_payload: dict, elapse
     statistics = result.setdefault("statistics", {})
     engine_used = str(metadata.get("engine") or "")
     text = str(result.get("text") or "")
+    engine_order = metadata.get("ocr_engine_order") if isinstance(metadata.get("ocr_engine_order"), list) else []
+    attempted_engines = metadata.get("ocr_attempted_engines") if isinstance(metadata.get("ocr_attempted_engines"), list) else []
+    fallback_notes = metadata.get("ocr_fallback_notes") if isinstance(metadata.get("ocr_fallback_notes"), list) else []
     char_count = int(statistics.get("char_count") or len(text))
     original_processing_ms = result.get("processing_ms")
     if original_processing_ms is None:
@@ -936,6 +985,9 @@ def _restore_cached_image_ocr_result(filename: str, cached_payload: dict, elapse
         text,
         cache_hit=True,
         cache_original_processing_ms=original_processing_ms,
+        engine_order=engine_order,
+        attempted_engines=attempted_engines,
+        fallback_notes=fallback_notes,
     )
     return result
 
@@ -955,7 +1007,36 @@ BATCH_TEST_LOCK = threading.Lock()
 PROCESS_JOBS = {}
 PROCESS_JOB_LOCK = threading.Lock()
 
+
+def _log_ocr_runtime_status() -> None:
+    try:
+        dep_status = collect_dependency_status()
+        items = {item.get("id"): item for item in dep_status.get("items", []) if isinstance(item, dict)}
+        image_profile = dep_status.get("profiles", {}).get("image_ocr", {})
+        logger.info(
+            "OCR startup check: cloud=%s order=%s profile=%s reason=%s",
+            _is_cloud_runtime(),
+            _format_ocr_engine_chain(_get_image_ocr_order()),
+            image_profile.get("status", "unknown"),
+            image_profile.get("reason", ""),
+        )
+        for dep_id in ("rapidocr", "onnxruntime", "pytesseract"):
+            item = items.get(dep_id)
+            if not item:
+                continue
+            logger.info(
+                "OCR dependency: %s installed=%s available=%s version=%s message=%s",
+                dep_id,
+                item.get("installed"),
+                item.get("available", item.get("installed")),
+                item.get("version", ""),
+                item.get("message", ""),
+            )
+    except Exception as exc:
+        logger.warning("OCR startup check failed: %s", exc)
+
 # ── 创建处理器（全局复用）
+_log_ocr_runtime_status()
 processor = DocFlowProcessor()
 
 # ── 支持 OCR 的图片格式
@@ -1790,6 +1871,8 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
     tesseract_error = ""
     prepared_meta = {}
     engine_order = _get_image_ocr_order()
+    attempted_engines: list[str] = []
+    fallback_notes: list[str] = []
     cache_key = ""
     file_sha256 = ""
     cache_profile = {}
@@ -1814,6 +1897,7 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
     for engine_name in engine_order:
         if text or engine_used:
             break
+        attempted_engines.append(engine_name)
 
         if engine_name == "rapidocr":
             try:
@@ -1830,18 +1914,35 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
                     prepared_meta = candidate_meta
                     rapidocr_error = "RapidOCR 未识别到有效文本"
                     next_engine = _get_next_ocr_engine(engine_order, "rapidocr")
+                    fallback_notes.append(
+                        f"RapidOCR 未识别到有效文本，转 {_describe_ocr_engine(next_engine) if next_engine else '后续引擎'}"
+                    )
                     logger.warning(
                         "图片OCR回退: %s RapidOCR 未识别到有效文本，转%s",
                         filename,
                         _describe_ocr_engine(next_engine) if next_engine else "后续引擎",
                     )
+                    logger.warning(
+                        "Image OCR fallback: %s RapidOCR produced no text, switching to %s",
+                        filename,
+                        _describe_ocr_engine(next_engine) if next_engine else "next-engine",
+                    )
             except Exception as e:
                 rapidocr_error = str(e)
                 next_engine = _get_next_ocr_engine(engine_order, "rapidocr")
+                fallback_notes.append(
+                    f"RapidOCR 失败：{rapidocr_error}，转 {_describe_ocr_engine(next_engine) if next_engine else '后续引擎'}"
+                )
                 logger.warning(
                     "图片OCR回退: %s RapidOCR 失败，转%s，原因: %s",
                     filename,
                     _describe_ocr_engine(next_engine) if next_engine else "后续引擎",
+                    rapidocr_error,
+                )
+                logger.warning(
+                    "Image OCR fallback: %s RapidOCR failed, switching to %s, reason: %s",
+                    filename,
+                    _describe_ocr_engine(next_engine) if next_engine else "next-engine",
                     rapidocr_error,
                 )
 
@@ -1859,8 +1960,16 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
                 else:
                     prepared_meta = candidate_meta
                     paddleocr_error = "PaddleOCR 未识别到有效文本"
+                    next_engine = _get_next_ocr_engine(engine_order, "paddleocr")
+                    fallback_notes.append(
+                        f"PaddleOCR 未识别到有效文本，转 {_describe_ocr_engine(next_engine) if next_engine else '后续引擎'}"
+                    )
             except Exception as e:
                 paddleocr_error = str(e)
+                next_engine = _get_next_ocr_engine(engine_order, "paddleocr")
+                fallback_notes.append(
+                    f"PaddleOCR 失败：{paddleocr_error}，转 {_describe_ocr_engine(next_engine) if next_engine else '后续引擎'}"
+                )
 
         elif engine_name == "tesseract":
             try:
@@ -1885,6 +1994,10 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
                 pass
             except Exception as e:
                 tesseract_error = str(e)
+                next_engine = _get_next_ocr_engine(engine_order, "tesseract")
+                fallback_notes.append(
+                    f"Tesseract 失败：{tesseract_error}，转 {_describe_ocr_engine(next_engine) if next_engine else '后续引擎'}"
+                )
 
         elif engine_name == "easyocr":
             try:
@@ -1898,6 +2011,10 @@ def process_image_ocr(image_path: str, filename: str, progress_callback=None, ca
                 pass
             except Exception as e:
                 easyocr_error = str(e)
+                next_engine = _get_next_ocr_engine(engine_order, "easyocr")
+                fallback_notes.append(
+                    f"EasyOCR 失败：{easyocr_error}，转 {_describe_ocr_engine(next_engine) if next_engine else '后续引擎'}"
+                )
 
     # 两种都没装：返回提示
     if not engine_used:
@@ -1943,6 +2060,10 @@ OCR 引擎: {engine_used}
         "metadata": {
             "engine": engine_used,
             "file": filename,
+            "ocr_engine_order": engine_order,
+            "ocr_attempted_engines": attempted_engines,
+            "ocr_fallback_notes": fallback_notes,
+            "fallback_reason": fallback_notes[0] if fallback_notes else "",
             "ocr_preprocess": prepared_meta,
             "image_ocr_cache": _build_image_ocr_cache_meta(
                 cache_hit=False,
@@ -1965,9 +2086,20 @@ OCR 引擎: {engine_used}
             elapsed,
             text,
             cache_hit=False,
+            engine_order=engine_order,
+            attempted_engines=attempted_engines,
+            fallback_notes=fallback_notes,
         ),
         "error": "",
     }
+    logger.info(
+        "图片OCR完成: file=%s engine=%s chain=%s fallback=%s elapsed=%.0fms",
+        filename,
+        engine_used,
+        _format_ocr_engine_chain(attempted_engines or engine_order),
+        " | ".join(fallback_notes) if fallback_notes else "-",
+        elapsed,
+    )
     if cache_key and file_sha256 and cache_profile and engine_used in {"Tesseract", "EasyOCR", "PaddleOCR", "RapidOCR"}:
         _save_image_ocr_cache(cache_key, file_sha256, cache_profile, result)
     return result
