@@ -20,6 +20,37 @@ from typing import Optional
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
+
+def _configure_native_thread_env() -> None:
+    cloud_markers = (
+        "RENDER",
+        "RENDER_SERVICE_ID",
+        "RENDER_INSTANCE_ID",
+        "DOCFLOW_CLOUD_DEPLOYMENT",
+    )
+    cloud_like = any(str(os.getenv(name, "")).strip() for name in cloud_markers)
+    limit_requested = str(os.getenv("DOCFLOW_LIMIT_OCR_THREADS", "")).strip().lower()
+    should_limit = cloud_like or limit_requested in {"1", "true", "yes", "on"}
+    if not should_limit:
+        return
+
+    thread_env = {
+        "OMP_NUM_THREADS": "1",
+        "OMP_THREAD_LIMIT": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "VECLIB_MAXIMUM_THREADS": "1",
+        "BLIS_NUM_THREADS": "1",
+        "GOTO_NUM_THREADS": "1",
+        "OMP_WAIT_POLICY": "PASSIVE",
+    }
+    for env_name, env_value in thread_env.items():
+        os.environ.setdefault(env_name, env_value)
+
+
+_configure_native_thread_env()
+
 # 修复 Windows 编码问题
 if sys.platform == 'win32':
     import io
@@ -59,6 +90,10 @@ IMAGE_OCR_CACHE_VERSION = "v1"
 IMAGE_OCR_CACHE_DIR = PROJECT_ROOT / "uploads_temp" / "ocr_cache"
 IMAGE_OCR_MEMORY_CACHE = {}
 IMAGE_OCR_CACHE_LOCK = threading.Lock()
+_RAPIDOCR_WARMUP_STARTED = False
+_RAPIDOCR_WARMUP_FINISHED = False
+_RAPIDOCR_WARMUP_LOCK = threading.Lock()
+_RAPIDOCR_READER_LOCK = threading.Lock()
 
 
 def _get_default_pdf_mode() -> str:
@@ -147,15 +182,15 @@ def _get_image_ocr_resize_config() -> dict:
     if config["cloud_downsample_enabled"]:
         config["max_long_edge"] = min(
             config["max_long_edge"],
-            _env_int("DOCFLOW_CLOUD_IMAGE_OCR_MAX_LONG_EDGE", 1100),
+            _env_int("DOCFLOW_CLOUD_IMAGE_OCR_MAX_LONG_EDGE", 960),
         )
         config["fast_edge_trigger"] = min(
             config["fast_edge_trigger"],
-            _env_int("DOCFLOW_CLOUD_IMAGE_OCR_FAST_EDGE_TRIGGER", 1800),
+            _env_int("DOCFLOW_CLOUD_IMAGE_OCR_FAST_EDGE_TRIGGER", 1500),
         )
         config["huge_long_edge"] = min(
             config["huge_long_edge"],
-            _env_int("DOCFLOW_CLOUD_IMAGE_OCR_HUGE_LONG_EDGE", 900),
+            _env_int("DOCFLOW_CLOUD_IMAGE_OCR_HUGE_LONG_EDGE", 768),
         )
 
     config["huge_long_edge"] = min(config["huge_long_edge"], config["max_long_edge"])
@@ -419,6 +454,36 @@ def _get_rapidocr_reader():
         raise
 
 
+def _get_rapidocr_reader():
+    global _RAPIDOCR_READER_CACHE, _RAPIDOCR_READER_ERROR
+    if not _env_flag("DOCFLOW_ENABLE_RAPIDOCR", True):
+        raise RuntimeError("RapidOCR is disabled")
+    if _RAPIDOCR_READER_CACHE is not None:
+        return _RAPIDOCR_READER_CACHE
+    if _RAPIDOCR_READER_ERROR is not None:
+        raise _RAPIDOCR_READER_ERROR
+
+    with _RAPIDOCR_READER_LOCK:
+        if _RAPIDOCR_READER_CACHE is not None:
+            return _RAPIDOCR_READER_CACHE
+        if _RAPIDOCR_READER_ERROR is not None:
+            raise _RAPIDOCR_READER_ERROR
+
+        try:
+            rapidocr_module = import_with_base_fallback("rapidocr")
+            rapidocr_cls = getattr(rapidocr_module, "RapidOCR", None)
+            if rapidocr_cls is None:
+                raise RuntimeError("RapidOCR class not found")
+            try:
+                _RAPIDOCR_READER_CACHE = rapidocr_cls()
+            except TypeError:
+                _RAPIDOCR_READER_CACHE = rapidocr_cls(params={})
+            return _RAPIDOCR_READER_CACHE
+        except Exception as exc:
+            _RAPIDOCR_READER_ERROR = exc
+            raise
+
+
 def _prepare_image_for_rapidocr(image_path: str) -> tuple[str, dict, callable]:
     import tempfile
     from PIL import Image, ImageOps
@@ -554,6 +619,69 @@ def _run_rapidocr(image_path: str) -> tuple[str, dict]:
         }
     )
     return text, prepared_meta
+
+
+def _should_prewarm_rapidocr() -> bool:
+    return _env_flag("DOCFLOW_RAPIDOCR_PREWARM", _is_cloud_runtime())
+
+
+def _run_rapidocr_warmup() -> None:
+    global _RAPIDOCR_WARMUP_FINISHED
+
+    start = time.time()
+    warmup_path = None
+    try:
+        import tempfile
+        from PIL import Image, ImageDraw, ImageFont
+
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png", dir=UPLOAD_FOLDER)
+        warmup_path = temp_file.name
+        temp_file.close()
+
+        image = Image.new("RGB", (640, 160), "white")
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.load_default()
+        draw.text((18, 24), "DocFlow OCR Warmup 123", fill="black", font=font)
+        draw.text((18, 78), "Render CPU warmup", fill="black", font=font)
+        image.save(warmup_path, format="PNG", optimize=True)
+        image.close()
+
+        text, meta = _run_rapidocr(warmup_path)
+        elapsed_ms = (time.time() - start) * 1000
+        logger.info(
+            "RapidOCR warmup complete: elapsed=%.0fms prepared=%s chars=%s",
+            elapsed_ms,
+            meta.get("prepared_size"),
+            len(str(text or "")),
+        )
+    except Exception as exc:
+        logger.warning("RapidOCR warmup failed: %s", exc)
+    finally:
+        _RAPIDOCR_WARMUP_FINISHED = True
+        if warmup_path:
+            try:
+                os.remove(warmup_path)
+            except Exception:
+                pass
+
+
+def _schedule_rapidocr_warmup() -> None:
+    global _RAPIDOCR_WARMUP_STARTED
+
+    if not _should_prewarm_rapidocr():
+        return
+    if not _env_flag("DOCFLOW_ENABLE_RAPIDOCR", True):
+        return
+    if "rapidocr" not in _get_image_ocr_order():
+        return
+
+    with _RAPIDOCR_WARMUP_LOCK:
+        if _RAPIDOCR_WARMUP_STARTED:
+            return
+        _RAPIDOCR_WARMUP_STARTED = True
+
+    logger.info("RapidOCR warmup scheduled")
+    threading.Thread(target=_run_rapidocr_warmup, name="rapidocr-warmup", daemon=True).start()
 
 
 def _prepare_image_for_paddleocr(image_path: str) -> tuple[str, dict, callable]:
@@ -1014,11 +1142,14 @@ def _log_ocr_runtime_status() -> None:
         items = {item.get("id"): item for item in dep_status.get("items", []) if isinstance(item, dict)}
         image_profile = dep_status.get("profiles", {}).get("image_ocr", {})
         logger.info(
-            "OCR startup check: cloud=%s order=%s profile=%s reason=%s",
+            "OCR startup check: cloud=%s order=%s profile=%s reason=%s prewarm=%s threads=%s/%s",
             _is_cloud_runtime(),
             _format_ocr_engine_chain(_get_image_ocr_order()),
             image_profile.get("status", "unknown"),
             image_profile.get("reason", ""),
+            _should_prewarm_rapidocr(),
+            os.getenv("OMP_NUM_THREADS", "-"),
+            os.getenv("OPENBLAS_NUM_THREADS", "-"),
         )
         for dep_id in ("rapidocr", "onnxruntime", "pytesseract"):
             item = items.get(dep_id)
@@ -1037,6 +1168,8 @@ def _log_ocr_runtime_status() -> None:
 
 # ── 创建处理器（全局复用）
 _log_ocr_runtime_status()
+_log_ocr_runtime_status()
+_schedule_rapidocr_warmup()
 processor = DocFlowProcessor()
 
 # ── 支持 OCR 的图片格式
