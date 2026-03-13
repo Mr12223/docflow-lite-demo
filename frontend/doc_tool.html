@@ -461,6 +461,25 @@ tr:hover td{background:rgba(124,106,255,.04)}
 }
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--s2);border:1px solid var(--accent);color:var(--accent);font-family:var(--mono);font-size:11.5px;padding:9px 22px;border-radius:8px;opacity:0;pointer-events:none;transition:all .25s;z-index:999;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* Invoice extraction styles */
+.invoice-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px}
+.invoice-field{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.invoice-field-label{font-family:var(--mono);font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.3px;display:flex;align-items:center;gap:6px}
+.invoice-field-value{font-size:13px;color:var(--text);word-break:break-all}
+.invoice-field-value.empty{color:var(--muted);font-style:italic;font-size:11px}
+.invoice-conf{display:inline-block;font-size:8px;padding:1px 5px;border-radius:8px;font-family:var(--mono);vertical-align:middle}
+.invoice-conf.high{background:rgba(61,232,160,.15);color:var(--accent3)}
+.invoice-conf.medium{background:rgba(255,179,64,.15);color:var(--amber)}
+.invoice-conf.low{background:rgba(104,104,160,.15);color:var(--dim)}
+.invoice-save-status{padding:8px 14px;font-size:11px;color:var(--accent3);font-family:var(--mono)}
+.invoice-record-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.invoice-record-item:hover{background:var(--s2)}
+.invoice-record-info{flex:1;min-width:0}
+.invoice-record-name{font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.invoice-record-meta{font-size:9.5px;color:var(--dim);font-family:var(--mono)}
+.invoice-record-del{background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:4px}
+.invoice-record-del:hover{color:var(--accent2);background:rgba(255,106,142,.1)}
+@media(max-width:860px){.invoice-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -528,6 +547,7 @@ tr:hover td{background:rgba(124,106,255,.04)}
         <div class="opt-item on" data-opt="table"><div class="opt-ck">✓</div><span class="opt-lbl">📊 表格</span></div>
         <div class="opt-item on" data-opt="meta"><div class="opt-ck">✓</div><span class="opt-lbl">🏷 元数据</span></div>
         <div class="opt-item" data-opt="image"><div class="opt-ck"></div><span class="opt-lbl">🖼 图片OCR</span></div>
+        <div class="opt-item" data-opt="invoice"><div class="opt-ck"></div><span class="opt-lbl">🧾 发票识别</span></div>
       </div>
     </div>
     <div class="opts-divider"></div>
@@ -684,6 +704,25 @@ tr:hover td{background:rgba(124,106,255,.04)}
         </div>
       </div>
     </div>
+    <div class="opts-divider"></div>
+    <div class="opts-section">
+      <div class="collapsible-panel invoice-records-panel" data-panel="invoice_records">
+        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePanel('invoice_records')" onkeydown="handlePanelKey(event,'invoice_records')">
+          <div class="collapsible-title-wrap">
+            <span class="dep-title">发票记录</span>
+            <span class="collapsible-sub">已识别并保存的发票数据</span>
+          </div>
+          <div class="collapsible-actions">
+            <button class="panel-action-btn" onclick="event.stopPropagation();exportInvoices()">导出CSV</button>
+            <button class="panel-action-btn" onclick="event.stopPropagation();loadInvoiceRecords()">刷新</button>
+            <span class="collapsible-chevron">▾</span>
+          </div>
+        </div>
+        <div class="collapsible-body">
+          <div id="invoice-records-list"><div class="hist-empty" id="invoice-records-empty">暂无发票记录</div></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -710,6 +749,7 @@ tr:hover td{background:rgba(124,106,255,.04)}
     <div class="tab" onclick="switchTab('table',this)">表格 <span class="tab-badge" id="tb-tables">—</span></div>
     <div class="tab" onclick="switchTab('stats',this)">统计 &amp; 字数</div>
     <div class="tab" onclick="switchTab('log',this)">日志</div>
+    <div class="tab" onclick="switchTab('invoice',this)">发票 <span class="tab-badge" id="tb-invoice">—</span></div>
   </div>
   <div class="result-body">
     <div class="tab-pane active" id="tab-text">
@@ -793,6 +833,13 @@ tr:hover td{background:rgba(124,106,255,.04)}
         <div class="log-line log-INFO"><span class="log-t">00:00:00</span><span class="log-lv">INFO</span><span class="log-msg">DocFlow v2.1 就绪 — 支持 PDF/DOCX/XLSX/PPTX/TXT/CSV/图片/JSON</span></div>
       </div>
     </div>
+    <div class="tab-pane" id="tab-invoice">
+      <div class="placeholder" id="ph-invoice"><div class="ph-icon">🧾</div><div class="ph-txt">勾选「发票识别」后处理文件，可自动提取发票结构化信息</div></div>
+      <div id="invoice-out" style="display:none">
+        <div class="invoice-grid" id="invoice-fields-grid"></div>
+        <div class="invoice-save-status" id="invoice-save-status"></div>
+      </div>
+    </div>
   </div>
   <!-- FOOTER: clear layout, no overlap -->
   <div class="result-foot">
@@ -829,7 +876,7 @@ function fmtSz(b){if(b<1024)return b+'B';if(b<1048576)return (b/1024).toFixed(1)
 function nowStr(){const d=new Date();return[d.getHours(),d.getMinutes(),d.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');}
 function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m]));}
 function readPrefs(){try{return JSON.parse(localStorage.getItem(PREF_KEY)||'{}');}catch(e){return {};}}
-const PANEL_DEFAULTS={mode_compare:true,batch_test:true,batch_summary:true,dependency_check:true,history_panel:true};
+const PANEL_DEFAULTS={mode_compare:true,batch_test:true,batch_summary:true,dependency_check:true,history_panel:true,invoice_records:true};
 function getPanelOpen(panelId){
   const panel=document.querySelector(`.collapsible-panel[data-panel="${panelId}"]`);
   return panel?!panel.classList.contains('collapsed'):!!PANEL_DEFAULTS[panelId];
@@ -840,6 +887,7 @@ function getCurrentPrefs(){
   return {
     format:getFormat(),
     pdfMode:getPdfMode(),
+    invoiceExtract:!!document.querySelector('.opt-item[data-opt="invoice"]')?.classList.contains('on'),
     batch:{
       suiteNormal:!!document.getElementById('bt-suite-normal')?.checked,
       suiteEdge:!!document.getElementById('bt-suite-edge')?.checked,
@@ -902,6 +950,14 @@ function applyPrefs(){
   }
   const pdfMode=prefs.pdfMode||'fast';
   document.querySelectorAll('.pdf-mode-chip').forEach(chip=>chip.classList.toggle('on',chip.dataset.pdfMode===pdfMode));
+  if(typeof prefs.invoiceExtract==='boolean'){
+    const invoiceOpt=document.querySelector('.opt-item[data-opt="invoice"]');
+    if(invoiceOpt){
+      invoiceOpt.classList.toggle('on',prefs.invoiceExtract);
+      const check=invoiceOpt.querySelector('.opt-ck');
+      if(check)check.textContent=prefs.invoiceExtract?'✓':'';
+    }
+  }
   const batch=prefs.batch||{};
   if(document.getElementById('bt-suite-normal'))document.getElementById('bt-suite-normal').checked=batch.suiteNormal ?? true;
   if(document.getElementById('bt-suite-edge'))document.getElementById('bt-suite-edge').checked=batch.suiteEdge ?? true;
@@ -1047,6 +1103,9 @@ function updateBatchBar(){
 // Options
 document.querySelectorAll('.opt-item').forEach(el=>{
   el.addEventListener('click',()=>{el.classList.toggle('on');el.querySelector('.opt-ck').textContent=el.classList.contains('on')?'✓':'';});
+});
+document.querySelectorAll('.opt-item').forEach(el=>{
+  el.addEventListener('click',()=>savePrefs());
 });
 document.querySelectorAll('.fmt-chip').forEach(el=>{
   el.addEventListener('click',()=>{document.querySelectorAll('.fmt-chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');savePrefs();});
@@ -1767,6 +1826,9 @@ function switchTab(name,el){
   el.classList.add('active');
   document.getElementById('tab-'+name).classList.add('active');
 }
+function getTabEl(name){
+  return Array.from(document.querySelectorAll('.tab')).find(tab=>tab.getAttribute('onclick')===`switchTab('${name}',this)`)||null;
+}
 
 // Log
 function log(level,msg){
@@ -2463,6 +2525,8 @@ async function startProcessJob(file,fmt,pdfMode){
   fd.append('file',file);
   fd.append('format',fmt);
   fd.append('pdf_mode',pdfMode);
+  const invoiceOpt=document.querySelector('.opt-item[data-opt="invoice"]');
+  if(invoiceOpt&&invoiceOpt.classList.contains('on'))fd.append('invoice_extract','1');
   const res=await fetch('/process/start',{method:'POST',body:fd});
   const data=await res.json().catch(()=>({}));
   if(!res.ok || !data.success || !data.job_id){
@@ -2755,6 +2819,7 @@ function showResult(result,fname){
       `<div class="detail-row"><span class="detail-key">${esc(k)}</span><span class="detail-val">${esc(formatMetaValue(v))}</span></div>`
     ).join('');
   }else detCard.style.display='none';
+  renderInvoiceTab(result);
   document.getElementById('result-file').textContent=fname||'—';
 }
 
@@ -2912,9 +2977,122 @@ renderModeCompareReport(null);
 refreshModeComparePanel();
 resetBatchSummaryPanel();
 loadDependencyStatus();
+loadInvoiceRecords();
 window.addEventListener('resize',()=>requestAnimationFrame(syncCollapsibleHeights));
 log('INFO','💡 多文件：处理完成后点击文件列表条目可切换查看各自的结果');
 log('INFO','💡 搜索：在搜索框输入关键词，↑↓ 键跳转匹配位置');
+
+// ── 发票识别相关函数 ──
+
+const INVOICE_FIELD_LABELS={
+  invoice_code:'发票代码',invoice_number:'发票号码',invoice_date:'开票日期',
+  amount:'金额（不含税）',tax:'税额',total:'价税合计',
+  buyer_name:'购买方',seller_name:'销售方',
+  buyer_tax_id:'购买方税号',seller_tax_id:'销售方税号',
+  invoice_type:'发票类型',machine_number:'机器编号',check_code:'校验码'
+};
+const INVOICE_FIELD_ORDER=['invoice_type','invoice_code','invoice_number','invoice_date','total','amount','tax','buyer_name','buyer_tax_id','seller_name','seller_tax_id','machine_number','check_code'];
+
+function renderInvoiceTab(result){
+  const out=document.getElementById('invoice-out');
+  const ph=document.getElementById('ph-invoice');
+  const grid=document.getElementById('invoice-fields-grid');
+  const badge=document.getElementById('tb-invoice');
+  const saveStatus=document.getElementById('invoice-save-status');
+  const inv=result.stats?.invoice_fields;
+  if(!inv||!inv.is_invoice){
+    out.style.display='none';ph.style.display='flex';
+    badge.textContent='—';
+    return;
+  }
+  ph.style.display='none';out.style.display='block';
+  badge.textContent=inv.field_count||0;
+  const fields=inv.fields||{};
+  let html='';
+  INVOICE_FIELD_ORDER.forEach(key=>{
+    const f=fields[key];
+    const label=INVOICE_FIELD_LABELS[key]||key;
+    if(f&&f.value){
+      const confCls=f.confidence||'medium';
+      const confLabel={high:'高',medium:'中',low:'低'}[confCls]||confCls;
+      html+=`<div class="invoice-field">
+        <div class="invoice-field-label">${esc(label)} <span class="invoice-conf ${confCls}">${confLabel}</span></div>
+        <div class="invoice-field-value">${esc(f.value)}</div>
+      </div>`;
+    }else{
+      html+=`<div class="invoice-field">
+        <div class="invoice-field-label">${esc(label)}</div>
+        <div class="invoice-field-value empty">未识别</div>
+      </div>`;
+    }
+  });
+  grid.innerHTML=html;
+  if(inv.saved_record_id){
+    saveStatus.innerHTML=`<span style="color:var(--accent3)">✓ 已自动保存到发票记录 (ID: ${inv.saved_record_id})</span>`;
+    loadInvoiceRecords();
+  }else{
+    saveStatus.innerHTML='<span style="color:var(--dim)">未检测到有效发票或未启用发票识别</span>';
+  }
+}
+
+async function loadInvoiceRecords(){
+  try{
+    const res=await fetch('/invoices?per_page=50');
+    const data=await res.json();
+    if(!data.success)return;
+    const list=document.getElementById('invoice-records-list');
+    const empty=document.getElementById('invoice-records-empty');
+    const records=data.records||[];
+    if(!records.length){list.innerHTML='';list.appendChild(empty);empty.style.display='block';return;}
+    empty.style.display='none';
+    list.innerHTML=records.map(r=>{
+      const amt=r.total||r.amount||'—';
+      const date=r.invoice_date||'';
+      const num=r.invoice_number||'';
+      const meta=[num,date,amt?`¥${amt}`:''].filter(Boolean).join(' · ');
+      return `<div class="invoice-record-item" onclick="viewInvoiceRecord(${r.id})">
+        <div class="invoice-record-info">
+          <div class="invoice-record-name">${esc(r.file_name)}</div>
+          <div class="invoice-record-meta">${esc(meta)}</div>
+        </div>
+        <button class="invoice-record-del" onclick="event.stopPropagation();deleteInvoiceRecord(${r.id})" title="删除">✕</button>
+      </div>`;
+    }).join('');
+  }catch(e){console.warn('加载发票记录失败',e);}
+}
+
+async function deleteInvoiceRecord(id){
+  try{
+    const res=await fetch(`/invoices/${id}`,{method:'DELETE'});
+    const data=await res.json();
+    if(data.success){toast('✓ 已删除','var(--accent3)');loadInvoiceRecords();}
+  }catch(e){toast('删除失败','var(--accent2)');}
+}
+
+async function viewInvoiceRecord(id){
+  try{
+    const res=await fetch(`/invoices/${id}`);
+    const data=await res.json();
+    if(!data.success||!data.record)return;
+    const r=data.record;
+    const fakeResult={stats:{invoice_fields:{
+      is_invoice:true,confidence:r.confidence,field_count:r.field_count,
+      saved_record_id:r.id,
+      fields:{}
+    }}};
+    INVOICE_FIELD_ORDER.forEach(key=>{
+      if(r[key])fakeResult.stats.invoice_fields.fields[key]={value:r[key],confidence:r.confidence,label:INVOICE_FIELD_LABELS[key]};
+    });
+    renderInvoiceTab(fakeResult);
+    const invoiceTab=getTabEl('invoice');
+    if(invoiceTab)switchTab('invoice',invoiceTab);
+    document.getElementById('result-file').textContent=r.file_name||'—';
+  }catch(e){console.warn('查看发票记录失败',e);}
+}
+
+function exportInvoices(){
+  window.open('/invoices/export','_blank');
+}
 </script>
 </body>
 </html>

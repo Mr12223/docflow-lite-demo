@@ -1135,6 +1135,11 @@ BATCH_TEST_LOCK = threading.Lock()
 PROCESS_JOBS = {}
 PROCESS_JOB_LOCK = threading.Lock()
 
+# ── 发票数据库
+from invoice_db import InvoiceDB
+from invoice_extractor import InvoiceExtractor
+invoice_db = InvoiceDB()
+
 
 def _log_ocr_runtime_status() -> None:
     try:
@@ -1297,6 +1302,68 @@ def _build_cancelled_process_result(file_name: str, file_ext: str) -> dict:
         "error": message,
         "error_info": build_error_info(message, file_name=file_name, file_ext=file_ext, metadata_dict={}, source="process"),
     }
+    return result
+
+
+def _maybe_attach_invoice_fields(result: dict, enabled: bool) -> dict:
+    if not enabled or not isinstance(result, dict) or not result.get("success"):
+        return result
+
+    text = str(result.get("text") or "").strip()
+    if not text:
+        return result
+
+    stats = result.setdefault("statistics", {})
+    if isinstance(stats.get("invoice_fields"), dict):
+        return result
+
+    try:
+        stats["invoice_fields"] = InvoiceExtractor().extract(text)
+    except Exception as exc:
+        logger.warning("鍙戠エ鎻愬彇澶辫触: %s", exc)
+        stats["invoice_fields"] = {
+            "is_invoice": False,
+            "confidence": "none",
+            "field_count": 0,
+            "fields": {},
+        }
+    return result
+
+
+def _maybe_save_invoice_record(
+    result: dict,
+    enabled: bool,
+    save_path: str,
+    file_name: str,
+    file_ext: str,
+) -> dict:
+    if not enabled or not isinstance(result, dict) or not result.get("success"):
+        return result
+
+    inv_data = (result.get("statistics") or {}).get("invoice_fields") or {}
+    if not isinstance(inv_data, dict) or not inv_data.get("is_invoice"):
+        return result
+
+    try:
+        file_size = 0
+        try:
+            file_size = os.path.getsize(save_path)
+        except Exception:
+            pass
+        record_id = invoice_db.save_record(
+            fields=inv_data.get("fields", {}),
+            file_name=file_name,
+            file_type=file_ext,
+            file_size=file_size,
+            confidence=inv_data.get("confidence", "low"),
+            field_count=inv_data.get("field_count", 0),
+            raw_text=result.get("text", ""),
+        )
+        inv_data["saved_record_id"] = record_id
+    except Exception as exc:
+        logger.warning("鍙戠エ璁板綍淇濆瓨澶辫触: %s", exc)
+
+    return result
 
 
 def _run_process_job(job_id: str) -> None:
@@ -1309,6 +1376,7 @@ def _run_process_job(job_id: str) -> None:
         output_format = job["output_format"]
         pdf_mode = job["pdf_mode"]
         file_ext = job["file_ext"]
+        invoice_extract = job.get("invoice_extract", False)
         if job.get("state") == "cancelled" or job.get("cancel_requested"):
             PROCESS_JOBS[job_id]["state"] = "cancelled"
             PROCESS_JOBS[job_id]["progress_pct"] = 100.0
@@ -1347,10 +1415,19 @@ def _run_process_job(job_id: str) -> None:
             raise DocFlowCancelledError(cancelled_message)
         if file_ext in IMAGE_EXTS:
             result = process_image_ocr(save_path, file_name, progress_callback=report, cancel_callback=cancel_requested)
+            # 图片 OCR 路径：单独运行发票提取
+            if invoice_extract and result.get("success") and result.get("text"):
+                try:
+                    from invoice_extractor import InvoiceExtractor
+                    inv = InvoiceExtractor().extract(result["text"])
+                    result.setdefault("statistics", {})["invoice_fields"] = inv
+                except Exception:
+                    pass
         else:
             result = job_processor.process(
                 save_path,
                 extract_keywords=True,
+                extract_invoice=invoice_extract,
                 output_format=output_format,
                 pdf_mode=pdf_mode,
                 progress_callback=report,
@@ -1359,6 +1436,31 @@ def _run_process_job(job_id: str) -> None:
         if cancel_requested():
             raise DocFlowCancelledError(cancelled_message)
         result = augment_result_payload(result, file_name=file_name, file_ext=file_ext, source="process")
+        result = _maybe_save_invoice_record(result, invoice_extract, save_path, file_name, file_ext)
+
+        # 发票自动存库
+        if False and invoice_extract and result.get("success"):
+            try:
+                inv_data = result.get("statistics", {}).get("invoice_fields", {})
+                if inv_data.get("is_invoice"):
+                    file_size = 0
+                    try:
+                        file_size = os.path.getsize(save_path)
+                    except Exception:
+                        pass
+                    record_id = invoice_db.save_record(
+                        fields=inv_data.get("fields", {}),
+                        file_name=file_name,
+                        file_type=file_ext,
+                        file_size=file_size,
+                        confidence=inv_data.get("confidence", "low"),
+                        field_count=inv_data.get("field_count", 0),
+                        raw_text=result.get("text", ""),
+                    )
+                    inv_data["saved_record_id"] = record_id
+            except Exception as exc:
+                logger.warning("发票记录保存失败: %s", exc)
+
         final_state = "completed" if result.get("success") else "failed"
         _update_process_job(
             job_id,
@@ -1735,6 +1837,7 @@ def start_process_file():
 
     output_format = request.form.get("format", "txt")
     pdf_mode = _normalize_pdf_mode(request.form.get("pdf_mode", DEFAULT_PDF_MODE))
+    invoice_extract = request.form.get("invoice_extract", "0") == "1"
     file_ext = Path(safe_name).suffix.lower()
     now = time.time()
 
@@ -1750,6 +1853,7 @@ def start_process_file():
             "save_path": save_path,
             "output_format": output_format,
             "pdf_mode": pdf_mode,
+            "invoice_extract": invoice_extract,
             "result": None,
             "error": "",
             "cancel_requested": False,
@@ -1837,19 +1941,23 @@ def process_file():
 
     output_format = request.form.get("format", "txt")
     pdf_mode = _normalize_pdf_mode(request.form.get("pdf_mode", DEFAULT_PDF_MODE))
+    invoice_extract = request.form.get("invoice_extract", "0") == "1"
     ext = os.path.splitext(file.filename)[1].lower()
 
     # 图片走 OCR 流程
     if ext in IMAGE_EXTS:
         result = process_image_ocr(save_path, file.filename)
+        result = _maybe_attach_invoice_fields(result, invoice_extract)
     else:
         result = processor.process(
             save_path,
             extract_keywords=True,
+            extract_invoice=invoice_extract,
             output_format=output_format,
             pdf_mode=pdf_mode,
         )
     result = augment_result_payload(result, file_name=file.filename, file_ext=ext, source="process")
+    result = _maybe_save_invoice_record(result, invoice_extract, save_path, file.filename, ext)
 
     # 删除临时文件
     try:
@@ -2236,6 +2344,52 @@ OCR 引擎: {engine_used}
     if cache_key and file_sha256 and cache_profile and engine_used in {"Tesseract", "EasyOCR", "PaddleOCR", "RapidOCR"}:
         _save_image_ocr_cache(cache_key, file_sha256, cache_profile, result)
     return result
+
+
+# ────────────────────────────────────────
+#  发票记录 API
+# ────────────────────────────────────────
+
+@app.route("/invoices", methods=["GET"])
+def list_invoices():
+    """分页查询发票记录"""
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 20, type=int)
+    search = request.args.get("search", "").strip()
+    data = invoice_db.list_records(page=page, per_page=per_page, search=search)
+    return jsonify({"success": True, **data})
+
+
+@app.route("/invoices/<int:record_id>", methods=["GET"])
+def get_invoice(record_id: int):
+    """获取单条发票记录"""
+    record = invoice_db.get_record(record_id)
+    if not record:
+        return _error_response("发票记录不存在", status_code=404)
+    return jsonify({"success": True, "record": record})
+
+
+@app.route("/invoices/<int:record_id>", methods=["DELETE"])
+def delete_invoice(record_id: int):
+    """删除发票记录"""
+    ok = invoice_db.delete_record(record_id)
+    if not ok:
+        return _error_response("发票记录不存在", status_code=404)
+    return jsonify({"success": True, "deleted": True})
+
+
+@app.route("/invoices/export", methods=["GET"])
+def export_invoices():
+    """导出所有发票记录为 CSV"""
+    csv_content = invoice_db.export_csv()
+    if not csv_content:
+        return _error_response("暂无发票记录可导出")
+    from flask import Response
+    return Response(
+        "\ufeff" + csv_content,  # BOM for Excel UTF-8
+        content_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=invoice_records.csv"},
+    )
 
 
 # ────────────────────────────────────────

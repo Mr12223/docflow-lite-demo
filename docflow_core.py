@@ -1652,6 +1652,7 @@ class DocFlowProcessor:
         self,
         file_path: str,
         extract_keywords: bool = True,
+        extract_invoice: bool = False,
         output_format: str = "txt",   # "txt" | "json" | "markdown" | "csv"
         pdf_mode: str = DEFAULT_PDF_MODE,
         progress_callback=None,
@@ -1699,6 +1700,21 @@ class DocFlowProcessor:
             result.statistics["summary"]  = self.analyzer.extract_summary(result.text_content)
         else:
             emit(88, "analyzing", "正在整理结构化结果")
+
+        # 发票结构化字段提取
+        if extract_invoice and result.text_content:
+            _ensure_not_cancelled(cancel_callback)
+            emit(92, "invoice_extract", "正在提取发票结构化信息")
+            try:
+                from invoice_extractor import InvoiceExtractor
+                invoice_result = InvoiceExtractor().extract(result.text_content)
+                result.statistics["invoice_fields"] = invoice_result
+            except Exception as exc:
+                logger.warning("发票提取失败: %s", exc)
+                result.statistics["invoice_fields"] = {
+                    "is_invoice": False, "confidence": "none",
+                    "field_count": 0, "fields": {},
+                }
 
         # 格式化输出
         fmt_map = {
