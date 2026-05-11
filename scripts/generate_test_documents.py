@@ -17,15 +17,19 @@ import json
 import shutil
 from pathlib import Path
 
+from _bootstrap import ensure_project_root_on_path
 from docx import Document
 from openpyxl import Workbook
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from PIL import Image, ImageDraw, ImageFont
 
+ensure_project_root_on_path()
 
-ROOT = Path(__file__).resolve().parent.parent
-OUTPUT_DIR = ROOT / "sample_data" / "test_documents"
+from docflow.paths import SAMPLE_DATA_DIR
+
+
+OUTPUT_DIR = SAMPLE_DATA_DIR / "test_documents"
 
 TITLE_ZH = "DocFlow 综合测试样本"
 TITLE_EN = "DocFlow End-to-End Sample Pack"

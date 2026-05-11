@@ -8,13 +8,16 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any
 
+from _bootstrap import ensure_project_root_on_path
 from openpyxl import load_workbook
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT = SCRIPT_DIR.parent
+ensure_project_root_on_path()
 
-DEFAULT_EXCEL_DIR = ROOT / "发票样本" / "invoices" / "excel"
-DEFAULT_OUTPUT = ROOT / "发票样本" / "invoice_excel_manifest.csv"
+from docflow.paths import PROJECT_ROOT
+
+
+DEFAULT_EXCEL_DIR = PROJECT_ROOT / "发票样本" / "invoices" / "excel"
+DEFAULT_OUTPUT = PROJECT_ROOT / "发票样本" / "invoice_excel_manifest.csv"
 HEADERS = [
     "sample_id",
     "file_name",
@@ -123,6 +126,8 @@ def _find_summary_row(ws) -> int | None:
 
 
 def extract_row(path: Path, index: int) -> dict[str, str]:
+    """Extract ground-truth fields from one Excel invoice template."""
+
     workbook = load_workbook(path, data_only=True)
     ws = workbook.active
     summary_row = _find_summary_row(ws)
@@ -156,10 +161,10 @@ def main() -> int:
     args = parse_args()
     excel_dir = Path(args.excel_dir)
     if not excel_dir.is_absolute():
-        excel_dir = ROOT / excel_dir
+        excel_dir = PROJECT_ROOT / excel_dir
     output_path = Path(args.output)
     if not output_path.is_absolute():
-        output_path = ROOT / output_path
+        output_path = PROJECT_ROOT / output_path
 
     if not excel_dir.exists():
         print(f"未找到 Excel 样本目录：{excel_dir}")

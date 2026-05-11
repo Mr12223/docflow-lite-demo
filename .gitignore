@@ -7,6 +7,8 @@ __pycache__/
 
 uploads_temp/
 reports/
+tmp/
+data/*.db
 .tmp_wheels/
 .tmp_pymupdf.json
 docflow_*.txt

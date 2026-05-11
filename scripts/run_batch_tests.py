@@ -17,29 +17,27 @@ import argparse
 import csv
 import json
 import os
-import sys
 from collections import Counter, defaultdict
 from datetime import datetime
 from html import escape
 from pathlib import Path
 from typing import Iterable
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT = SCRIPT_DIR.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+from _bootstrap import ensure_project_root_on_path
+
+ensure_project_root_on_path()
 
 from app import IMAGE_EXTS, process_image_ocr
+from docflow.paths import PROJECT_ROOT, REPORTS_DIR, SAMPLE_DATA_DIR
 from docflow_core import DocFlowProcessor
 from docflow_support import build_error_info, summarize_error_records
 
-SAMPLE_DATA_DIR = ROOT / "sample_data"
 SUITE_ALIASES = {
     "test_documents": SAMPLE_DATA_DIR / "test_documents",
     "test_documents_edge_cases": SAMPLE_DATA_DIR / "test_documents_edge_cases",
 }
 DEFAULT_SUITES = ["test_documents", "test_documents_edge_cases"]
-DEFAULT_REPORT_ROOT = ROOT / "reports"
+DEFAULT_REPORT_ROOT = REPORTS_DIR
 
 
 KNOWN_EXPECTATIONS = {
@@ -120,6 +118,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def resolve_suite_path(suite: str) -> Path:
+    """Resolve a suite alias or relative path to a concrete directory."""
+
     suite_name = str(suite or "").strip()
     if suite_name in SUITE_ALIASES:
         return SUITE_ALIASES[suite_name]
@@ -127,12 +127,14 @@ def resolve_suite_path(suite: str) -> Path:
     suite_path = Path(suite_name)
     if suite_path.is_absolute():
         return suite_path
-    if (ROOT / suite_path).exists():
-        return ROOT / suite_path
+    if (PROJECT_ROOT / suite_path).exists():
+        return PROJECT_ROOT / suite_path
     return suite_path
 
 
 def iter_files(suite_paths: Iterable[Path]) -> list[tuple[str, Path]]:
+    """Enumerate test files from suite directories in a stable order."""
+
     items: list[tuple[str, Path]] = []
     for suite_path in suite_paths:
         if not suite_path.exists():
@@ -160,6 +162,8 @@ def run_single_case(
     extract_keywords: bool,
     pdf_mode: str,
 ) -> dict:
+    """Execute one sample file and normalize its report fields."""
+
     ext = file_path.suffix.lower()
     expected_success = get_expected_result(suite_name, file_path.name)
 

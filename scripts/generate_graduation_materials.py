@@ -5,6 +5,7 @@ import json
 from datetime import date
 from pathlib import Path
 
+from _bootstrap import ensure_project_root_on_path
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from docx.oxml import OxmlElement
@@ -16,9 +17,13 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Pt as PptPt
 
+ensure_project_root_on_path()
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_DIR = REPO_ROOT / "docs" / "graduation"
+from docflow.paths import PROJECT_ROOT
+
+
+REPO_ROOT = PROJECT_ROOT
+OUTPUT_DIR = PROJECT_ROOT / "docs" / "graduation"
 DOWNLOADS_DIR = Path(r"d:\Downloads")
 TODAY = date.today()
 

@@ -2,21 +2,20 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from datetime import datetime
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT = SCRIPT_DIR.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+from _bootstrap import ensure_project_root_on_path
+
+ensure_project_root_on_path()
 
 from app import IMAGE_EXTS, process_image_ocr
+from docflow.paths import PROJECT_ROOT, REPORTS_DIR, SAMPLE_DATA_DIR
 from docflow_core import DocFlowProcessor
 from docflow_support import build_error_info
 
-DEFAULT_MANIFEST = ROOT / "sample_data" / "evaluation_set" / "sample_manifest.json"
-DEFAULT_REPORT_ROOT = ROOT / "reports"
+DEFAULT_MANIFEST = SAMPLE_DATA_DIR / "evaluation_set" / "sample_manifest.json"
+DEFAULT_REPORT_ROOT = REPORTS_DIR
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,12 +43,16 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_manifest(manifest_path: Path) -> dict:
+    """Load the evaluation manifest JSON file."""
+
     return json.loads(manifest_path.read_text(encoding="utf-8"))
 
 
 def evaluate_item(processor: DocFlowProcessor, item: dict, extract_keywords: bool) -> dict:
+    """Run one evaluation item and compute per-rule pass/fail fields."""
+
     relative_path = item["path"]
-    file_path = ROOT / relative_path
+    file_path = PROJECT_ROOT / relative_path
     expected_success = item.get("expected_success")
     min_char_count = item.get("min_char_count")
     must_contain = item.get("must_contain") or []
@@ -207,8 +210,8 @@ def main() -> int:
     args = parse_args()
     manifest_path = Path(args.manifest)
     if not manifest_path.is_absolute():
-        project_relative = ROOT / manifest_path
-        sample_data_relative = ROOT / "sample_data" / manifest_path
+        project_relative = PROJECT_ROOT / manifest_path
+        sample_data_relative = SAMPLE_DATA_DIR / manifest_path
         manifest_path = sample_data_relative if sample_data_relative.exists() else project_relative
     if not manifest_path.exists():
         print(f"未找到评价集清单：{manifest_path}")

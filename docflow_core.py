@@ -7,51 +7,29 @@ import os
 import re
 import json
 import time
-import logging
 import sys
 import importlib
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional
 
+from docflow.runtime import configure_logging, configure_windows_utf8_stdio
+from docflow.settings import DEFAULT_PDF_MODE, env_flag as _env_flag, normalize_pdf_mode
 from docflow_support import prepare_pytesseract
 
-# 修复 Windows 编码问题
-if sys.platform == 'win32':
-    import io
-    if hasattr(sys.stdout, 'buffer') and not isinstance(sys.stdout, io.TextIOWrapper):
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    if hasattr(sys.stderr, 'buffer') and not isinstance(sys.stderr, io.TextIOWrapper):
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
-logger = logging.getLogger("DocFlow")
-
-
-def _env_flag(name: str, default: bool = False) -> bool:
-    value = str(os.getenv(name, "")).strip().lower()
-    if not value:
-        return default
-    return value in {"1", "true", "yes", "on"}
-
-
-def _default_pdf_mode() -> str:
-    value = str(os.getenv("DOCFLOW_DEFAULT_PDF_MODE", "balanced")).strip().lower()
-    return value if value in {"accurate", "balanced", "fast"} else "balanced"
-
-
-DEFAULT_PDF_MODE = _default_pdf_mode()
+configure_windows_utf8_stdio()
+logger = configure_logging("DocFlow")
 
 
 class DocFlowCancelledError(Exception):
+    """Raised when a caller requests cancellation during long-running parsing."""
+
     pass
 
 
 def _ensure_not_cancelled(cancel_callback=None) -> None:
+    """Abort parsing if the optional cancel callback reports cancellation."""
+
     if not callable(cancel_callback):
         return
     try:
@@ -65,6 +43,8 @@ def _ensure_not_cancelled(cancel_callback=None) -> None:
 
 
 def _get_base_site_packages() -> Optional[Path]:
+    """Locate base environment site-packages for fallback imports."""
+
     base_prefix = getattr(sys, 'base_prefix', sys.prefix)
     candidates = []
 
@@ -83,6 +63,8 @@ def _get_base_site_packages() -> Optional[Path]:
 
 
 def import_with_base_fallback(module_name: str):
+    """Import a module, retrying against base site-packages when needed."""
+
     try:
         return importlib.import_module(module_name)
     except ModuleNotFoundError as exc:
@@ -134,7 +116,7 @@ class ExtractionResult:
 # ═══════════════════════════════════════════════════
 
 class BaseParser:
-    """所有解析器的抽象基类"""
+    """Abstract base class implemented by all concrete document parsers."""
     supported_extensions: tuple = ()
 
     def can_parse(self, file_path: str) -> bool:
@@ -208,7 +190,7 @@ class PDFParser(BaseParser):
         return result
 
     def _resolve_pdf_mode(self, value: Optional[str]) -> str:
-        return value if value in {"accurate", "balanced", "fast"} else DEFAULT_PDF_MODE
+        return normalize_pdf_mode(value, DEFAULT_PDF_MODE)
 
     def _get_pdf_mode_config(self, pdf_mode: str) -> dict:
         configs = {

@@ -8,13 +8,13 @@ import io
 import os
 import sqlite3
 import time
-from pathlib import Path
 from typing import Optional
+
+from docflow.paths import INVOICE_DB_PATH
 
 
 # 数据库文件路径
-_PROJECT_ROOT = Path(__file__).resolve().parent
-_DEFAULT_DB_PATH = _PROJECT_ROOT / "data" / "invoices.db"
+_DEFAULT_DB_PATH = INVOICE_DB_PATH
 
 # 发票字段列表（与 invoice_extractor 保持一致）
 INVOICE_COLUMNS = [
@@ -197,6 +197,15 @@ class InvoiceDB:
             )
             conn.commit()
             return cursor.rowcount > 0
+        finally:
+            conn.close()
+
+    def delete_all_records(self) -> int:
+        conn = self._get_conn()
+        try:
+            cursor = conn.execute("DELETE FROM invoice_records")
+            conn.commit()
+            return max(0, cursor.rowcount or 0)
         finally:
             conn.close()
 

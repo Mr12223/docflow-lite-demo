@@ -23,14 +23,18 @@ import os
 import shutil
 from pathlib import Path
 
+from _bootstrap import ensure_project_root_on_path
 from docx import Document
 from openpyxl import Workbook
 from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation
 
+ensure_project_root_on_path()
 
-ROOT = Path(__file__).resolve().parent.parent
-OUTPUT_DIR = ROOT / "sample_data" / "test_documents_edge_cases"
+from docflow.paths import SAMPLE_DATA_DIR
+
+
+OUTPUT_DIR = SAMPLE_DATA_DIR / "test_documents_edge_cases"
 
 
 def ensure_output_dir() -> None:

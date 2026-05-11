@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import re
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Optional
 
 
@@ -82,6 +83,10 @@ FIELD_PATTERNS: dict[str, list[tuple[str, str]]] = {
 }
 
 INVOICE_TYPE_KEYWORDS: list[tuple[str, str]] = [
+    ("收款收据", "收据"),
+    ("收据", "收据"),
+    ("RECEIPT", "收据"),
+    ("Receipt", "收据"),
     ("增值税电子专用发票", "增值税电子专用发票"),
     ("增值税电子普通发票", "增值税电子普通发票"),
     ("增值税专用发票", "增值税专用发票"),
@@ -238,6 +243,9 @@ class InvoiceExtractor:
         compact: str,
         lines: list[str],
     ) -> Optional[tuple[str, str]]:
+        if self._looks_like_receipt(cleaned, compact):
+            return None
+
         top_lines = lines[:12]
         counts: dict[str, int] = {}
         first_pos: dict[str, int] = {}
@@ -262,6 +270,14 @@ class InvoiceExtractor:
         compact: str,
         lines: list[str],
     ) -> Optional[tuple[str, str]]:
+        receipt_number = self._find_receipt_number(lines)
+        if receipt_number:
+            return receipt_number
+
+        labeled_number = self._find_labeled_invoice_number(lines)
+        if labeled_number:
+            return labeled_number
+
         match = re.search(r"\bNo\.?\s*([A-Za-z]?\d{8,20})\b", cleaned, re.IGNORECASE)
         if match:
             return match.group(1), "high"
@@ -270,19 +286,21 @@ class InvoiceExtractor:
         counts: dict[str, int] = {}
         first_pos: dict[str, int] = {}
         for idx, line in enumerate(top_lines):
-            digits = self._digits_only(line)
-            if len(digits) != 8 or self._is_plausible_date_digits(digits):
-                continue
-            counts[digits] = counts.get(digits, 0) + 1
-            first_pos.setdefault(digits, idx)
+            for candidate in self._extract_invoice_number_candidates(line):
+                normalized = re.sub(r"[^A-Za-z0-9]", "", candidate)
+                if not self._is_plausible_invoice_number(normalized, line=line):
+                    continue
+                counts[normalized] = counts.get(normalized, 0) + 1
+                first_pos.setdefault(normalized, idx)
         if counts:
             best = sorted(counts, key=lambda value: (-counts[value], first_pos[value]))[0]
             confidence = "high" if counts[best] >= 2 else "medium"
             return best, confidence
 
-        match = re.search(r"(?<!\d)(\d{8})(?!\d)", compact)
-        if match and not self._is_plausible_date_digits(match.group(1)):
-            return match.group(1), "low"
+        for match in re.finditer(r"(?<![A-Za-z0-9])([A-Za-z]?\d{8,20})(?![A-Za-z0-9])", compact):
+            candidate = match.group(1)
+            if self._is_plausible_invoice_number(candidate):
+                return candidate, "low"
         return None
 
     def _find_invoice_date(
@@ -291,12 +309,9 @@ class InvoiceExtractor:
         compact: str,
         lines: list[str],
     ) -> Optional[tuple[str, str]]:
-        for idx, line in enumerate(lines):
-            if "开票日期" in line or line == "日期" or line.lower() == "date":
-                for candidate in lines[idx : idx + 4]:
-                    date_value = self._extract_valid_date(candidate)
-                    if date_value:
-                        return date_value, "high"
+        labeled_date = self._find_labeled_invoice_date(lines)
+        if labeled_date:
+            return labeled_date
 
         for line in lines[:20]:
             date_value = self._extract_valid_date(line)
@@ -341,6 +356,14 @@ class InvoiceExtractor:
         compact: str,
         lines: list[str],
     ) -> Optional[tuple[str, str]]:
+        paired_name = self._find_dual_section_value(lines, ("名称",), index=0)
+        if paired_name and self._looks_like_name(paired_name):
+            return paired_name, "high"
+
+        receipt_name = self._find_label_value(lines, ("付款单位", "付款方"), self._looks_like_name)
+        if receipt_name:
+            return receipt_name, "high"
+
         return self._find_party_name(compact, lines, ("购买方", "购方"), prefer="first")
 
     def _find_seller_name(
@@ -349,6 +372,14 @@ class InvoiceExtractor:
         compact: str,
         lines: list[str],
     ) -> Optional[tuple[str, str]]:
+        paired_name = self._find_dual_section_value(lines, ("名称",), index=1)
+        if paired_name and self._looks_like_name(paired_name):
+            return paired_name, "high"
+
+        receipt_name = self._find_label_value(lines, ("收款单位", "收款方"), self._looks_like_name)
+        if receipt_name:
+            return receipt_name, "high"
+
         return self._find_party_name(compact, lines, ("销售方", "销方"), prefer="last")
 
     def _find_buyer_tax_id(
@@ -357,6 +388,10 @@ class InvoiceExtractor:
         compact: str,
         lines: list[str],
     ) -> Optional[tuple[str, str]]:
+        paired_tax_id = self._find_dual_section_value(lines, ("纳税人识别号", "税号"), index=0)
+        if paired_tax_id:
+            return paired_tax_id, "high"
+
         return self._find_party_tax_id(compact, lines, ("购买方", "购方"))
 
     def _find_seller_tax_id(
@@ -365,6 +400,10 @@ class InvoiceExtractor:
         compact: str,
         lines: list[str],
     ) -> Optional[tuple[str, str]]:
+        paired_tax_id = self._find_dual_section_value(lines, ("纳税人识别号", "税号"), index=1)
+        if paired_tax_id:
+            return paired_tax_id, "high"
+
         return self._find_party_tax_id(compact, lines, ("销售方", "销方"))
 
     def _find_party_name(
@@ -449,31 +488,57 @@ class InvoiceExtractor:
             if total:
                 result["total"] = total
 
+        table_amount_tax = self._find_amount_tax_from_table(
+            lines,
+            known_total=(result.get("total") or ("", ""))[0],
+        )
+        for field_name, value in table_amount_tax.items():
+            result.setdefault(field_name, value)
+
         summary_amount_tax = self._find_amount_tax_from_summary(lines, known_total=(total or ("", ""))[0])
         for field_name, value in summary_amount_tax.items():
             result.setdefault(field_name, value)
 
-        explicit_amount = self._find_explicit_amount(lines)
-        if explicit_amount:
-            result.setdefault("amount", explicit_amount)
-
-        explicit_tax = self._find_explicit_tax(lines, known_total=(total or ("", ""))[0], known_amount=(result.get("amount") or ("", ""))[0])
-        if explicit_tax:
-            result.setdefault("tax", explicit_tax)
-
-        if "amount" not in result or "tax" not in result:
-            amount_tax = self._find_amount_tax_from_rate(
+        if "amount" not in result or "tax" not in result or "total" not in result:
+            derived_fields = self._derive_money_fields(
                 lines,
+                cleaned,
+                compact,
                 known_total=(result.get("total") or ("", ""))[0],
+                known_amount=(result.get("amount") or ("", ""))[0],
+                known_tax=(result.get("tax") or ("", ""))[0],
             )
-            for field_name, value in amount_tax.items():
+            for field_name, value in derived_fields.items():
                 result.setdefault(field_name, value)
+
+        if "amount" not in result:
+            explicit_amount = self._find_explicit_amount(lines)
+            if explicit_amount:
+                result.setdefault("amount", explicit_amount)
+
+        if "tax" not in result:
+            explicit_tax = self._find_explicit_tax(
+                lines,
+                known_total=(total or ("", ""))[0],
+                known_amount=(result.get("amount") or ("", ""))[0],
+            )
+            if explicit_tax:
+                result.setdefault("tax", explicit_tax)
 
         if self._looks_like_taxi_invoice(cleaned, compact):
             if "amount" in result and "total" not in result:
                 result["total"] = result["amount"]
             elif "total" in result and "amount" not in result:
                 result["amount"] = result["total"]
+
+        if self._looks_like_receipt(cleaned, compact):
+            if "amount" in result and "total" not in result:
+                result["total"] = result["amount"]
+            elif "total" in result and "amount" not in result:
+                result["amount"] = result["total"]
+            result.pop("tax", None)
+
+        self._reconcile_money_fields(result)
 
         return result
 
@@ -485,11 +550,12 @@ class InvoiceExtractor:
         for idx, line in enumerate(lines):
             if self._is_table_header_line(line):
                 continue
+            compact_line = self._compact_text(line)
             if "小写" in line:
                 values = self._collect_money_values([line])
                 if values:
                     return values[-1], "high"
-            if "价税合计" in line:
+            if "价税合计" in line or compact_line == "合计" or compact_line.startswith("合计"):
                 values = self._collect_money_values([line])
                 if values:
                     return values[-1], "high"
@@ -513,39 +579,50 @@ class InvoiceExtractor:
             result["tax"] = summary_fields["tax"]
         return result
 
-    def _find_amount_tax_from_rate(
+    def _find_amount_tax_from_table(
         self,
         lines: list[str],
         known_total: str = "",
     ) -> dict[str, tuple[str, str]]:
         result: dict[str, tuple[str, str]] = {}
-        explicit_rate_indexes = [
-            idx for idx, line in enumerate(lines) if re.search(r"(?:\d{1,2}%|%\d{1,2})", line)
-        ]
-        fallback_rate_indexes = [
-            idx for idx, line in enumerate(lines) if "税率" in line and idx not in explicit_rate_indexes
-        ]
+        amount_candidates, tax_candidates = self._collect_rate_amount_tax_candidates(
+            lines,
+            known_total=known_total,
+        )
+        pairs = self._collect_rate_amount_tax_pairs(lines, known_total=known_total)
 
-        for idx in explicit_rate_indexes or fallback_rate_indexes:
-            line = lines[idx]
-            if not re.search(r"(?:\d{1,2}%|%\d{1,2}|税率)", line):
-                continue
-
-            amount = self._nearest_money(lines, idx, direction=-1, limit=3)
-            if amount and "amount" not in result:
-                result["amount"] = (amount, "high")
-
-            tax = self._nearest_money(
-                lines,
-                idx,
-                direction=1,
-                limit=5,
-                skip_values={amount or "", known_total},
+        if pairs:
+            amount_sum = self._sum_money_values([amount for amount, _tax in pairs])
+            tax_sum = self._sum_money_values([tax for _amount, tax in pairs])
+            total_sum = self._sum_money_values(
+                [amount for amount, _tax in pairs] + [tax for _amount, tax in pairs]
             )
-            if tax:
-                result["tax"] = (tax, "high")
-            break
+            if not known_total or (total_sum and self._same_money(total_sum, known_total)):
+                confidence = "high" if len(pairs) >= 2 else "medium"
+                if amount_sum:
+                    result["amount"] = (amount_sum, confidence)
+                if tax_sum:
+                    result["tax"] = (tax_sum, confidence)
+                if total_sum:
+                    result.setdefault("total", (total_sum, confidence))
+                return result
+
+        if known_total:
+            repaired = self._repair_amount_tax_from_candidates(
+                amount_candidates,
+                tax_candidates,
+                known_total,
+            )
+            if repaired:
+                return repaired
         return result
+
+    def _find_amount_tax_from_rate(
+        self,
+        lines: list[str],
+        known_total: str = "",
+    ) -> dict[str, tuple[str, str]]:
+        return self._find_amount_tax_from_table(lines, known_total=known_total)
 
     def _find_explicit_amount(self, lines: list[str]) -> Optional[tuple[str, str]]:
         for idx, line in enumerate(lines):
@@ -556,9 +633,9 @@ class InvoiceExtractor:
             prev_values = self._collect_money_values([lines[idx - 1]]) if idx > 0 else []
             values = self._collect_money_values(lines[max(0, idx - 1) : idx + 4])
             if values:
-                if prev_values and prev_values[0] in values:
-                    return prev_values[0], "medium"
-                return values[0], "medium"
+                if prev_values and prev_values[-1] in values:
+                    return prev_values[-1], "medium"
+                return self._max_money_value(values), "medium"
         return None
 
     def _find_explicit_tax(
@@ -779,6 +856,82 @@ class InvoiceExtractor:
                 return normalized
         return ""
 
+    def _looks_like_receipt(self, cleaned: str, compact: str) -> bool:
+        return (
+            "收据" in cleaned
+            or "收据" in compact
+            or ("付款单位" in cleaned and "收款单位" in cleaned)
+        )
+
+    def _find_receipt_number(self, lines: list[str]) -> Optional[tuple[str, str]]:
+        for idx, line in enumerate(lines[:12]):
+            if not re.search(r"(收据编号|收据号|编号)", line):
+                continue
+            snippet_lines = lines[idx : min(len(lines), idx + 3)]
+            snippet = " ".join(snippet_lines)
+            for match in re.finditer(r"([A-Za-z]{1,4}\d{6,20}|\d{8,20})", snippet):
+                candidate = re.sub(r"[^A-Za-z0-9]", "", match.group(1)).upper()
+                if not candidate or self._is_plausible_date_digits(self._digits_only(candidate)):
+                    continue
+                return candidate, "high"
+        return None
+
+    def _find_label_value(
+        self,
+        lines: list[str],
+        labels: tuple[str, ...],
+        validator,
+    ) -> str:
+        label_expr = "|".join(map(re.escape, labels))
+        for idx, line in enumerate(lines[:20]):
+            match = re.search(rf"(?:{label_expr})[：:\s]+(.+)$", line)
+            if match:
+                value = match.group(1).strip()
+                if validator(value):
+                    return value
+
+            if self._compact_text(line) not in {self._compact_text(label) for label in labels}:
+                continue
+
+            for next_line in lines[idx + 1 : min(len(lines), idx + 3)]:
+                value = next_line.strip()
+                if validator(value):
+                    return value
+        return ""
+
+    def _find_dual_section_value(
+        self,
+        lines: list[str],
+        labels: tuple[str, ...],
+        index: int,
+    ) -> str:
+        buyer_header = next(
+            (idx for idx, line in enumerate(lines[:12]) if any(term in line for term in ("购买方", "购方"))),
+            -1,
+        )
+        seller_header = next(
+            (
+                idx
+                for idx, line in enumerate(lines[:12])
+                if idx > buyer_header and any(term in line for term in ("销售方", "销方"))
+            ),
+            -1,
+        )
+        if buyer_header < 0 or seller_header < 0 or seller_header - buyer_header > 3:
+            return ""
+
+        label_expr = "|".join(map(re.escape, labels))
+        values: list[str] = []
+        for line in lines[seller_header + 1 : min(len(lines), seller_header + 10)]:
+            if self._is_table_header_line(line) or "货物名称" in line:
+                break
+            match = re.search(rf"(?:{label_expr})[：:\s]+(.+)$", line)
+            if match:
+                values.append(match.group(1).strip())
+                if len(values) > index:
+                    return values[index]
+        return ""
+
     def _normalize_date(self, value: str) -> str:
         value = str(value or "").strip()
         if not value:
@@ -813,7 +966,7 @@ class InvoiceExtractor:
         for line in lines:
             for pattern in (
                 r"[¥￥]\s*(\d[\d,]*(?:\.\d{1,2})?)",
-                r"(?<![\dA-Za-z])(\d{1,12}(?:\.\d{1,2})?)(?![\dA-Za-z])",
+                r"(?<![\dA-Za-z,])(\d{1,12}(?:,\d{3})*(?:\.\d{1,2})?)(?![\dA-Za-z])",
             ):
                 for match in re.finditer(pattern, line):
                     value = self._clean_value("amount", match.group(1))
@@ -840,7 +993,8 @@ class InvoiceExtractor:
             if idx < 0 or idx >= len(lines):
                 break
             values = self._collect_money_values([lines[idx]])
-            for value in values:
+            candidates = reversed(values) if direction < 0 else values
+            for value in candidates:
                 if value in skip_values:
                     continue
                 return value
@@ -856,6 +1010,46 @@ class InvoiceExtractor:
             return abs(float(left) - float(right)) < 0.01
         except ValueError:
             return False
+
+    def _reconcile_money_fields(self, result: dict[str, tuple[str, str]]) -> None:
+        amount = (result.get("amount") or ("", ""))[0]
+        tax = (result.get("tax") or ("", ""))[0]
+        total = (result.get("total") or ("", ""))[0]
+
+        if amount and tax and total and self._same_money(self._add_money(amount, tax), total):
+            return
+
+        if amount and total:
+            derived_tax = self._subtract_money(total, amount)
+            total_amount = self._to_decimal(total)
+            derived_tax_amount = self._to_decimal(derived_tax)
+            tax_ratio_ok = bool(
+                total_amount
+                and derived_tax_amount is not None
+                and derived_tax_amount > Decimal("0.00")
+                and total_amount > Decimal("0.00")
+                and Decimal("0.00") <= (derived_tax_amount / total_amount) <= Decimal("0.20")
+            )
+            if derived_tax and tax_ratio_ok and (not tax or not self._same_money(derived_tax, tax)):
+                tax_confidence = "high" if tax else "medium"
+                result["tax"] = (derived_tax, tax_confidence)
+                tax = derived_tax
+
+        if tax and total:
+            derived_amount = self._subtract_money(total, tax)
+            if (
+                derived_amount
+                and self._is_plausible_tax_value(tax, total=total)
+                and (not amount or self._to_decimal(amount) is None or self._to_decimal(amount) > self._to_decimal(total))
+            ):
+                amount_confidence = "high" if amount else "medium"
+                result["amount"] = (derived_amount, amount_confidence)
+                amount = derived_amount
+
+        if amount and tax and not total:
+            derived_total = self._add_money(amount, tax)
+            if derived_total:
+                result["total"] = (derived_total, "medium")
 
     def _digits_only(self, value: str) -> str:
         return re.sub(r"\D", "", value or "")
@@ -900,15 +1094,17 @@ class InvoiceExtractor:
                 continue
 
             snippets = [line]
-            if idx > 0:
-                snippets.append(" ".join(lines[idx - 1 : idx + 1]))
             if idx + 1 < len(lines):
                 snippets.append(" ".join(lines[idx : idx + 2]))
+            if idx > 0:
+                snippets.append(" ".join(lines[idx - 1 : idx + 1]))
 
             for snippet in snippets:
                 values = self._collect_money_values([snippet])
                 triplet = self._pick_summary_triplet(values, known_total=known_total)
                 if not triplet:
+                    if len(values) == 1 and self._looks_like_total_marker(snippet) and snippet.startswith(line):
+                        return {"total": (values[-1], "high")}
                     continue
                 amount, tax, total = triplet
                 return {
@@ -926,6 +1122,7 @@ class InvoiceExtractor:
             return False
         return (
             "合计大写" in compact_line
+            or "价税合计" in compact_line
             or "价税合计(小写)" in compact_line
             or "价税合计小写" in compact_line
             or compact_line in {"合", "计", "合计", "小写"}
@@ -946,7 +1143,24 @@ class InvoiceExtractor:
         return values[-3], values[-2], values[-1]
 
     def _is_table_header_line(self, line: str) -> bool:
-        return all(keyword in line for keyword in ("金额", "税率", "税额", "价税合计"))
+        compact_line = self._compact_text(line)
+        header_tokens = {
+            "项目",
+            "货物名称",
+            "商品名称",
+            "规格",
+            "型号",
+            "单位",
+            "数量",
+            "单价",
+            "金额",
+            "税率",
+            "税额",
+            "价税合计",
+        }
+        if compact_line in header_tokens:
+            return True
+        return sum(token in compact_line for token in ("金额", "税率", "税额", "单价", "数量")) >= 2
 
     def _is_money_candidate(self, value: str, line: str, start: int, end: int) -> bool:
         digits = self._digits_only(value)
@@ -969,6 +1183,461 @@ class InvoiceExtractor:
         if 0 < numeric < 1:
             return False
         return True
+
+    def _find_labeled_invoice_number(self, lines: list[str]) -> Optional[tuple[str, str]]:
+        for idx, line in enumerate(lines[:20]):
+            if not re.search(r"(发票号码|票号|No\.?|NO\.?)", line, re.IGNORECASE):
+                continue
+            if "代码" in line and "号码" not in line:
+                continue
+            candidates = self._extract_invoice_number_candidates(" ".join(lines[idx : idx + 3]))
+            for candidate in candidates:
+                if self._is_plausible_invoice_number(candidate, line=line):
+                    confidence = "high" if idx < 12 else "medium"
+                    return candidate, confidence
+        return None
+
+    def _extract_invoice_number_candidates(self, text: str) -> list[str]:
+        candidates: list[str] = []
+        for pattern in (
+            r"(?:发票号码|票号|No\.?|NO\.?)" + _SEP + r"([A-Za-z]?\d{8,20})",
+            r"(?<![A-Za-z0-9])([A-Za-z]?\d{8,20})(?![A-Za-z0-9])",
+        ):
+            for match in re.finditer(pattern, text, re.IGNORECASE):
+                candidate = re.sub(r"[^A-Za-z0-9]", "", match.group(1)).upper()
+                if candidate and candidate not in candidates:
+                    candidates.append(candidate)
+        return candidates
+
+    def _is_plausible_invoice_number(self, value: str, line: str = "") -> bool:
+        value = re.sub(r"[^A-Za-z0-9]", "", value or "").upper()
+        if not re.fullmatch(r"[A-Z]?\d{8,20}", value):
+            return False
+        digits = self._digits_only(value)
+        if len(digits) == 8 and self._is_plausible_date_digits(digits):
+            return False
+        if any(keyword in line for keyword in ("机器编号", "校验码", "税号", "账号", "代码")) and "号码" not in line:
+            return False
+        return True
+
+    def _find_labeled_invoice_date(self, lines: list[str]) -> Optional[tuple[str, str]]:
+        for idx, line in enumerate(lines[:20]):
+            normalized = line.strip().lower()
+            if "开票日期" not in line and line.strip() != "日期" and normalized != "date":
+                continue
+            for candidate in lines[idx : idx + 4]:
+                date_value = self._extract_valid_date(candidate)
+                if date_value:
+                    confidence = "high" if idx < 12 else "medium"
+                    return date_value, confidence
+            merged = " ".join(lines[idx : idx + 3])
+            date_value = self._extract_valid_date(merged)
+            if date_value:
+                return date_value, "medium"
+        return None
+
+    def _derive_money_fields(
+        self,
+        lines: list[str],
+        cleaned: str,
+        compact: str,
+        known_total: str = "",
+        known_amount: str = "",
+        known_tax: str = "",
+    ) -> dict[str, tuple[str, str]]:
+        result: dict[str, tuple[str, str]] = {}
+        body_values = self._collect_body_money_values(lines, skip_values={known_total})
+        has_tax_signal = self._has_tax_signal(lines)
+
+        if known_total and known_tax and not known_amount:
+            target_amount = self._subtract_money(known_total, known_tax)
+            if target_amount and self._is_plausible_tax_value(known_tax, amount=target_amount, total=known_total):
+                subset = self._pick_money_subset(body_values, target_amount)
+                if subset or not has_tax_signal:
+                    confidence = "high" if subset else "medium"
+                    result["amount"] = (target_amount, confidence)
+
+        if known_total and known_amount and not known_tax:
+            derived_tax = self._subtract_money(known_total, known_amount)
+            if (
+                derived_tax
+                and not self._same_money(derived_tax, "0.00")
+                and self._is_plausible_tax_value(derived_tax, amount=known_amount, total=known_total)
+            ):
+                result["tax"] = (derived_tax, "medium")
+
+        if known_total and not known_amount:
+            if has_tax_signal:
+                amount_tax_pair = self._find_amount_tax_pair_by_total(body_values, known_total)
+                if amount_tax_pair:
+                    amount_value, tax_value = amount_tax_pair
+                    result.setdefault("amount", (amount_value, "medium"))
+                    if tax_value and not known_tax:
+                        result.setdefault("tax", (tax_value, "medium"))
+            elif not self._looks_like_taxi_invoice(cleaned, compact):
+                result.setdefault("amount", (known_total, "low"))
+
+        if known_amount and known_tax and not known_total:
+            derived_total = self._add_money(known_amount, known_tax)
+            if derived_total:
+                result["total"] = (derived_total, "medium")
+
+        return result
+
+    def _collect_rate_amount_tax_pairs(
+        self,
+        lines: list[str],
+        known_total: str = "",
+    ) -> list[tuple[str, str]]:
+        pairs: list[tuple[str, str]] = []
+        seen: set[tuple[str, str]] = set()
+        for idx, line in enumerate(lines):
+            if not self._looks_like_rate_anchor(line):
+                continue
+            amount = self._nearest_money(lines, idx, direction=-1, limit=3, skip_values={known_total})
+            tax = self._nearest_money(
+                lines,
+                idx,
+                direction=1,
+                limit=3,
+                skip_values={known_total, amount},
+            )
+            if not amount or not tax:
+                continue
+            amount_decimal = self._to_decimal(amount)
+            tax_decimal = self._to_decimal(tax)
+            if amount_decimal is None or tax_decimal is None:
+                continue
+            if amount_decimal <= 0 or tax_decimal < 0 or tax_decimal >= amount_decimal:
+                continue
+            if not self._is_plausible_tax_value(tax, amount=amount):
+                continue
+            key = (amount, tax)
+            if key in seen:
+                continue
+            seen.add(key)
+            pairs.append(key)
+        return pairs
+
+    def _collect_rate_amount_tax_candidates(
+        self,
+        lines: list[str],
+        known_total: str = "",
+    ) -> tuple[list[str], list[str]]:
+        amount_candidates: list[str] = []
+        tax_candidates: list[str] = []
+        seen_amounts: set[str] = set()
+        seen_taxes: set[str] = set()
+
+        for idx, line in enumerate(lines):
+            if not self._looks_like_rate_anchor(line):
+                continue
+            amount = self._nearest_money(lines, idx, direction=-1, limit=3, skip_values={known_total})
+            tax = self._nearest_money(
+                lines,
+                idx,
+                direction=1,
+                limit=3,
+                skip_values={known_total, amount},
+            )
+            if amount and amount not in seen_amounts:
+                seen_amounts.add(amount)
+                amount_candidates.append(amount)
+            if tax and tax not in seen_taxes:
+                seen_taxes.add(tax)
+                tax_candidates.append(tax)
+        return amount_candidates, tax_candidates
+
+    def _repair_amount_tax_from_candidates(
+        self,
+        amount_candidates: list[str],
+        tax_candidates: list[str],
+        known_total: str,
+    ) -> dict[str, tuple[str, str]]:
+        result: dict[str, tuple[str, str]] = {}
+
+        total_amount = self._to_decimal(known_total)
+        if total_amount is None or total_amount <= Decimal("0.00"):
+            return result
+
+        valid_amounts = [
+            value
+            for value in amount_candidates
+            if (self._to_decimal(value) or Decimal("0.00")) > Decimal("0.00")
+            and (self._to_decimal(value) or Decimal("0.00")) < total_amount
+        ]
+        valid_taxes = [
+            value
+            for value in tax_candidates
+            if self._is_plausible_tax_value(value, total=known_total)
+        ]
+
+        amount_sum = self._sum_money_values(valid_amounts)
+        if amount_sum:
+            derived_tax = self._subtract_money(known_total, amount_sum)
+            if self._same_money(derived_tax, "0.00"):
+                result["amount"] = (amount_sum, "medium")
+                result["total"] = (known_total, "high")
+                return result
+            if derived_tax and self._is_plausible_tax_value(derived_tax, amount=amount_sum, total=known_total):
+                result["amount"] = (amount_sum, "medium")
+                result["tax"] = (derived_tax, "medium")
+                result["total"] = (known_total, "high")
+                return result
+
+        tax_sum = self._sum_money_values(valid_taxes)
+        if tax_sum:
+            derived_amount = self._subtract_money(known_total, tax_sum)
+            if (
+                derived_amount
+                and self._to_decimal(derived_amount) is not None
+                and self._to_decimal(derived_amount) > Decimal("0.00")
+                and self._is_plausible_tax_value(tax_sum, amount=derived_amount, total=known_total)
+            ):
+                result["amount"] = (derived_amount, "medium")
+                result["tax"] = (tax_sum, "medium")
+                result["total"] = (known_total, "high")
+                return result
+
+        return result
+
+    def _looks_like_rate_anchor(self, line: str) -> bool:
+        compact_line = self._compact_text(line)
+        if not compact_line or self._is_table_header_line(line):
+            return False
+        if any(symbol in compact_line for symbol in ("￥", "¥", "$")):
+            return False
+        normalized_line = compact_line.replace("％", "%")
+        if re.fullmatch(r"(?:\d{1,2}%|%\d{1,2})", normalized_line):
+            return self._digits_only(normalized_line) in {"1", "3", "5", "6", "9", "10", "13"}
+        if normalized_line in {
+            "0.01",
+            "0.03",
+            "0.05",
+            "0.06",
+            "0.09",
+            "0.10",
+            "0.13",
+            "1.00",
+            "3.00",
+            "5.00",
+            "6.00",
+            "9.00",
+            "10.00",
+            "13.00",
+        }:
+            return True
+        digits = self._digits_only(normalized_line)
+        if digits in {"100", "300", "500", "600", "900", "1000", "1300"}:
+            return True
+        return "税率" in compact_line
+
+    def _collect_body_money_values(
+        self,
+        lines: list[str],
+        skip_values: Optional[set[str]] = None,
+    ) -> list[str]:
+        skip_values = {item for item in (skip_values or set()) if item}
+        summary_index = self._find_summary_index(lines)
+        start_index = self._find_table_start_index(lines)
+        scoped_lines = lines[start_index:summary_index] if summary_index > start_index else lines[start_index:]
+
+        values: list[str] = []
+        for line in scoped_lines:
+            if self._is_table_header_line(line) or self._looks_like_total_marker(line):
+                continue
+            for value in self._collect_money_values([line]):
+                if value in skip_values:
+                    continue
+                values.append(value)
+        return values
+
+    def _find_summary_index(self, lines: list[str]) -> int:
+        for idx, line in enumerate(lines):
+            if self._looks_like_total_marker(line):
+                return idx
+        return len(lines)
+
+    def _find_table_start_index(self, lines: list[str]) -> int:
+        for idx, line in enumerate(lines):
+            if self._is_table_header_line(line):
+                return idx
+        return 0
+
+    def _looks_like_total_marker(self, line: str) -> bool:
+        compact_line = self._compact_text(line)
+        return (
+            "价税合计" in compact_line
+            or "小写" in compact_line
+            or compact_line == "合计"
+            or compact_line.startswith("合计")
+        )
+
+    def _pick_money_subset(self, values: list[str], target: str) -> list[str]:
+        target_cents = self._money_to_cents(target)
+        if target_cents is None or target_cents <= 0:
+            return []
+
+        candidate_values = sorted(
+            [
+                amount_cents
+                for amount_cents in (self._money_to_cents(value) for value in values)
+                if amount_cents is not None and 0 < amount_cents <= target_cents
+            ],
+            reverse=True,
+        )
+        if not candidate_values:
+            return []
+
+        states: dict[int, list[int]] = {0: []}
+        for amount_cents in candidate_values:
+            next_states = dict(states)
+            for subtotal, picked in states.items():
+                new_total = subtotal + amount_cents
+                if new_total > target_cents:
+                    continue
+                candidate_path = picked + [amount_cents]
+                current_path = next_states.get(new_total)
+                if current_path is None or len(candidate_path) < len(current_path):
+                    next_states[new_total] = candidate_path
+            states = next_states
+            if target_cents in states:
+                break
+
+        subset = states.get(target_cents, [])
+        return [self._format_cents(value) for value in subset]
+
+    def _find_amount_tax_pair_by_total(
+        self,
+        values: list[str],
+        total: str,
+    ) -> Optional[tuple[str, str]]:
+        target_total = self._to_decimal(total)
+        if target_total is None or target_total <= Decimal("0.00"):
+            return None
+
+        normalized_values: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            cleaned_value = self._clean_value("amount", value)
+            if not cleaned_value or cleaned_value in seen:
+                continue
+            numeric = self._to_decimal(cleaned_value)
+            if numeric is None or numeric <= Decimal("0.00") or numeric >= target_total:
+                continue
+            seen.add(cleaned_value)
+            normalized_values.append(cleaned_value)
+
+        best_pair: Optional[tuple[str, str]] = None
+        best_amount = Decimal("-1")
+        best_tax = Decimal("-1")
+        for left_index, left in enumerate(normalized_values):
+            for right in normalized_values[left_index + 1 :]:
+                left_amount = self._to_decimal(left)
+                right_amount = self._to_decimal(right)
+                if left_amount is None or right_amount is None:
+                    continue
+                amount_value, tax_value = (left, right) if left_amount >= right_amount else (right, left)
+                amount_numeric = max(left_amount, right_amount)
+                tax_numeric = min(left_amount, right_amount)
+                pair_total = self._add_money(amount_value, tax_value)
+                if not pair_total or not self._same_money(pair_total, total):
+                    continue
+                if not self._is_plausible_tax_value(tax_value, amount=amount_value, total=total):
+                    continue
+                if amount_numeric > best_amount or (amount_numeric == best_amount and tax_numeric > best_tax):
+                    best_pair = (amount_value, tax_value)
+                    best_amount = amount_numeric
+                    best_tax = tax_numeric
+        return best_pair
+
+    def _sum_money_values(self, values: list[str]) -> str:
+        total = Decimal("0.00")
+        seen_any = False
+        for value in values:
+            amount = self._to_decimal(value)
+            if amount is None:
+                continue
+            total += amount
+            seen_any = True
+        return self._format_decimal(total) if seen_any else ""
+
+    def _add_money(self, left: str, right: str) -> str:
+        left_amount = self._to_decimal(left)
+        right_amount = self._to_decimal(right)
+        if left_amount is None or right_amount is None:
+            return ""
+        return self._format_decimal(left_amount + right_amount)
+
+    def _subtract_money(self, left: str, right: str) -> str:
+        left_amount = self._to_decimal(left)
+        right_amount = self._to_decimal(right)
+        if left_amount is None or right_amount is None:
+            return ""
+        diff = left_amount - right_amount
+        if diff < Decimal("0.00"):
+            return ""
+        return self._format_decimal(diff)
+
+    def _max_money_value(self, values: list[str]) -> str:
+        best_value = ""
+        best_amount = Decimal("-1")
+        for value in values:
+            amount = self._to_decimal(value)
+            if amount is None or amount <= best_amount:
+                continue
+            best_amount = amount
+            best_value = self._format_decimal(amount)
+        return best_value
+
+    def _has_tax_signal(self, lines: list[str]) -> bool:
+        for line in lines:
+            if "税额" in line or "税率" in line or self._looks_like_rate_anchor(line):
+                return True
+        return False
+
+    def _is_plausible_tax_value(
+        self,
+        tax: str,
+        amount: str = "",
+        total: str = "",
+    ) -> bool:
+        tax_amount = self._to_decimal(tax)
+        if tax_amount is None or tax_amount < Decimal("0.00"):
+            return False
+        if tax_amount == Decimal("0.00"):
+            return True
+
+        for base_value in (amount, total):
+            base_amount = self._to_decimal(base_value)
+            if base_amount is None or base_amount <= Decimal("0.00"):
+                continue
+            ratio = tax_amount / base_amount
+            if Decimal("0.00") < ratio <= Decimal("0.20"):
+                return True
+        return False
+
+    def _to_decimal(self, value: str) -> Optional[Decimal]:
+        text = self._clean_value("amount", value)
+        if not text:
+            return None
+        try:
+            return Decimal(text)
+        except InvalidOperation:
+            return None
+
+    def _format_decimal(self, value: Decimal) -> str:
+        return format(value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP), "f")
+
+    def _money_to_cents(self, value: str) -> Optional[int]:
+        amount = self._to_decimal(value)
+        if amount is None:
+            return None
+        quantized = amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        return int((quantized * 100).to_integral_value(rounding=ROUND_HALF_UP))
+
+    def _format_cents(self, cents: int) -> str:
+        return self._format_decimal(Decimal(cents) / Decimal("100"))
 
     def _empty_result(self) -> dict:
         return {

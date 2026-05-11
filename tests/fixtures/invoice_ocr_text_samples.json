@@ -1,0 +1,108 @@
+[
+  {
+    "sample_id": "IMG001",
+    "source_file": "invoice_electronic_003.png",
+    "source_path": "发票样本/invoices/images/invoice_electronic_003.png",
+    "source_type": "image_electronic",
+    "ocr_engine": "RapidOCR",
+    "ocr_text": "全国统一电子发票\n发票号码：E3402243667\n开票日期：2024年10月27日\n校验码：40678140969136081784\n机器编号：612608404278\n购买方：上海贸易股份有限公司\n销售方：成都软件开发有限公司\n商品名称\n规格\n单位\n数量\n单价\n金额\n税率\n税额\n办公用纸\n一\n箱\n20\n85.00\n1700.00\n0.13\n221.00\n广告投放服务\n次\n15000.00\n0.06\n900.00\n钢材\n吨\n5\n4500.00\n22500.00\n0.13\n2925.00\n价税合计：￥43246.00\n本发票为全国统一电子发票，无需加盖发票专用章",
+    "expected_fields": {
+      "invoice_number": "E3402243667",
+      "invoice_date": "2024-10-27",
+      "amount": "39200.00",
+      "tax": "4046.00",
+      "total": "43246.00",
+      "buyer_name": "上海贸易股份有限公司",
+      "seller_name": "成都软件开发有限公司",
+      "invoice_type": "电子发票"
+    }
+  },
+  {
+    "sample_id": "IMG002",
+    "source_file": "invoice_electronic_007.png",
+    "source_path": "发票样本/invoices/images/invoice_electronic_007.png",
+    "source_type": "image_electronic",
+    "ocr_engine": "RapidOCR",
+    "ocr_text": "全国统一电子发票\n发票号码：E9821861957\n开票日期：2024年03月16日\n校验码：03463868482042570018\n机器编号：118814768670\n购买方：济南物流配送有限公司\n销售方：福州海洋产品有限公司\n商品名称\n规格\n单位\n数量\n单价\n金额\n税率\n税额\n钢材\n一\n吨\n5\n4500.00\n22500.00\n0.13\n2925.00\n办公用纸\n一\n箱\n20\n85.00\n1700.00\n0.13\n221.00\n仓储服务\n月\n2\n5000.00\n10000\n600\n900.00\n价税合计：￥38246.00\n本发票为全国统一电子发票，无需加盖发票专用章",
+    "expected_fields": {
+      "invoice_number": "E9821861957",
+      "invoice_date": "2024-03-16",
+      "amount": "34200.00",
+      "tax": "4046.00",
+      "total": "38246.00",
+      "buyer_name": "济南物流配送有限公司",
+      "seller_name": "福州海洋产品有限公司",
+      "invoice_type": "电子发票"
+    }
+  },
+  {
+    "sample_id": "IMG003",
+    "source_file": "invoice_electronic_011.png",
+    "source_path": "发票样本/invoices/images/invoice_electronic_011.png",
+    "source_type": "image_electronic",
+    "ocr_engine": "RapidOCR",
+    "ocr_text": "全国统一电子发票\n发票号码：E3303416863\n开票日期：2023年03月19日\n校验码：98949984086360979481\n机器编号：801924670589\n购买方：西安航空工业有限公司\n销售方：宁波国际贸易有限公司\n商品名称\n规格\n单位\n数量\n单价\n金额\n税率\n税额\n咨询顾问费\n月\n1\n8000.00\n0.06\n480.00\n服务器托管费\n月\n3000.00\n0.06\n180.00\n价税合计：￥11660.00\n本发票为全国统一电子发票，无需加盖发票专用章",
+    "expected_fields": {
+      "invoice_number": "E3303416863",
+      "invoice_date": "2023-03-19",
+      "amount": "11000.00",
+      "tax": "660.00",
+      "total": "11660.00",
+      "buyer_name": "西安航空工业有限公司",
+      "seller_name": "宁波国际贸易有限公司",
+      "invoice_type": "电子发票"
+    }
+  },
+  {
+    "sample_id": "IMG004",
+    "source_file": "invoice_electronic_015.png",
+    "source_path": "发票样本/invoices/images/invoice_electronic_015.png",
+    "source_type": "image_electronic",
+    "ocr_engine": "RapidOCR",
+    "ocr_text": "全国统一电子发票\n发票号码：E4292764673\n开票日期：2024年05月31日\n校验码：50026900867271533191\n机器编号：843311046739\n购买方：哈尔滨农业科技股份有限公司\n销售方：苏州精密仪器有限公司\n商品名称\n规格\n单位\n数量\n单价\n金额\n税率\n税额\n仓储服务\n月\n2\n5000.00\n100000\n600\n900.00\n价税合计：￥10900.00\n本发票为全国统一电子发票，无需加盖发票专用章",
+    "expected_fields": {
+      "invoice_number": "E4292764673",
+      "invoice_date": "2024-05-31",
+      "amount": "10000.00",
+      "tax": "900.00",
+      "total": "10900.00",
+      "buyer_name": "哈尔滨农业科技股份有限公司",
+      "seller_name": "苏州精密仪器有限公司",
+      "invoice_type": "电子发票"
+    }
+  },
+  {
+    "sample_id": "IMG008",
+    "source_file": "invoice_normal_002.png",
+    "source_path": "发票样本/invoices/images/invoice_normal_002.png",
+    "source_type": "image_normal",
+    "ocr_engine": "RapidOCR",
+    "ocr_text": "增值税普通发票\n发票号码：5011999948\n开票日期：2022-03-19\n购方名称：沈阳重工设备制造有限公司\n销方名称：长沙建筑工程有限公司\n项目\n数量\n单价\n金额\n钢材\n5\n￥ 4500.00\n￥22500.00\n办公用纸\n20\n￥ 85.00\n￥1700.00\n合计：￥24200.00",
+    "expected_fields": {
+      "invoice_number": "5011999948",
+      "invoice_date": "2022-03-19",
+      "amount": "24200.00",
+      "total": "24200.00",
+      "buyer_name": "沈阳重工设备制造有限公司",
+      "seller_name": "长沙建筑工程有限公司",
+      "invoice_type": "增值税普通发票"
+    }
+  },
+  {
+    "sample_id": "IMG010",
+    "source_file": "invoice_normal_010.png",
+    "source_path": "发票样本/invoices/images/invoice_normal_010.png",
+    "source_type": "image_normal",
+    "ocr_engine": "RapidOCR",
+    "ocr_text": "增值税普通发票\n发票号码：3146506194\n开票日期：2023-10-04\n购方名称：上海贸易股份有限公司\n销方名称：沈阳重工设备制造有限公司\n项目\n数量\n单价\n金额\n笔记本电脑\n2\n￥5800.00\n￥11600.00\n仓储服务\n2\n￥50000\n￥10000.00\n咨询顾问费\n￥8000.00\n合计：￥29600.00",
+    "expected_fields": {
+      "invoice_number": "3146506194",
+      "invoice_date": "2023-10-04",
+      "amount": "29600.00",
+      "total": "29600.00",
+      "buyer_name": "上海贸易股份有限公司",
+      "seller_name": "沈阳重工设备制造有限公司",
+      "invoice_type": "增值税普通发票"
+    }
+  }
+]

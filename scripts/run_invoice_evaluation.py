@@ -4,26 +4,25 @@ import argparse
 import csv
 import json
 import re
-import sys
 from collections import Counter, defaultdict
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT = SCRIPT_DIR.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+from _bootstrap import ensure_project_root_on_path
+
+ensure_project_root_on_path()
 
 from app import IMAGE_EXTS, process_image_ocr
+from docflow.paths import PROJECT_ROOT, REPORTS_DIR
 from docflow_core import DocFlowProcessor
 from docflow_support import build_error_info
 from invoice_extractor import InvoiceExtractor
 
-DEFAULT_MANIFEST = ROOT / "发票样本" / "invoice_test_manifest.csv"
-DEFAULT_REPORT_ROOT = ROOT / "reports"
-DEFAULT_DATASET_ROOT = ROOT / "发票样本" / "InvoiceDatasets-master" / "dataset" / "images"
+DEFAULT_MANIFEST = PROJECT_ROOT / "发票样本" / "invoice_test_manifest.csv"
+DEFAULT_REPORT_ROOT = REPORTS_DIR
+DEFAULT_DATASET_ROOT = PROJECT_ROOT / "发票样本" / "InvoiceDatasets-master" / "dataset" / "images"
 FIELD_NAMES = [
     "invoice_code",
     "invoice_number",
@@ -78,6 +77,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_manifest(manifest_path: Path, sample_types: list[str], limit: int) -> list[dict[str, str]]:
+    """Load manifest rows and apply optional filters."""
+
     with manifest_path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         rows = [dict(row) for row in reader]
@@ -200,6 +201,8 @@ def _fmt_bool(value: Any) -> str:
 
 
 def resolve_file_path(row: dict[str, str], manifest_path: Path, dataset_root: Path) -> Path:
+    """Resolve a manifest row to an existing sample file path."""
+
     file_name = str(row.get("file_name", "")).strip()
     source_dir = str(row.get("source_dir", "")).strip()
     if not file_name:
@@ -212,7 +215,7 @@ def resolve_file_path(row: dict[str, str], manifest_path: Path, dataset_root: Pa
             [
                 dataset_root / rel_dir / file_name,
                 manifest_path.parent / rel_dir / file_name,
-                ROOT / rel_dir / file_name,
+                PROJECT_ROOT / rel_dir / file_name,
             ]
         )
     else:
@@ -220,7 +223,7 @@ def resolve_file_path(row: dict[str, str], manifest_path: Path, dataset_root: Pa
             [
                 dataset_root / file_name,
                 manifest_path.parent / file_name,
-                ROOT / file_name,
+                PROJECT_ROOT / file_name,
             ]
         )
 
@@ -251,7 +254,10 @@ def process_sample(
     if file_path.suffix.lower() in IMAGE_EXTS:
         result = process_image_ocr(str(file_path), file_path.name)
         if result.get("success") and result.get("text"):
-            result.setdefault("statistics", {})["invoice_fields"] = extractor.extract(result.get("text", ""))
+            stats = result.setdefault("statistics", {})
+            invoice_fields = stats.get("invoice_fields")
+            if not isinstance(invoice_fields, dict) or "fields" not in invoice_fields:
+                stats["invoice_fields"] = extractor.extract(result.get("text", ""))
         return result
 
     return processor.process(
@@ -292,11 +298,12 @@ def evaluate_row(
 ) -> dict[str, Any]:
     file_path = resolve_file_path(row, manifest_path, dataset_root)
     result = process_sample(processor, extractor, file_path)
+    result_metadata = result.get("metadata") or {}
     error_info = build_error_info(
         result.get("error", ""),
         file_name=file_path.name,
         file_ext=file_path.suffix.lower(),
-        metadata_dict=result.get("metadata") or {},
+        metadata_dict=result_metadata,
         source="invoice_evaluation",
     )
 
@@ -361,6 +368,10 @@ def evaluate_row(
         "invoice_match": invoice_match,
         "processing_ms": round(float(result.get("processing_ms", 0.0)), 2),
         "raw_success": bool(result.get("success")),
+        "ocr_engine": str(result_metadata.get("engine") or ""),
+        "ocr_selection_strategy": str(result_metadata.get("ocr_selection_strategy") or ""),
+        "ocr_selection_summary": str(result_metadata.get("ocr_selection_summary") or ""),
+        "ocr_candidate_count": len(result_metadata.get("ocr_candidates") or []),
         "field_count": int(invoice_block.get("field_count", 0) or 0),
         "confidence": str(invoice_block.get("confidence", "none")),
         "has_field_labels": has_field_labels,
@@ -500,6 +511,10 @@ def write_csv(report_dir: Path, items: list[dict[str, Any]]) -> Path:
         "field_accuracy_pct",
         "field_count",
         "confidence",
+        "ocr_engine",
+        "ocr_selection_strategy",
+        "ocr_candidate_count",
+        "ocr_selection_summary",
         "processing_ms",
         "sample_passed",
         "failure_reason",
@@ -536,6 +551,10 @@ def write_csv(report_dir: Path, items: list[dict[str, Any]]) -> Path:
                 _fmt_pct(item.get("field_accuracy_pct")),
                 item.get("field_count", 0),
                 item.get("confidence", ""),
+                item.get("ocr_engine", ""),
+                item.get("ocr_selection_strategy", ""),
+                item.get("ocr_candidate_count", 0),
+                item.get("ocr_selection_summary", ""),
                 item.get("processing_ms", 0),
                 _fmt_bool(item.get("sample_passed")),
                 item.get("failure_reason", ""),
@@ -659,14 +678,14 @@ def main() -> int:
     args = parse_args()
     manifest_path = Path(args.manifest)
     if not manifest_path.is_absolute():
-        manifest_path = ROOT / manifest_path
+        manifest_path = PROJECT_ROOT / manifest_path
     if not manifest_path.exists():
         print(f"未找到发票清单：{manifest_path}")
         return 1
 
     dataset_root = Path(args.dataset_root)
     if not dataset_root.is_absolute():
-        dataset_root = ROOT / dataset_root
+        dataset_root = PROJECT_ROOT / dataset_root
 
     items = load_manifest(manifest_path, args.sample_type, args.limit)
     if not items:
@@ -676,7 +695,7 @@ def main() -> int:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     report_root = Path(args.report_root)
     if not report_root.is_absolute():
-        report_root = ROOT / report_root
+        report_root = PROJECT_ROOT / report_root
     report_dir = report_root / f"invoice_evaluation_{timestamp}"
     report_dir.mkdir(parents=True, exist_ok=True)
 
