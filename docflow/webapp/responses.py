@@ -2,7 +2,7 @@
 
 from flask import jsonify
 
-from docflow_support import build_error_info
+from docflow.support import build_error_info
 
 
 def error_response(

@@ -6,8 +6,15 @@ import statistics
 from difflib import SequenceMatcher
 from typing import Optional
 
-from docflow_support import prepare_pytesseract
-from invoice_extractor import FIELD_LABELS, InvoiceExtractor
+from docflow.support import prepare_pytesseract
+from docflow.invoice.extractor import InvoiceExtractor
+from docflow.invoice.schema import (
+    FIELD_LABELS,
+    get_field_labels,
+    get_invoice_field_order,
+    get_invoice_schema,
+    infer_category_from_type_name,
+)
 
 from ..core import UPLOAD_FOLDER
 from .ocr_engines import (
@@ -62,6 +69,10 @@ _OCR_TAX_ID_INLINE_STOP_TERMS = _OCR_TAX_ID_LABELS + (
     "地址电话",
     "名称",
 )
+_OCR_TAX_ID_REJECT_CONTEXT_TERMS = (
+    "校验码",
+    "机器编号",
+)
 
 
 _OCR_TAX_ID_EXPECTED_LENGTH = 18
@@ -103,6 +114,28 @@ def _rank_confidence(level: str) -> int:
     return _OCR_CONFIDENCE_RANK.get(str(level or "").strip().lower(), 0)
 
 
+def _field_value(fields: dict, field_name: str) -> str:
+    source = fields.get(field_name) if isinstance(fields, dict) else None
+    if isinstance(source, dict):
+        return str(source.get("value") or "")
+    return str(source or "")
+
+
+def _infer_invoice_category(invoice_fields: dict) -> str:
+    category = str((invoice_fields or {}).get("invoice_category") or "").strip()
+    if category and get_invoice_schema(category).key == category:
+        return category
+
+    fields = (invoice_fields or {}).get("fields") or {}
+    invoice_type = _field_value(fields, "invoice_type")
+    inferred = infer_category_from_type_name(invoice_type)
+    if inferred != "unknown":
+        return inferred
+    if any(field_name in fields for field_name in ("buyer_tax_id", "seller_tax_id", "invoice_code")):
+        return "vat"
+    return "unknown"
+
+
 def _evaluate_ocr_invoice_text(text: str) -> dict:
     normalized_text = str(text or "").strip()
     if not normalized_text:
@@ -122,6 +155,11 @@ def _evaluate_ocr_invoice_text(text: str) -> dict:
                 "confidence": "none",
                 "field_count": 0,
                 "fields": {},
+                "invoice_category": "unknown",
+                "schema_name": get_invoice_schema("unknown").name,
+                "expected_fields": [],
+                "not_applicable_fields": {},
+                "missing_fields": {},
             },
         }
 
@@ -175,6 +213,8 @@ def _evaluate_ocr_invoice_text(text: str) -> dict:
     if digit_count >= 8:
         score += min(8, digit_count // 8)
 
+    invoice_fields = _attach_invoice_missing_fields(invoice_fields)
+
     return {
         "score": int(score),
         "is_invoice": is_invoice,
@@ -196,7 +236,59 @@ def _empty_invoice_fields_payload() -> dict:
         "confidence": "none",
         "field_count": 0,
         "fields": {},
+        "invoice_category": "unknown",
+        "schema_name": get_invoice_schema("unknown").name,
+        "expected_fields": [],
+        "not_applicable_fields": {},
+        "missing_fields": {},
     }
+
+
+def _attach_invoice_missing_fields(invoice_fields: dict) -> dict:
+    if not isinstance(invoice_fields, dict):
+        return _empty_invoice_fields_payload()
+
+    fields = invoice_fields.get("fields")
+    if not isinstance(fields, dict):
+        fields = {}
+        invoice_fields["fields"] = fields
+
+    category = _infer_invoice_category(invoice_fields)
+    schema = get_invoice_schema(category)
+    expected_fields = tuple(invoice_fields.get("expected_fields") or schema.fields)
+    expected_set = set(expected_fields)
+    invoice_fields["invoice_category"] = category
+    invoice_fields["schema_name"] = str(invoice_fields.get("schema_name") or schema.name)
+    invoice_fields["expected_fields"] = list(expected_fields)
+
+    missing_fields: dict[str, dict] = {}
+    not_applicable_fields: dict[str, dict] = {}
+    field_labels = get_field_labels()
+    if invoice_fields.get("is_invoice"):
+        for field_name in expected_fields:
+            field = fields.get(field_name)
+            value = field.get("value") if isinstance(field, dict) else field
+            if str(value or "").strip():
+                continue
+            missing_fields[field_name] = {
+                "label": field_labels.get(field_name, field_name),
+                "status": "missing",
+                "reason": "source_empty_or_unrecognized",
+                "message": "原图疑似为空/未识别",
+            }
+        for field_name in get_invoice_field_order():
+            if field_name in expected_set:
+                continue
+            not_applicable_fields[field_name] = {
+                "label": field_labels.get(field_name, field_name),
+                "status": "not_applicable",
+                "reason": "not_required_for_invoice_type",
+                "message": "该类型不适用",
+            }
+
+    invoice_fields["missing_fields"] = missing_fields
+    invoice_fields["not_applicable_fields"] = not_applicable_fields
+    return invoice_fields
 
 
 def _normalize_ocr_tax_id(value: str) -> str:
@@ -292,6 +384,20 @@ def _score_ocr_tax_id_candidate(value: str) -> tuple[int, int, int, int]:
     )
 
 
+def _contains_ocr_tax_id_label(line: str) -> bool:
+    return any(label in str(line or "") for label in _OCR_TAX_ID_LABELS)
+
+
+def _is_ocr_tax_id_reject_context(lines: list[str], index: int) -> bool:
+    current = lines[index] if 0 <= index < len(lines) else ""
+    if _contains_ocr_tax_id_label(current):
+        return False
+
+    previous = lines[index - 1] if index > 0 else ""
+    context = f"{previous}\n{current}"
+    return any(term in context for term in _OCR_TAX_ID_REJECT_CONTEXT_TERMS)
+
+
 def _extract_ocr_tax_id_segment_values(segment: str) -> list[str]:
     cleaned_segment = str(segment or "").strip()
     if not cleaned_segment:
@@ -341,9 +447,12 @@ def _extract_single_ocr_tax_id_field(text: str, field_name: str, method: str) ->
             }
         }
 
-    for line in str(text or "").splitlines():
+    lines = [line.strip() for line in str(text or "").splitlines()]
+    for index, line in enumerate(lines):
         line = line.strip()
         if not line:
+            continue
+        if _is_ocr_tax_id_reject_context(lines, index):
             continue
         values = _extract_ocr_tax_id_values_from_line(line)
         if not values:
@@ -619,7 +728,10 @@ def _collect_tesseract_tax_id_crop_candidates(image_path: str) -> list[dict]:
     return candidates
 
 
-def _collect_rapidocr_tax_id_field_candidates(image_path: str) -> list[dict]:
+def _collect_rapidocr_tax_id_field_candidates(
+    image_path: str,
+    target_fields=None,
+) -> list[dict]:
     try:
         import tempfile
         from PIL import Image, ImageFilter, ImageOps
@@ -633,12 +745,27 @@ def _collect_rapidocr_tax_id_field_candidates(image_path: str) -> list[dict]:
 
     candidates: list[dict] = []
     seen_signatures: set[tuple[tuple[str, str], ...]] = set()
+    try:
+        variant_limit = int(os.getenv("DOCFLOW_RAPIDOCR_TAX_ID_CROP_VARIANT_LIMIT", "1") or "1")
+    except Exception:
+        variant_limit = 1
+    variant_limit = max(1, variant_limit)
+    enabled_variants = _OCR_TAX_ID_FIELD_CROP_VARIANTS[: min(variant_limit, len(_OCR_TAX_ID_FIELD_CROP_VARIANTS))]
+    requested_fields = {
+        str(field_name)
+        for field_name in (target_fields or _OCR_TAX_ID_FIELDS)
+        if str(field_name) in _OCR_TAX_ID_FIELDS
+    }
+    if not requested_fields:
+        requested_fields = set(_OCR_TAX_ID_FIELDS)
 
     with Image.open(image_path) as image:
         grayscale = ImageOps.autocontrast(image.convert("L"))
         width, height = grayscale.size
 
         for field_index, (field_name, spec) in enumerate(_OCR_TAX_ID_FIELD_CROP_SPECS.items()):
+            if field_name not in requested_fields:
+                continue
             left = int(width * float(spec["left"]))
             right = int(width * float(spec["right"]))
             top = int(height * float(spec["top"]))
@@ -648,7 +775,7 @@ def _collect_rapidocr_tax_id_field_candidates(image_path: str) -> list[dict]:
 
             base_crop = grayscale.crop((left, top, right, bottom))
             try:
-                for variant_index, variant in enumerate(_OCR_TAX_ID_FIELD_CROP_VARIANTS):
+                for variant_index, variant in enumerate(enabled_variants):
                     crop = base_crop.copy()
                     try:
                         if variant.get("sharpen"):
@@ -1004,6 +1131,17 @@ def _merge_ocr_invoice_fields(selected_candidate: Optional[dict], ranked_candida
         fields = {}
         merged_invoice_fields["fields"] = fields
 
+    category = _infer_invoice_category(merged_invoice_fields)
+    merged_invoice_fields["invoice_category"] = category
+    schema = get_invoice_schema(category)
+    merged_invoice_fields["schema_name"] = str(merged_invoice_fields.get("schema_name") or schema.name)
+    merged_invoice_fields["expected_fields"] = list(schema.fields)
+    expected_fields = set(schema.fields)
+    if category != "vat":
+        for field_name in _OCR_TAX_ID_FIELDS:
+            if field_name not in expected_fields:
+                fields.pop(field_name, None)
+
     merge_meta = {"applied": False, "fields": {}}
     selected_structured = selected_candidate.get("ocr_tax_id_fields")
     if not isinstance(selected_structured, dict):
@@ -1017,7 +1155,7 @@ def _merge_ocr_invoice_fields(selected_candidate: Optional[dict], ranked_candida
         fields[field_name] = {
             "value": normalized_value,
             "confidence": str(source.get("confidence") or "high"),
-            "label": FIELD_LABELS.get(field_name, field_name),
+            "label": get_field_labels().get(field_name, field_name),
         }
         if previous_value != normalized_value:
             merge_meta["applied"] = True
@@ -1069,7 +1207,7 @@ def _merge_ocr_invoice_fields(selected_candidate: Optional[dict], ranked_candida
             fields[field_name] = {
                 "value": normalized_value,
                 "confidence": str(source.get("confidence") or "high"),
-                "label": FIELD_LABELS.get(field_name, field_name),
+                "label": get_field_labels().get(field_name, field_name),
             }
             merge_meta["applied"] = True
             merge_meta["fields"][field_name] = {
@@ -1129,7 +1267,7 @@ def _merge_ocr_invoice_fields(selected_candidate: Optional[dict], ranked_candida
             fields[field_name] = {
                 "value": best_value,
                 "confidence": str(current_field.get("confidence") or "high"),
-                "label": FIELD_LABELS.get(field_name, field_name),
+                "label": get_field_labels().get(field_name, field_name),
             }
             merge_meta["applied"] = True
             merge_meta["fields"][field_name] = best_meta
@@ -1138,7 +1276,7 @@ def _merge_ocr_invoice_fields(selected_candidate: Optional[dict], ranked_candida
     merged_invoice_fields["is_invoice"] = bool(merged_invoice_fields.get("is_invoice") or fields)
     if merged_invoice_fields["is_invoice"] and str(merged_invoice_fields.get("confidence") or "none") == "none":
         merged_invoice_fields["confidence"] = "medium"
-    return merged_invoice_fields, merge_meta
+    return _attach_invoice_missing_fields(merged_invoice_fields), merge_meta
 
 
 def _format_ocr_field_merge_summary(merge_meta: dict) -> str:
@@ -1227,4 +1365,4 @@ def _format_ocr_selection_summary(candidates: list[dict], selected_engine: str) 
 
 def extract_invoice_fields(text: str) -> dict:
     """? OCR ??????????"""
-    return _get_invoice_extractor().extract(text)
+    return _attach_invoice_missing_fields(_get_invoice_extractor().extract(text))

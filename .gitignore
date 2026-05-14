@@ -4,14 +4,20 @@ __pycache__/
 *.pyo
 *.pyd
 *.whl
+.pytest_cache/
+.coverage
 
 uploads_temp/
 reports/
 tmp/
 data/*.db
+data/*.sqlite
+data/*.sqlite3
 .tmp_wheels/
 .tmp_pymupdf.json
+.tmp_*.json
 docflow_*.txt
+*.log
 
 .claude/
 .DS_Store

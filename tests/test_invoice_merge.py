@@ -114,6 +114,20 @@ class InvoiceMergeFieldTests(unittest.TestCase):
         self.assertEqual(result["buyer_tax_id"]["method"], "ordered_pair")
         self.assertEqual(result["seller_tax_id"]["method"], "ordered_pair")
 
+    def test_extract_single_ocr_tax_id_field_skips_check_code_context(self):
+        text = "\n".join(
+            [
+                "校验码",
+                "67398706512584952290",
+                "名",
+                "称：中国科学院自动化研究所",
+            ]
+        )
+
+        result = invoice_merge._extract_single_ocr_tax_id_field(text, "buyer_tax_id", "crop")
+
+        self.assertEqual(result, {})
+
     def test_repair_ocr_tax_id_value_prefers_expected_length(self):
         truncated = "91320214MA2B6789C"
 
@@ -211,6 +225,65 @@ class InvoiceMergeFieldTests(unittest.TestCase):
         self.assertIn("buyer_tax_id", merged["fields"])
         self.assertNotIn("seller_tax_id", merged["fields"])
         self.assertEqual(meta["fields"]["seller_tax_id"]["action"], "cleared_duplicate")
+
+    def test_merge_ocr_invoice_fields_marks_missing_without_filling_value(self):
+        selected = _build_candidate(
+            engine="RapidOCR",
+            invoice_fields={
+                "invoice_code": "1100153350",
+                "invoice_number": "03159334",
+                "total": "500.00",
+            },
+        )
+
+        merged, meta = invoice_merge._merge_ocr_invoice_fields(selected, [selected])
+
+        self.assertNotIn("buyer_tax_id", merged["fields"])
+        self.assertIn("buyer_tax_id", merged["missing_fields"])
+        self.assertEqual(merged["missing_fields"]["buyer_tax_id"]["message"], "原图疑似为空/未识别")
+        self.assertFalse(meta["applied"])
+
+    def test_electronic_invoice_marks_tax_ids_not_applicable(self):
+        result = invoice_merge.extract_invoice_fields(
+            "\n".join(
+                [
+                    "全国统一电子发票",
+                    "发票号码：E3402243667",
+                    "开票日期：2024年10月27日",
+                    "购买方：上海贸易股份有限公司",
+                    "销售方：成都软件开发有限公司",
+                    "价税合计：￥43246.00",
+                ]
+            )
+        )
+
+        self.assertTrue(result["is_invoice"])
+        self.assertEqual(result["invoice_category"], "electronic")
+        self.assertNotIn("buyer_tax_id", result["missing_fields"])
+        self.assertIn("buyer_tax_id", result["not_applicable_fields"])
+        self.assertIn("invoice_number", result["expected_fields"])
+
+    def test_train_ticket_uses_train_schema(self):
+        result = invoice_merge.extract_invoice_fields(
+            "\n".join(
+                [
+                    "中国铁路电子客票",
+                    "乘车人：张三",
+                    "车次：G1234",
+                    "北京南站-上海虹桥站",
+                    "乘车日期：2026年05月13日",
+                    "二等座",
+                    "票价：￥553.00",
+                ]
+            )
+        )
+
+        self.assertTrue(result["is_invoice"])
+        self.assertEqual(result["invoice_category"], "train")
+        self.assertEqual(result["fields"]["train_no"]["value"], "G1234")
+        self.assertEqual(result["fields"]["fare"]["value"], "553.00")
+        self.assertIn("departure_station", result["expected_fields"])
+        self.assertIn("buyer_tax_id", result["not_applicable_fields"])
 
     def test_evaluate_ocr_invoice_text_scores_structured_payload(self):
         payload = _build_invoice_payload(

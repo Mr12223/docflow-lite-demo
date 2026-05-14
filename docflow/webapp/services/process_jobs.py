@@ -5,8 +5,8 @@ import threading
 import time
 from typing import Optional
 
-from docflow_core import DocFlowCancelledError, DocFlowProcessor
-from docflow_support import augment_result_payload, build_error_info
+from docflow.core import DocFlowCancelledError, DocFlowProcessor
+from docflow.support import augment_result_payload, build_error_info
 
 from ..core import invoice_db, logger
 from .ocr import IMAGE_EXTS, extract_invoice_fields, process_image_ocr
@@ -137,6 +137,7 @@ def _run_process_job(job_id: str) -> None:
         pdf_mode = job["pdf_mode"]
         file_ext = job["file_ext"]
         invoice_extract = job.get("invoice_extract", False)
+        force_reprocess = job.get("force_reprocess", False)
         if job.get("state") == "cancelled" or job.get("cancel_requested"):
             PROCESS_JOBS[job_id]["state"] = "cancelled"
             PROCESS_JOBS[job_id]["progress_pct"] = 100.0
@@ -180,6 +181,7 @@ def _run_process_job(job_id: str) -> None:
                 file_name,
                 progress_callback=report,
                 cancel_callback=cancel_requested,
+                force_reprocess=force_reprocess,
             )
             result = _maybe_attach_invoice_fields(result, invoice_extract)
         else:

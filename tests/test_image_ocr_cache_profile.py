@@ -47,6 +47,26 @@ class ImageOcrCacheProfileTests(unittest.TestCase):
         self.assertEqual(profile_before["provider_resize_policies"]["tesseract"]["max_long_edge"], 1600)
         self.assertEqual(profile_after["provider_resize_policies"]["tesseract"]["max_long_edge"], 1180)
 
+    def test_clear_image_ocr_cache_clears_disk_and_memory(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cache_dir = os.path.join(tmp_dir, "ocr_cache")
+            os.makedirs(cache_dir, exist_ok=True)
+            with open(os.path.join(cache_dir, "a.json"), "w", encoding="utf-8") as f:
+                f.write("{}")
+            os.makedirs(os.path.join(cache_dir, "nested"), exist_ok=True)
+            with open(os.path.join(cache_dir, "nested", "b.json"), "w", encoding="utf-8") as f:
+                f.write("{}")
+
+            with patch.object(ocr_engines, "IMAGE_OCR_CACHE_DIR", ocr_engines.Path(cache_dir)):
+                ocr_engines.IMAGE_OCR_MEMORY_CACHE["x"] = {"result": {}}
+                result = ocr_engines.clear_image_ocr_cache()
+
+            self.assertEqual(result["deleted_files"], 2)
+            self.assertEqual(result["cleared_memory_items"], 1)
+            self.assertTrue(os.path.isdir(cache_dir))
+            self.assertEqual(os.listdir(cache_dir), [])
+            self.assertEqual(ocr_engines.IMAGE_OCR_MEMORY_CACHE, {})
+
 
 if __name__ == "__main__":
     unittest.main()

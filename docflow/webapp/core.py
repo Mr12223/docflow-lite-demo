@@ -22,7 +22,7 @@ CORS(app)
 UPLOAD_FOLDER = str(UPLOADS_DIR)
 REPORTS_FOLDER = str(REPORTS_DIR)
 
-from invoice_db import InvoiceDB
+from docflow.invoice.db import InvoiceDB
 
 invoice_db = InvoiceDB()
 

@@ -4,64 +4,68 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DocFlow · 多格式文档智能处理工具</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@400;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#f5f7fb;--s1:#ffffff;--s2:#f8fafc;--s3:#eef2f7;
-  --border:#dbe3ef;--border2:#cbd5e1;
-  --accent:#2563eb;--accent2:#dc2626;--accent3:#16a34a;
-  --amber:#d97706;--blue:#0284c7;
-  --text:#172033;--dim:#64748b;--muted:#94a3b8;
-  --paper:#fffdf8;--wash:#e0f2fe;--mint:#dcfce7;
-  --font:'Noto Sans SC',sans-serif;--mono:'JetBrains Mono',monospace;--display:'Syne',sans-serif;
+  --bg:#FAF7F2;--s1:#FFFFFF;--s2:#FBF8F3;--s3:#F0E9DF;
+  --border:#EAE5DD;--border2:#D8D0C3;
+  --accent:#D86A47;--accent2:#C0473A;--accent3:#2E7D5B;
+  --amber:#C9982E;--blue:#5F7F95;
+  --text:#1A1816;--dim:#6B6660;--muted:#9B948B;
+  --paper:#FFFDF8;--wash:#FFF1EA;--mint:#EEF7F1;
+  --shadow:0 14px 36px rgba(89,68,48,.06);
+  --font:'Inter','Noto Sans SC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--mono:'JetBrains Mono','SFMono-Regular',ui-monospace,monospace;--display:'Cormorant','Noto Serif SC',Georgia,serif;
   --left-w:280px;--mid-w:300px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
-body{background:linear-gradient(135deg,#f8fbff 0%,#f5f7fb 48%,#f1f5f9 100%);color:var(--text);font-family:var(--font);display:flex;flex-direction:column}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(37,99,235,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.035) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(180deg,rgba(0,0,0,.85),rgba(0,0,0,.16));pointer-events:none;z-index:0}
-nav{position:relative;z-index:20;display:flex;align-items:center;gap:16px;padding:0 20px;height:56px;border-bottom:1px solid rgba(203,213,225,.72);background:rgba(255,255,255,.88);backdrop-filter:blur(18px);box-shadow:0 10px 28px rgba(15,23,42,.06);flex-shrink:0}
-.logo{font-family:var(--display);font-size:19px;font-weight:800;letter-spacing:0;display:flex;align-items:center;gap:9px}
-.logo-box{width:31px;height:31px;background:linear-gradient(135deg,#2563eb 0%,#0891b2 55%,#16a34a 100%);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;box-shadow:0 8px 18px rgba(37,99,235,.24)}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+body::before{content:'';position:fixed;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(250,247,242,0));pointer-events:none;z-index:0}
+nav{position:relative;z-index:20;display:flex;align-items:center;gap:16px;padding:0 26px;height:64px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.74);backdrop-filter:blur(18px);box-shadow:none;flex-shrink:0}
+.logo{font-family:var(--display);font-size:28px;font-weight:600;letter-spacing:0;display:flex;align-items:center;gap:10px}
+.logo-box{width:36px;height:36px;background:rgba(216,106,71,.12);border:1px solid rgba(216,106,71,.22);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--accent);box-shadow:none}
 .logo em{color:var(--accent);font-style:normal}
 .nav-sep{flex:1}
-.nav-pill{font-family:var(--mono);font-size:10px;letter-spacing:.5px;padding:5px 11px;border:1px solid var(--border2);border-radius:20px;color:var(--dim);background:#fff}
+.nav-pill{font-size:12px;letter-spacing:.02em;padding:5px 12px;border:1px solid var(--border);border-radius:8px;color:var(--dim);background:var(--s1)}
 .nav-pill b{color:var(--accent3);font-weight:500}
+.nav-stop-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 12px;border:1px solid rgba(192,71,58,.28);border-radius:8px;background:rgba(192,71,58,.06);color:var(--accent2);font-size:12px;font-weight:700;cursor:pointer;transition:all .18s ease}
+.nav-stop-btn:hover:not(:disabled){border-color:rgba(192,71,58,.42);background:rgba(192,71,58,.11);transform:translateY(-1px)}
+.nav-stop-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
 .gbar{height:2px;background:var(--border);flex-shrink:0;position:relative;overflow:hidden}
-.gbar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent3));transition:width .4s ease}
+.gbar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--amber),var(--accent3));transition:width .4s ease}
 .gbar-fill.ind{width:35%!important;animation:ind 1.4s ease-in-out infinite}
 @keyframes ind{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
-.app{position:relative;z-index:1;flex:1;display:grid;grid-template-columns:var(--left-w) var(--mid-w) 1fr;grid-template-areas:"files opts result";min-height:0;padding:10px;gap:10px}
-.col{display:flex;flex-direction:column;border:1px solid rgba(203,213,225,.82);border-radius:10px;overflow:hidden;min-height:0;min-width:0;background:rgba(255,255,255,.88);box-shadow:0 12px 30px rgba(15,23,42,.06)}
+.app{position:relative;z-index:1;flex:1;display:grid;grid-template-columns:var(--left-w) var(--mid-w) 1fr;grid-template-areas:"files opts result";min-height:0;padding:18px;gap:14px}
+.col{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:12px;overflow:hidden;min-height:0;min-width:0;background:var(--s1);box-shadow:var(--shadow)}
 .files-col{grid-area:files}
 .opts-col{grid-area:opts}
-.col-head{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:linear-gradient(180deg,#ffffff,#f8fafc)}
-.col-title{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);flex:1}
-.col-badge{font-family:var(--mono);font-size:10px;padding:2px 7px;background:var(--s3);border:1px solid var(--border2);border-radius:10px;color:var(--dim)}
+.col-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;background:linear-gradient(180deg,#fff,#FFFCF8)}
+.col-title{font-size:14px;font-weight:600;color:var(--text);flex:1}
+.col-badge{font-size:11px;font-weight:600;padding:2px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--dim)}
 .col-body{flex:1;overflow-y:auto;overflow-x:hidden}
 .col-body::-webkit-scrollbar{width:3px}
 .col-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 /* Drop zone */
-.drop-zone{margin:10px;border:1.5px dashed rgba(37,99,235,.34);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all .25s;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9)}
-.drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:linear-gradient(180deg,#eff6ff 0%,#ffffff 100%);box-shadow:0 10px 22px rgba(37,99,235,.1)}
+.drop-zone{margin:12px;border:1.5px dashed rgba(216,106,71,.38);border-radius:10px;padding:20px 12px;text-align:center;cursor:pointer;transition:all .25s;background:linear-gradient(180deg,#FFFDF8 0%,#fff 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.8)}
+.drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:linear-gradient(180deg,#FFF1EA 0%,#ffffff 100%);box-shadow:0 10px 24px rgba(216,106,71,.1)}
 .drop-zone.over{transform:scale(1.01)}
 .drop-icon{font-size:30px;display:block;margin-bottom:7px;animation:float 3s ease-in-out infinite}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 .drop-txt{font-size:11px;color:var(--dim);line-height:1.6}
 .drop-formats{font-size:9.5px;color:var(--muted);margin-top:3px}
 .drop-actions{margin-top:10px;display:flex;gap:6px;justify-content:center}
-.drop-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;background:#ffffff;border:1px solid var(--border2);border-radius:7px;font-size:11px;font-family:var(--mono);color:var(--text);cursor:pointer;transition:all .2s;box-shadow:0 1px 2px rgba(15,23,42,.04)}
-.drop-btn:hover{border-color:var(--accent);color:var(--accent);background:#eff6ff}
-.drop-btn.clr:hover{border-color:var(--accent2);color:var(--accent2)}
+.drop-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;background:#ffffff;border:1px solid var(--border2);border-radius:7px;font-size:11px;font-weight:600;color:var(--text);cursor:pointer;transition:all .2s;box-shadow:none}
+.drop-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--wash)}
+.drop-btn.clr:hover{border-color:var(--accent2);color:var(--accent2);background:rgba(192,71,58,.06)}
 #file-input{display:none}
 /* File list */
 .file-list{padding:4px 8px 8px}
-.file-item{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:8px;padding:8px 10px;margin-bottom:3px;border-radius:9px;cursor:pointer;transition:all .15s;border:1px solid transparent;position:relative;overflow:hidden}
-.file-item:hover{background:#f8fbff}
-.file-item.active{background:#eff6ff;border-color:rgba(37,99,235,.32)}
-.file-item.processing{border-color:rgba(37,99,235,.42);background:#eff6ff}
-.file-item.done-item{border-color:rgba(22,163,74,.22)}
-.file-item.error-item{border-color:rgba(220,38,38,.22)}
+.file-item{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:8px;padding:8px 10px;margin-bottom:3px;border-radius:8px;cursor:pointer;transition:all .15s;border:1px solid transparent;position:relative;overflow:hidden}
+.file-item:hover{background:var(--s2)}
+.file-item.active{background:var(--wash);border-color:rgba(216,106,71,.28)}
+.file-item.processing{border-color:rgba(216,106,71,.42);background:var(--wash)}
+.file-item.done-item{border-color:rgba(46,125,91,.22)}
+.file-item.error-item{border-color:rgba(192,71,58,.22)}
 .fi-icon{font-size:16px;line-height:1;text-align:center}
 .fi-body{min-width:0}
 .fi-name{font-size:11.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -77,7 +81,7 @@ nav{position:relative;z-index:20;display:flex;align-items:center;gap:16px;paddin
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .fi-del{opacity:0;font-size:10px;cursor:pointer;color:var(--dim);background:none;border:none;padding:2px 5px;border-radius:4px;transition:all .15s}
 .file-item:hover .fi-del{opacity:1}
-.fi-del:hover{color:var(--accent2);background:#fee2e2}
+.fi-del:hover{color:var(--accent2);background:rgba(192,71,58,.08)}
 .fi-prog{position:absolute;bottom:0;left:0;width:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:0 0 9px 9px;display:none;transition:width .25s ease}
 .file-item.processing .fi-prog{display:block;animation:shimmer 1.4s ease-in-out infinite}
 @keyframes shimmer{0%,100%{opacity:.5}50%{opacity:1}}
@@ -90,13 +94,13 @@ nav{position:relative;z-index:20;display:flex;align-items:center;gap:16px;paddin
 .batch-sep{width:1px;background:var(--border);align-self:stretch;flex-shrink:0}
 /* Footer */
 .col-foot{padding:8px 10px;border-top:1px solid var(--border);flex-shrink:0;background:var(--s1);display:flex;flex-direction:column;gap:6px}
-.run-btn{width:100%;padding:10px;background:var(--accent);border:none;border-radius:9px;color:white;font-family:var(--display);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px}
-.run-btn:hover:not(:disabled){transform:translateY(-1px);background:#1d4ed8;box-shadow:0 8px 20px rgba(37,99,235,.2)}
+.run-btn{width:100%;padding:10px;background:var(--accent);border:none;border-radius:8px;color:white;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.02em}
+.run-btn:hover:not(:disabled){transform:translateY(-1px);background:#BF5939;box-shadow:0 8px 20px rgba(216,106,71,.18)}
 .run-btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
 .process-actions{display:flex;gap:6px}
 .process-actions .run-btn{flex:1}
-.process-cancel-btn{flex:1;padding:10px;background:#fff7ed;border:1px solid rgba(217,119,6,.28);border-radius:9px;color:var(--amber);font-family:var(--display);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px}
-.process-cancel-btn:hover:not(:disabled){transform:translateY(-1px);border-color:var(--amber);box-shadow:0 8px 20px rgba(217,119,6,.14)}
+.process-cancel-btn{flex:1;padding:10px;background:#FFF8E8;border:1px solid rgba(201,152,46,.28);border-radius:8px;color:var(--amber);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.02em}
+.process-cancel-btn:hover:not(:disabled){transform:translateY(-1px);border-color:var(--amber);box-shadow:0 8px 20px rgba(201,152,46,.14)}
 .process-cancel-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
 @keyframes grad{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
 .progress-row{display:none;flex-direction:column;gap:6px}
@@ -287,9 +291,11 @@ tr:hover td{background:#f8fbff}
 .detail-title{font-family:var(--mono);font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
 .detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
 .detail-sub{font-family:var(--mono);font-size:9.5px;color:var(--dim);line-height:1.6}
-.detail-row{display:flex;gap:8px;font-size:11.5px;margin-bottom:5px}
-.detail-key{color:var(--dim);width:90px;flex-shrink:0;font-family:var(--mono);font-size:10.5px}
-.detail-val{color:var(--text);font-family:var(--mono);font-size:10.5px}
+.detail-row{display:grid;grid-template-columns:minmax(96px,150px) minmax(0,1fr);gap:10px;align-items:start;font-size:11.5px;margin-bottom:7px;min-width:0}
+.detail-key{color:var(--dim);min-width:0;font-family:var(--mono);font-size:10.5px;line-height:1.55;overflow-wrap:anywhere}
+.detail-val{color:var(--text);min-width:0;font-family:var(--mono);font-size:10.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:96px;overflow:auto}
+.detail-val::-webkit-scrollbar{width:4px;height:4px}
+.detail-val::-webkit-scrollbar-thumb{background:var(--border2);border-radius:999px}
 .pdf-compare-card{border-color:rgba(37,99,235,.22);background:#ffffff}
 .pdf-compare-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
 .pdf-mini-card{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:10px 12px}
@@ -367,7 +373,8 @@ tr:hover td{background:#f8fbff}
 /* Result footer - reworked, no overlap */
 .result-foot{display:flex;align-items:center;gap:6px;padding:7px 12px;border-top:1px solid var(--border);background:var(--s1);flex-shrink:0}
 .dl-label{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);flex-shrink:0}
-.dl-group{display:flex;gap:4px}
+.dl-group{display:flex;gap:4px;flex-wrap:wrap}
+.dl-label.all{margin-left:6px}
 .dl-btn{display:flex;align-items:center;gap:4px;padding:5px 11px;font-family:var(--mono);font-size:10.5px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--dim);cursor:pointer;transition:all .15s;white-space:nowrap}
 .dl-btn:hover{color:var(--text);border-color:var(--accent)}
 .dl-btn.txt{border-color:rgba(37,99,235,.28);color:var(--accent)}
@@ -451,6 +458,7 @@ tr:hover td{background:#f8fbff}
   .tab{padding:6px 10px}
   .table-scroll,.stats-body,.log-body{padding:10px}
   .stat-row,.mode-report-metrics{grid-template-columns:1fr}
+  .detail-row{grid-template-columns:1fr;gap:3px}
   .dl-label,.foot-sep{display:none}
   .dl-btn,.copy-btn{width:100%;justify-content:center}
   .toast{width:min(calc(100vw - 20px),420px);white-space:normal;text-align:center}
@@ -468,11 +476,21 @@ tr:hover td{background:#f8fbff}
 .invoice-field-label{font-family:var(--mono);font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.3px;display:flex;align-items:center;gap:6px}
 .invoice-field-value{font-size:13px;color:var(--text);word-break:break-all}
 .invoice-field-value.empty{color:var(--muted);font-style:italic;font-size:11px}
+.invoice-field-value.missing{color:var(--amber);font-style:normal;font-size:11.5px;line-height:1.45}
+.invoice-field-hint{font-size:10px;color:var(--dim);line-height:1.45}
 .invoice-conf{display:inline-block;font-size:8px;padding:1px 5px;border-radius:8px;font-family:var(--mono);vertical-align:middle}
 .invoice-conf.high{background:#dcfce7;color:var(--accent3)}
 .invoice-conf.medium{background:#fff7ed;color:var(--amber)}
 .invoice-conf.low{background:rgba(104,104,160,.15);color:var(--dim)}
+.invoice-conf.missing{background:#fff7ed;color:var(--amber)}
 .invoice-save-status{padding:8px 14px;font-size:11px;color:var(--accent3);font-family:var(--mono)}
+.invoice-section{display:flex;flex-direction:column;gap:8px}
+.opt-item-full{width:100%}
+.invoice-util-row{display:flex;gap:6px}
+.invoice-util-row .panel-action-btn{flex:1}
+.invoice-save-link{color:var(--accent3);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.invoice-save-link:hover{color:var(--accent)}
+.invoice-record-item.highlight{background:rgba(216,106,71,.12);transition:background .1s}
 .invoice-record-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
 .invoice-record-item:hover{background:var(--s2)}
 .invoice-record-info{flex:1;min-width:0}
@@ -480,7 +498,249 @@ tr:hover td{background:#f8fbff}
 .invoice-record-meta{font-size:9.5px;color:var(--dim);font-family:var(--mono)}
 .invoice-record-del{background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:4px}
 .invoice-record-del:hover{color:var(--accent2);background:#fee2e2}
-@media(max-width:860px){.invoice-grid{grid-template-columns:1fr}}
+.template-launcher{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,249,241,.96));box-shadow:0 4px 12px rgba(89,68,48,.04)}
+.template-launcher-actions{display:flex;flex-wrap:wrap;gap:8px}
+.template-workspace{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.25fr);gap:12px}
+.template-sidebar,.template-editor-card{border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,249,241,.96));box-shadow:0 10px 24px rgba(89,68,48,.05);padding:14px}
+.template-section-head,.template-editor-head,.template-inline-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.template-section-kicker{font-size:10px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.template-section-title{font-family:var(--display);font-size:18px;color:var(--text);line-height:1.1}
+.template-editor-meta,.template-preview-meta{font-size:11px;line-height:1.6;color:var(--dim)}
+.template-list{display:flex;flex-direction:column;gap:10px;max-height:620px;overflow:auto;padding-right:2px;margin-top:12px}
+.template-list::-webkit-scrollbar{width:4px}
+.template-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:999px}
+.template-item{display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid var(--border);border-radius:14px;background:linear-gradient(180deg,#fff,#fff9f3);cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+.template-item:hover{border-color:rgba(216,106,71,.34);box-shadow:0 10px 20px rgba(89,68,48,.06);transform:translateY(-1px)}
+.template-item.active{border-color:rgba(216,106,71,.46);box-shadow:0 0 0 1px rgba(216,106,71,.12),0 16px 28px rgba(216,106,71,.09);background:linear-gradient(180deg,#fffaf5,#fff)}
+.template-item-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.template-name{font-size:13px;font-weight:700;color:var(--text);line-height:1.35}
+.template-meta{font-size:10px;color:var(--dim);font-family:var(--mono);line-height:1.5}
+.template-pill-row,.template-item-actions,.template-preview-pills{display:flex;flex-wrap:wrap;gap:6px}
+.template-pill{display:inline-flex;align-items:center;padding:4px 8px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--dim);font-size:10px;font-family:var(--mono)}
+.template-pill.field{background:#fff8e8;color:#9a741e;border-color:rgba(201,152,46,.2)}
+.template-pill.alias{background:var(--mint);color:var(--accent3);border-color:rgba(46,125,91,.18)}
+.template-pill.soft{background:var(--s2);color:var(--dim)}
+.template-item-actions{justify-content:flex-end}
+.template-form{display:grid;gap:12px;padding:0;border:none;background:transparent}
+.template-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.template-field{display:grid;gap:6px}
+.template-field>span{font-size:11px;font-family:var(--mono);letter-spacing:.04em;color:var(--dim)}
+.template-field input,.template-field textarea,.template-label-input,.template-custom-input{width:100%;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);padding:10px 12px;font:12px var(--mono);resize:vertical;transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}
+.template-field input:focus,.template-field textarea:focus,.template-label-input:focus,.template-custom-input:focus{outline:none;border-color:rgba(216,106,71,.42);box-shadow:0 0 0 3px rgba(216,106,71,.08)}
+.template-field textarea{min-height:72px}
+.template-chip-grid{display:flex;flex-wrap:wrap;gap:8px}
+.template-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--dim);font-size:11px;cursor:pointer;transition:border-color .18s ease,background .18s ease,color .18s ease,transform .18s ease}
+.template-chip:hover{border-color:rgba(216,106,71,.3);background:#fffaf6;color:var(--text);transform:translateY(-1px)}
+.template-chip.active{background:var(--wash);border-color:rgba(216,106,71,.38);color:var(--accent)}
+.template-chip.locked{background:var(--mint);border-color:rgba(46,125,91,.3);color:var(--accent3);cursor:default}
+.template-chip small{font-family:var(--mono);font-size:10px;opacity:.8}
+.template-custom-list,.template-label-list,.template-preview-section{display:grid;gap:8px}
+.template-custom-card{padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.82)}
+.template-custom-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;align-items:center}
+.template-custom-note{margin-top:7px;font-size:10px;color:var(--dim);font-family:var(--mono)}
+.template-custom-note.warn{color:var(--amber)}
+.template-label-row{display:grid;grid-template-columns:minmax(156px,210px) minmax(0,1fr);gap:8px;align-items:center}
+.template-label-meta{display:grid;gap:2px}
+.template-label-name{font-size:12px;font-weight:600;color:var(--text)}
+.template-label-key{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.template-preview-card{padding:12px;border:1px solid var(--border);border-radius:14px;background:linear-gradient(180deg,#fffdf9,#fff7ed)}
+.template-preview-name{font-family:var(--display);font-size:22px;line-height:1.05;color:var(--text)}
+.template-preview-sub{font-size:11px;color:var(--dim);margin-top:4px}
+.template-preview-label{font-size:10px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.template-hint,.template-empty{padding:11px 12px;border-radius:12px;font-size:11px;line-height:1.6}
+.template-empty{color:var(--muted);border:1px dashed var(--border2);background:rgba(255,255,255,.58)}
+.template-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:30px clamp(16px,3.5vw,44px);background:rgba(47,39,30,.22);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transition:opacity .22s ease;z-index:1200}
+.template-modal.open{opacity:1;pointer-events:auto}
+.template-modal-card{width:min(1240px,calc(100vw - 32px));height:min(86vh,900px);display:flex;flex-direction:column;min-height:0;border:1px solid rgba(255,255,255,.6);border-radius:24px;background:linear-gradient(180deg,#FFFDF9,#F9F2E8);box-shadow:0 28px 80px rgba(58,43,25,.18);overflow:hidden;transform:translateY(16px) scale(.985);transition:transform .24s ease}
+.template-modal.open .template-modal-card{transform:translateY(0) scale(1)}
+.template-modal-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 18px;border-bottom:1px solid rgba(216,106,71,.12);background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,248,239,.88))}
+.template-modal-title{font-family:var(--display);font-size:20px;line-height:1;color:var(--text)}
+.template-modal-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.template-modal-body{flex:1;min-height:0;padding:14px;background:linear-gradient(180deg,rgba(255,255,255,.36),rgba(255,248,238,.74));overflow:hidden}
+.template-modal-body .template-workspace{height:100%;min-height:0}
+.template-modal-body .template-sidebar{display:flex;flex-direction:column;min-height:0}
+.template-modal-body .template-editor-card{min-height:0;overflow:auto}
+.template-modal-body .template-list{flex:1;min-height:0;max-height:none}
+@media(max-width:1200px){.template-workspace{grid-template-columns:1fr}.template-list{max-height:none}}
+@media(max-width:860px){.invoice-grid{grid-template-columns:1fr}.template-form-grid,.template-custom-row,.template-label-row{grid-template-columns:1fr}.template-section-head,.template-editor-head,.template-inline-head,.template-item-head,.template-modal-head{flex-direction:column}.template-item-actions{justify-content:flex-start}.template-modal{padding:12px}.template-modal-card{width:100%;height:min(92vh,980px);border-radius:18px}.template-modal-head,.template-modal-body{padding:14px}.template-modal-actions{width:100%;justify-content:flex-start}}
+
+/* Open Orbit inspired warm theme layer */
+button,input{font:inherit}
+button:focus-visible,input:focus-visible,.tab:focus-visible,.opt-item:focus-visible,.fmt-chip:focus-visible{outline:2px solid rgba(216,106,71,.28);outline-offset:2px}
+.col-body::-webkit-scrollbar-thumb,
+.text-out::-webkit-scrollbar-thumb,
+.table-scroll::-webkit-scrollbar-thumb,
+.stats-body::-webkit-scrollbar-thumb,
+.pdf-page-list::-webkit-scrollbar-thumb,
+.log-body::-webkit-scrollbar-thumb,
+.tab-bar::-webkit-scrollbar-thumb{background:var(--border2);border-radius:999px}
+.opts-section{padding:11px 16px 7px}
+.opts-label,.dep-title,.detail-title,.summary-title,.tbl-label,.stat-lbl,.pdf-mini-lbl,.mode-report-title,.mode-metric-lbl,.dl-label,.dep-command-title{letter-spacing:.08em;color:var(--dim)}
+.opt-grid{gap:7px}
+.opt-item{border-radius:8px;background:#fff;border-color:var(--border)}
+.opt-item:hover{border-color:rgba(216,106,71,.32);background:#FFFCF8}
+.opt-item.on{border-color:rgba(216,106,71,.36);background:var(--wash)}
+.opt-item.on .opt-ck{background:var(--accent);border-color:var(--accent);color:#fff}
+.fmt-chip{border-radius:7px;background:var(--s2)}
+.fmt-chip:hover{border-color:rgba(216,106,71,.3);color:var(--accent)}
+.fmt-chip.on{border-color:rgba(216,106,71,.32);background:var(--wash);color:var(--accent)}
+.pdf-mode-box,.dep-card,.mini-card,.dep-item,.dep-command-text,.mode-compare-target,.batch-test-opt{background:#fff;border-color:var(--border);border-radius:8px}
+.pdf-mode-chip{border-radius:8px;background:#fff}
+.pdf-mode-chip:hover{border-color:rgba(216,106,71,.34);background:#FFFCF8}
+.pdf-mode-chip.on{border-color:rgba(46,125,91,.34);background:var(--mint);box-shadow:none}
+.pdf-mode-chip.on .pdf-mode-desc{color:#547966}
+.collapsible-head{border-radius:8px;background:#fff;box-shadow:none}
+.collapsible-head:hover{border-color:rgba(216,106,71,.28);background:#FFFCF8;box-shadow:0 10px 22px rgba(89,68,48,.05)}
+.collapsible-chevron{background:var(--s2);border-color:var(--border);border-radius:8px}
+.collapsible-head:hover .collapsible-chevron{border-color:rgba(216,106,71,.28);background:var(--wash)}
+.panel-action-btn{border-color:rgba(216,106,71,.28);background:var(--wash);color:var(--accent);border-radius:7px}
+.panel-action-btn:hover{border-color:rgba(216,106,71,.42);background:#FFE7DC;color:#B85234}
+.panel-action-btn.primary{border-color:rgba(46,125,91,.32);background:var(--mint);color:var(--accent3)}
+.panel-action-btn.primary:hover{border-color:rgba(46,125,91,.46);background:#DDEFE5;color:#276A4D}
+.panel-action-btn.warn,.batch-stop-btn{border-color:rgba(201,152,46,.32);background:#FFF8E8;color:var(--amber)}
+.panel-action-btn.warn:hover,.batch-stop-btn:hover{border-color:rgba(201,152,46,.48);background:#FFF1C8;color:#9A741E}
+.dep-pill.ready,.dep-badge.ready,.mode-badge.rec{color:var(--accent3);border-color:rgba(46,125,91,.34);background:var(--mint)}
+.dep-pill.degraded,.dep-badge.degraded,.dep-pill.optional_missing,.dep-badge.optional_missing,.mode-badge.best{color:var(--amber);border-color:rgba(201,152,46,.32);background:#FFF8E8}
+.dep-pill.missing,.dep-badge.missing{color:var(--accent2);border-color:rgba(192,71,58,.32);background:rgba(192,71,58,.07)}
+.dep-command-box{background:#FFFCF8;border-color:var(--border2)}
+.dep-rec-item,.batch-tag,.pdf-legend-chip,.pdf-hint{background:#fff;border-color:var(--border);border-radius:7px}
+.batch-link:hover{border-color:var(--accent3);background:var(--mint)}
+.hist-item:hover,.invoice-record-item:hover,tr:hover td{background:var(--s2)}
+.hist-item.active-hist{background:var(--wash);border-left:2px solid var(--accent)}
+.hi-del:hover,.invoice-record-del:hover{color:var(--accent2);background:rgba(192,71,58,.08)}
+.result-head{height:48px;padding:0 16px;background:linear-gradient(180deg,#fff,#FFFCF8)}
+.result-title{font-size:13px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--text)}
+.result-file{font-size:13px;color:var(--dim)}
+.search-bar,.tab-bar,.result-foot{background:#fff}
+.search-wrap input{background:var(--s2);border-color:var(--border);border-radius:8px}
+.search-wrap input:focus{border-color:var(--accent);background:#fff}
+.search-nav button{background:var(--s2);border-color:var(--border);border-radius:6px}
+.search-nav button:hover{background:var(--wash);border-color:var(--accent);color:var(--accent)}
+.tab{border-radius:8px 8px 0 0;font-weight:500}
+.tab:hover{color:var(--accent)}
+.tab.active{color:var(--accent);background:var(--s2);border-color:var(--border)}
+.tab-badge{background:var(--s3);border-radius:6px}
+.tab.active .tab-badge{background:var(--wash);color:var(--accent)}
+.result-body{background:var(--s2)}
+.text-out{background:#fff;font-size:12.5px;line-height:1.85}
+.placeholder{background:linear-gradient(180deg,#fff,#FFFCF8)}
+.ph-icon{color:var(--accent);opacity:.28}
+th{background:var(--wash);border-color:var(--border2);color:var(--accent)}
+td{background:#fff}
+.stat-card,.summary-card,.detail-card,.mode-report-card,.mode-metric,.pdf-mini-card,.pdf-page-row,.mode-report-summary-text,.mode-table-cell,.invoice-field{background:#fff;border-color:var(--border);border-radius:8px}
+.stat-card:hover{border-color:rgba(216,106,71,.28)}
+.stat-val,.mini-value,.pdf-mini-val{font-family:var(--display);font-size:28px;line-height:1;color:var(--accent);font-weight:700}
+.stat-sub,.mini-sub,.pdf-mini-sub{color:var(--dim)}
+.kw-tag{background:#fff;border-color:var(--border);border-radius:7px}
+.kw-tag:hover{border-color:var(--accent);color:var(--accent);background:var(--wash)}
+.summary-card{border-left-color:var(--accent3);background:linear-gradient(90deg,rgba(46,125,91,.06),#fff 34%)}
+.pdf-compare-card{border-color:rgba(216,106,71,.22)}
+.pdf-track-text{background:linear-gradient(90deg,var(--accent),#E9A081)}
+.pdf-track-ocr{background:linear-gradient(90deg,var(--accent3),#7EB99A)}
+.pdf-track-empty{background:linear-gradient(90deg,rgba(201,152,46,.9),rgba(192,71,58,.86))}
+.pdf-legend-dot.text{background:var(--accent)}
+.pdf-legend-dot.ocr{background:var(--accent3)}
+.pdf-source-badge.text,.mode-badge.fastest{background:var(--wash);color:var(--accent);border-color:rgba(216,106,71,.24)}
+.pdf-source-badge.ocr{background:var(--mint);color:var(--accent3);border-color:rgba(46,125,91,.24)}
+.pdf-source-badge.empty{background:#FFF8E8;color:var(--amber);border-color:rgba(201,152,46,.24)}
+.pdf-source-badge.other{background:var(--s2);color:var(--dim);border-color:var(--border)}
+.mode-compare-report-card{border-color:rgba(46,125,91,.22)}
+.mode-report-card.recommended,.mode-table-cell.recommended{border-color:rgba(46,125,91,.34)}
+.mode-table-head .mode-table-cell{background:var(--wash);color:var(--accent)}
+.dl-btn,.copy-btn{background:#fff;border-color:var(--border);border-radius:7px}
+.dl-btn:hover,.copy-btn:hover{color:var(--accent);border-color:var(--accent);background:var(--wash)}
+.dl-btn.txt{border-color:rgba(216,106,71,.28);color:var(--accent)}
+.dl-btn.txt:hover{background:var(--wash)}
+.dl-btn.jsn{border-color:rgba(46,125,91,.28);color:var(--accent3)}
+.dl-btn.jsn:hover{background:var(--mint)}
+.toast{border-color:var(--accent);border-radius:8px;box-shadow:0 14px 32px rgba(89,68,48,.14)}
+.invoice-conf.high{background:var(--mint);color:var(--accent3)}
+.invoice-conf.medium{background:#FFF8E8;color:var(--amber)}
+.invoice-conf.low{background:var(--s3);color:var(--dim)}
+
+/* Readability pass: larger text and simplified control density */
+body{font-size:16px}
+nav{height:72px;padding:0 32px}
+.logo{font-size:34px}
+.logo-box{width:42px;height:42px;font-size:19px}
+.nav-pill{font-size:14px;padding:6px 14px}
+.app{grid-template-columns:310px 270px 1fr;padding:22px;gap:18px}
+.col{border-radius:12px}
+.col-head{padding:18px 20px}
+.col-title{font-size:18px}
+.col-badge{font-size:14px;padding:3px 10px}
+.drop-zone{margin:16px;padding:28px 16px}
+.drop-icon{font-size:38px}
+.drop-txt{font-size:17px}
+.drop-formats{font-size:13px}
+.drop-actions{gap:10px;margin-top:16px}
+.drop-btn,.run-btn,.process-cancel-btn,.dl-btn,.copy-btn{font-size:15px;padding:11px 16px;border-radius:8px}
+.col-foot{padding:12px 14px;gap:10px}
+.file-list{padding:8px 12px 12px}
+.file-item{grid-template-columns:28px 1fr auto;gap:10px;padding:12px 12px;margin-bottom:6px}
+.fi-icon{font-size:21px}
+.fi-name{font-size:15px}
+.fi-meta{font-size:12px}
+.file-empty{font-size:14px;padding:22px 16px}
+.batch-stat{font-size:13px}
+.batch-stat b{font-size:18px}
+.prog-label,.prog-hint{font-size:13px}
+.opts-section{padding:18px 20px}
+.opts-label{font-size:13px;margin-bottom:12px}
+.opt-grid{grid-template-columns:1fr;gap:10px}
+.opt-item{gap:10px;padding:14px 14px}
+.opt-ck{width:18px;height:18px;font-size:12px}
+.opt-lbl{font-size:16px}
+.result-head{height:58px;padding:0 20px}
+.result-title{font-size:18px}
+.result-file{font-size:15px}
+.result-status{font-size:14px}
+.search-bar{padding:12px 16px}
+.search-wrap input{font-size:15px;padding:9px 12px 9px 34px}
+.search-count{font-size:13px}
+.search-nav button{font-size:15px;padding:6px 11px}
+.tab-bar{gap:4px;padding:10px 16px 0}
+.tab{font-size:15px;padding:9px 16px}
+.tab-badge{font-size:12px;padding:2px 7px}
+.text-out{font-size:16px;line-height:1.9;padding:24px 28px}
+.ph-icon{font-size:48px}
+.ph-txt{font-size:17px}
+.table-scroll,.stats-body{padding:18px}
+.tbl-label{font-size:13px}
+table{font-size:15px}
+th,td{padding:10px 16px}
+.stat-row{gap:12px}
+.stat-card,.summary-card,.detail-card{padding:16px 18px}
+.stat-lbl,.summary-title,.detail-title{font-size:13px}
+.stat-val{font-size:36px}
+.stat-sub,.detail-sub{font-size:14px}
+.kw-tag{font-size:14px;padding:6px 10px}
+.summary-text{font-size:16px}
+.detail-row{font-size:15px;grid-template-columns:minmax(118px,180px) minmax(0,1fr);gap:12px}
+.detail-key,.detail-val{font-size:14px}
+.invoice-grid{gap:12px;padding:18px}
+.invoice-field{padding:14px 16px}
+.invoice-field-label{font-size:13px}
+.invoice-field-value{font-size:16px}
+.invoice-save-status{font-size:14px;padding:12px 18px}
+.result-foot{padding:12px 16px;gap:10px}
+.dl-label{font-size:13px}
+.dl-group{gap:8px}
+.toast{font-size:15px;padding:12px 24px}
+@media (max-width:1180px){
+  .app{grid-template-columns:minmax(280px,340px) minmax(0,1fr)}
+}
+@media (max-width:860px){
+  .app{padding:14px}
+  .opt-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:640px){
+  .logo{font-size:24px}
+  .app{padding:10px}
+  .opt-grid{grid-template-columns:1fr}
+  .tab{font-size:14px}
+  .text-out{font-size:15px;padding:18px}
+}
 </style>
 </head>
 <body>
@@ -488,6 +748,7 @@ tr:hover td{background:#f8fbff}
   <div class="logo"><div class="logo-box">📄</div>Doc<em>Flow</em></div>
   <span class="nav-sep"></span>
   <span class="nav-pill">v2.1 · <b>Python</b> Backend</span>
+  <button class="nav-stop-btn" id="shutdown-btn" onclick="shutdownServer()">结束项目</button>
 </nav>
 <div class="gbar"><div class="gbar-fill" id="gbar"></div></div>
 <div class="app">
@@ -519,7 +780,7 @@ tr:hover td{background:#f8fbff}
       <div class="batch-sep"></div>
       <div class="batch-stat"><b id="b-tables">0</b>总表格</div>
       <div class="batch-sep"></div>
-      <div class="batch-stat"><b id="b-time">0ms</b>总耗时</div>
+      <div class="batch-stat"><b id="b-time">0s</b>实际耗时</div>
     </div>
   </div>
   <div class="col-foot">
@@ -537,184 +798,19 @@ tr:hover td{background:#f8fbff}
   </div>
 </div>
 
-<!-- COL 2: OPTIONS + HISTORY -->
+<!-- COL 2: OPTIONS -->
 <div class="col opts-col">
-  <div class="col-head"><span class="col-title">选项 &amp; 历史</span></div>
+  <div class="col-head"><span class="col-title">识别设置</span></div>
   <div class="col-body">
-    <div class="opts-section">
-      <div class="opts-label">提取内容</div>
-      <div class="opt-grid">
-        <div class="opt-item on" data-opt="text"><div class="opt-ck">✓</div><span class="opt-lbl">📝 文本</span></div>
-        <div class="opt-item on" data-opt="table"><div class="opt-ck">✓</div><span class="opt-lbl">📊 表格</span></div>
-        <div class="opt-item on" data-opt="meta"><div class="opt-ck">✓</div><span class="opt-lbl">🏷 元数据</span></div>
-        <div class="opt-item" data-opt="image"><div class="opt-ck"></div><span class="opt-lbl">🖼 图片OCR</span></div>
-        <div class="opt-item" data-opt="invoice"><div class="opt-ck"></div><span class="opt-lbl">🧾 发票识别</span></div>
-      </div>
-    </div>
-    <div class="opts-divider"></div>
-    <div class="opts-section">
-      <div class="opts-label">默认导出格式</div>
-      <div class="fmt-chips">
-        <div class="fmt-chip on" data-fmt="txt">TXT</div>
-        <div class="fmt-chip" data-fmt="json">JSON</div>
-        <div class="fmt-chip" data-fmt="csv">CSV</div>
-        <div class="fmt-chip" data-fmt="md">Markdown</div>
-      </div>
-    </div>
-    <div class="opts-divider"></div>
-    <div class="opts-section">
-      <div class="opts-label">PDF 专用参数</div>
-      <div class="pdf-mode-box">
-        <div class="pdf-mode-row">
-          <div class="pdf-mode-chip" data-pdf-mode="accurate">
-            <div class="pdf-mode-name">高精度</div>
-            <div class="pdf-mode-desc">更高分辨率与更多预处理，最慢但更稳</div>
-          </div>
-          <div class="pdf-mode-chip" data-pdf-mode="balanced">
-            <div class="pdf-mode-name">平衡</div>
-            <div class="pdf-mode-desc">推荐默认模式，速度和效果均衡</div>
-          </div>
-          <div class="pdf-mode-chip on" data-pdf-mode="fast">
-            <div class="pdf-mode-name">快速</div>
-            <div class="pdf-mode-desc">更少 OCR 尝试，适合大文件快速预览</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="opts-divider"></div>
-    <div class="opts-section">
-      <div class="collapsible-panel mode-compare-box" data-panel="mode_compare">
-        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePanel('mode_compare')" onkeydown="handlePanelKey(event,'mode_compare')">
-          <div class="collapsible-title-wrap">
-            <span class="dep-title">模式对比实验</span>
-            <span class="collapsible-sub">同一 PDF 跑高精度 / 平衡 / 快速</span>
-          </div>
-          <div class="collapsible-actions">
-            <button class="panel-action-btn primary" id="mode-compare-run-btn" onclick="event.stopPropagation();runPdfModeCompare()" disabled>🧪 开始实验</button>
-            <button class="panel-action-btn warn" id="mode-compare-cancel-btn" onclick="event.stopPropagation();cancelModeCompare()" disabled>⏹ 停止实验</button>
-            <button class="panel-action-btn subtle" id="mode-compare-clear-btn" onclick="event.stopPropagation();clearModeCompareReport()" disabled>清空</button>
-            <span class="collapsible-chevron">▾</span>
-          </div>
-        </div>
-        <div class="collapsible-body">
-          <div class="mode-compare-target" id="mode-compare-target">请选择一个 PDF 文件作为实验对象</div>
-          <div class="mode-compare-hint">实验固定使用 TXT 输出，避免导出格式对耗时对比造成干扰。</div>
-          <div class="batch-test-meta">
-            <span id="mode-compare-status">未执行</span>
-            <span id="mode-compare-last"></span>
-          </div>
-          <div class="prog-track"><div class="prog-fill" id="mode-compare-fill"></div></div>
-          <div class="batch-test-current" id="mode-compare-current"></div>
-          <div class="mode-compare-summary" id="mode-compare-reco"><span class="dep-rec-item">实验完成后会给出推荐模式和原因</span></div>
-        </div>
-      </div>
-      <div class="collapsible-panel batch-test-box" data-panel="batch_test">
-        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePanel('batch_test')" onkeydown="handlePanelKey(event,'batch_test')">
-          <div class="collapsible-title-wrap">
-            <span class="dep-title">批量测试</span>
-            <span class="collapsible-sub">一键运行正常/边界样本</span>
-          </div>
-          <div class="collapsible-actions">
-            <span class="collapsible-chevron">▾</span>
-          </div>
-        </div>
-        <div class="collapsible-body">
-          <div class="batch-test-grid">
-            <label class="batch-test-opt"><input type="checkbox" id="bt-suite-normal" checked> 正常样本</label>
-            <label class="batch-test-opt"><input type="checkbox" id="bt-suite-edge" checked> 异常/边界</label>
-            <label class="batch-test-opt"><input type="checkbox" id="bt-strict"> Strict 模式</label>
-            <label class="batch-test-opt"><input type="checkbox" id="bt-keywords"> 关键词</label>
-          </div>
-          <div class="batch-test-actions">
-            <button class="drop-btn batch-test-btn" id="batch-test-btn" onclick="runBatchTests()">🧪 一键批测</button>
-            <button class="drop-btn batch-stop-btn" id="batch-cancel-btn" onclick="cancelBatchTests()" disabled>⏹ 停止批测</button>
-          </div>
-          <div class="batch-test-meta">
-            <span id="batch-test-status">未执行</span>
-            <span id="batch-test-last"></span>
-          </div>
-          <div class="prog-track"><div class="prog-fill" id="batch-test-fill"></div></div>
-          <div class="batch-test-current" id="batch-test-current"></div>
-          <div class="batch-test-links" id="batch-test-links"></div>
-        </div>
-      </div>
-      <div class="collapsible-panel batch-summary-box" data-panel="batch_summary">
-        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePanel('batch_summary')" onkeydown="handlePanelKey(event,'batch_summary')">
-          <div class="collapsible-title-wrap">
-            <span class="dep-title">批测统计</span>
-            <span class="collapsible-sub" id="batch-summary-last">等待批测</span>
-          </div>
-          <div class="collapsible-actions">
-            <span class="collapsible-chevron">▾</span>
-          </div>
-        </div>
-        <div class="collapsible-body">
-          <div class="batch-stats-grid">
-            <div class="mini-card"><div class="mini-label">成功率</div><div class="mini-value" id="batch-stat-rate">--</div><div class="mini-sub">完成后自动汇总</div></div>
-            <div class="mini-card"><div class="mini-label">平均耗时</div><div class="mini-value" id="batch-stat-avg">--</div><div class="mini-sub">单位 ms</div></div>
-            <div class="mini-card"><div class="mini-label">成功 / 失败</div><div class="mini-value" id="batch-stat-okfail">0 / 0</div><div class="mini-sub">批测样本结果</div></div>
-            <div class="mini-card"><div class="mini-label">预期匹配</div><div class="mini-value" id="batch-stat-expected">--</div><div class="mini-sub">用于验证测试集</div></div>
-          </div>
-          <div class="batch-format-list" id="batch-format-list"><div class="dep-empty">批测完成后显示各格式成功率</div></div>
-          <div class="dep-rec" id="batch-error-summary"><span class="dep-rec-item">错误分类会显示在这里</span></div>
-        </div>
-      </div>
-      <div class="collapsible-panel dep-box" data-panel="dependency_check">
-        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePanel('dependency_check')" onkeydown="handlePanelKey(event,'dependency_check')">
-          <div class="collapsible-title-wrap">
-            <span class="dep-title">环境自检</span>
-            <span class="collapsible-sub">依赖、OCR、LibreOffice 检查</span>
-          </div>
-          <div class="collapsible-actions">
-            <button class="panel-action-btn primary" id="dep-check-btn" onclick="event.stopPropagation();runMissingDependencyCheck()">一键检查</button>
-            <button class="panel-action-btn warn" id="dep-install-btn" onclick="event.stopPropagation();runInstallMissingDependencies()">一键安装</button>
-            <button class="panel-action-btn subtle" onclick="event.stopPropagation();loadDependencyStatus(true)">刷新</button>
-            <span class="collapsible-chevron">▾</span>
-          </div>
-        </div>
-        <div class="collapsible-body">
-          <div class="dep-overview" id="dep-overview">正在检查依赖环境...</div>
-          <div class="dep-profile-grid" id="dep-profile-grid"></div>
-          <div class="dep-list" id="dep-list"></div>
-          <div class="dep-rec" id="dep-rec"></div>
-          <div class="dep-command-box" id="dep-command-box">
-            <div class="dep-command-head">
-              <span class="dep-command-title">安装建议</span>
-              <button class="copy-btn" id="dep-copy-btn" onclick="copyDependencyInstallCommands()" disabled>复制命令</button>
-            </div>
-            <pre class="dep-command-text" id="dep-command-text">正在等待检查结果...</pre>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="opts-divider"></div>
-    <div class="opts-section">
-      <div class="collapsible-panel history-panel" data-panel="history_panel">
-        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePanel('history_panel')" onkeydown="handlePanelKey(event,'history_panel')">
-          <div class="collapsible-title-wrap">
-            <span class="dep-title">处理历史</span>
-            <span class="collapsible-sub">查看本地缓存结果</span>
-          </div>
-          <div class="collapsible-actions">
-            <button class="panel-action-btn" onclick="event.stopPropagation();clearHistory()">清空</button>
-            <span class="collapsible-chevron">▾</span>
-          </div>
-        </div>
-        <div class="collapsible-body">
-          <div id="hist-list"><div class="hist-empty" id="hist-empty">暂无历史记录</div></div>
-        </div>
-      </div>
-    </div>
-    <div class="opts-divider"></div>
-    <div class="opts-section">
-      <div class="collapsible-panel invoice-records-panel" data-panel="invoice_records">
-        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="true" onclick="togglePanel('invoice_records')" onkeydown="handlePanelKey(event,'invoice_records')">
+    <div class="opts-section invoice-section">
+      <div class="opt-item opt-item-full" data-opt="invoice"><div class="opt-ck"></div><span class="opt-lbl">🧾 发票识别</span></div>
+      <div class="collapsible-panel collapsed" data-panel="invoice_records">
+        <div class="collapsible-head" role="button" tabindex="0" aria-expanded="false" onclick="togglePanel('invoice_records')" onkeydown="handlePanelKey(event,'invoice_records')">
           <div class="collapsible-title-wrap">
             <span class="dep-title">发票记录</span>
             <span class="collapsible-sub">已识别并保存的发票数据</span>
           </div>
           <div class="collapsible-actions">
-            <button class="panel-action-btn warn" onclick="event.stopPropagation();clearInvoiceRecords()">一键删除</button>
             <button class="panel-action-btn" onclick="event.stopPropagation();exportInvoices()">导出CSV</button>
             <button class="panel-action-btn" onclick="event.stopPropagation();loadInvoiceRecords()">刷新</button>
             <span class="collapsible-chevron">▾</span>
@@ -723,6 +819,30 @@ tr:hover td{background:#f8fbff}
         <div class="collapsible-body">
           <div id="invoice-records-list"><div class="hist-empty" id="invoice-records-empty">暂无发票记录</div></div>
         </div>
+      </div>
+      <div class="collapsible-panel collapsed" data-panel="invoice_templates">
+        <div class="collapsible-head" tabindex="0" role="button" aria-expanded="false" onclick="togglePanel('invoice_templates')" onkeydown="handlePanelKey(event,'invoice_templates')">
+          <div class="collapsible-title-wrap">
+            <span class="dep-title">发票模板</span>
+            <span class="collapsible-sub" id="invoice-template-summary">可自定义</span>
+          </div>
+          <div class="collapsible-actions">
+            <button class="panel-action-btn" onclick="event.stopPropagation();loadInvoiceTemplates()">刷新</button>
+            <span class="collapsible-chevron">▾</span>
+          </div>
+        </div>
+        <div class="collapsible-body">
+          <div class="template-launcher">
+            <div class="template-launcher-actions">
+              <button class="panel-action-btn primary" onclick="openInvoiceTemplateModal()">打开编辑器</button>
+              <button class="panel-action-btn subtle" onclick="openInvoiceTemplateModal(true)">新建模板</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="invoice-util-row">
+        <button class="panel-action-btn warn" id="clear-ocr-cache-btn" onclick="clearOcrCache()">删除 OCR 缓存</button>
+        <button class="panel-action-btn warn" id="clear-upload-buffer-btn" onclick="clearUploadBuffer()">删除临时缓冲</button>
       </div>
     </div>
   </div>
@@ -750,7 +870,6 @@ tr:hover td{background:#f8fbff}
     <div class="tab active" onclick="switchTab('text',this)">文本 <span class="tab-badge" id="tb-chars">—</span></div>
     <div class="tab" onclick="switchTab('table',this)">表格 <span class="tab-badge" id="tb-tables">—</span></div>
     <div class="tab" onclick="switchTab('stats',this)">统计 &amp; 字数</div>
-    <div class="tab" onclick="switchTab('log',this)">日志</div>
     <div class="tab" onclick="switchTab('invoice',this)">发票 <span class="tab-badge" id="tb-invoice">—</span></div>
   </div>
   <div class="result-body">
@@ -774,7 +893,7 @@ tr:hover td{background:#f8fbff}
           <div class="stat-card stat-half"><div class="stat-lbl">预计阅读时长</div><div class="stat-val" id="s-readtime">—</div><div class="stat-sub">按400字/分钟估算</div></div>
           <div class="stat-card stat-half"><div class="stat-lbl">页数 / 幻灯片</div><div class="stat-val" id="s-pages">—</div><div class="stat-sub">文档页数</div></div>
           <div class="stat-card"><div class="stat-lbl">表格数</div><div class="stat-val" id="s-tables">—</div><div class="stat-sub">检测到的表格</div></div>
-          <div class="stat-card"><div class="stat-lbl">处理耗时</div><div class="stat-val" id="s-time">—</div><div class="stat-sub">毫秒</div></div>
+          <div class="stat-card"><div class="stat-lbl">处理耗时</div><div class="stat-val" id="s-time">—</div><div class="stat-sub">秒</div></div>
         </div>
         <div class="stat-row">
           <div class="stat-card"><div class="stat-lbl">文件大小</div><div class="stat-val" id="s-size">—</div><div class="stat-sub">原始文件</div></div>
@@ -803,23 +922,6 @@ tr:hover td{background:#f8fbff}
           <div class="pdf-hints" id="pdf-hints"></div>
           <div class="pdf-page-list" id="pdf-page-list"></div>
         </div>
-        <div class="detail-card mode-compare-report-card" id="mode-compare-report-card" style="display:none">
-          <div class="detail-head">
-            <div>
-              <div class="detail-title">PDF 模式实验报告</div>
-              <div class="detail-sub" id="mode-compare-report-sub">对同一 PDF 依次运行高精度、平衡、快速，比较效果与耗时</div>
-            </div>
-            <div class="mode-report-actions">
-              <button class="panel-action-btn primary" id="mode-compare-apply-btn" onclick="applyRecommendedPdfMode()" disabled>设为推荐模式</button>
-              <button class="panel-action-btn" onclick="downloadModeCompareReport('md')">下载 MD</button>
-              <button class="panel-action-btn" onclick="downloadModeCompareReport('json')">下载 JSON</button>
-            </div>
-          </div>
-          <div class="mode-report-grid" id="mode-compare-grid"></div>
-          <div class="mode-report-summary" id="mode-compare-summary"></div>
-          <div class="mode-report-summary-text" id="mode-compare-summary-text"></div>
-          <div class="mode-report-table" id="mode-compare-table"></div>
-        </div>
         <div class="detail-card" id="error-card" style="display:none">
           <div class="detail-title">错误中心</div>
           <div id="error-rows"></div>
@@ -828,11 +930,6 @@ tr:hover td{background:#f8fbff}
           <div class="detail-title">文档元数据</div>
           <div id="detail-rows"></div>
         </div>
-      </div>
-    </div>
-    <div class="tab-pane" id="tab-log">
-      <div class="log-body" id="log-body">
-        <div class="log-line log-INFO"><span class="log-t">00:00:00</span><span class="log-lv">INFO</span><span class="log-msg">DocFlow v2.1 就绪 — 支持 PDF/DOCX/XLSX/PPTX/TXT/CSV/图片/JSON</span></div>
       </div>
     </div>
     <div class="tab-pane" id="tab-invoice">
@@ -845,21 +942,102 @@ tr:hover td{background:#f8fbff}
   </div>
   <!-- FOOTER: clear layout, no overlap -->
   <div class="result-foot">
-    <span class="dl-label">下载</span>
+    <span class="dl-label">当前</span>
     <div class="dl-group">
       <button class="dl-btn txt" onclick="dl('txt')">⬇ TXT</button>
       <button class="dl-btn jsn" onclick="dl('json')">⬇ JSON</button>
       <button class="dl-btn" onclick="dl('md')">⬇ MD</button>
       <button class="dl-btn" onclick="dl('csv')">⬇ CSV</button>
     </div>
+    <span class="dl-label all">全部</span>
+    <div class="dl-group">
+      <button class="dl-btn txt" onclick="dlAll('txt')">⬇ TXT</button>
+      <button class="dl-btn jsn" onclick="dlAll('json')">⬇ JSON</button>
+      <button class="dl-btn" onclick="dlAll('md')">⬇ MD</button>
+      <button class="dl-btn" onclick="dlAll('csv')">⬇ CSV</button>
+    </div>
     <span class="foot-sep"></span>
     <button class="copy-btn" onclick="copyOut()">📋 复制文本</button>
   </div>
 </div>
 </div>
+<div class="template-modal" id="invoice-template-modal" aria-hidden="true" onclick="handleInvoiceTemplateModalBackdrop(event)">
+  <div class="template-modal-card" role="dialog" aria-modal="true" aria-labelledby="invoice-template-modal-title">
+    <div class="template-modal-head">
+      <div class="template-modal-title" id="invoice-template-modal-title">发票模板编辑器</div>
+      <div class="template-modal-actions">
+        <button class="panel-action-btn subtle" onclick="createInvoiceTemplate()">新建</button>
+        <button class="panel-action-btn" onclick="loadInvoiceTemplates()">刷新</button>
+        <button class="panel-action-btn warn" onclick="closeInvoiceTemplateModal()">关闭</button>
+      </div>
+    </div>
+    <div class="template-modal-body">
+      <div class="template-workspace">
+        <div class="template-sidebar">
+          <div class="template-section-head">
+            <div class="template-section-title">选择现有模板</div>
+            <button class="panel-action-btn subtle" onclick="createInvoiceTemplate()">新建</button>
+          </div>
+          <div class="template-list" id="invoice-template-list"></div>
+        </div>
+        <div class="template-editor-card">
+          <div class="template-editor-head">
+            <div class="template-section-title" id="tpl-editor-title">新建自定义模板</div>
+            <div class="template-editor-meta" id="tpl-editor-meta">从空白开始创建，或从左侧复制内置模板。</div>
+          </div>
+          <div class="template-form">
+            <div class="template-form-grid">
+              <label class="template-field">
+                <span>模板标识</span>
+                <input id="tpl-key" placeholder="如 hotel_receipt" oninput="handleTemplateMetaChange()" onblur="normalizeTemplateKeyInput()">
+              </label>
+              <label class="template-field">
+                <span>模板名称</span>
+                <input id="tpl-name" placeholder="如 酒店收据" oninput="handleTemplateMetaChange()">
+              </label>
+            </div>
+            <label class="template-field">
+              <span>识别关键词 / 别名</span>
+              <textarea id="tpl-aliases" placeholder="用逗号或换行分隔，如 酒店收据, 住宿费" oninput="handleTemplateMetaChange()"></textarea>
+            </label>
+            <div class="template-field">
+              <span>标准字段选择</span>
+              <div class="template-chip-grid" id="tpl-known-fields"></div>
+            </div>
+            <div class="template-field">
+              <div class="template-inline-head">
+                <span>自定义字段</span>
+                <button class="panel-action-btn subtle" type="button" onclick="addCustomTemplateField()">新增字段</button>
+              </div>
+              <div class="template-custom-list" id="tpl-custom-fields"></div>
+            </div>
+            <div class="template-field">
+              <span>字段显示名</span>
+              <div class="template-label-list" id="tpl-label-grid"></div>
+            </div>
+            <div class="template-preview-card">
+              <div class="template-inline-head">
+                <span>模板预览</span>
+                <span class="template-preview-meta" id="tpl-preview-meta">0 个字段</span>
+              </div>
+              <div id="tpl-preview"></div>
+            </div>
+            <div class="mode-compare-actions">
+              <button class="panel-action-btn primary" onclick="saveInvoiceTemplate()">保存模板</button>
+              <button class="panel-action-btn subtle" onclick="resetInvoiceTemplateForm()">重置</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <script>
 let files=[],activeIdx=-1,_lastResult=null,_lastBatchReport=null,_lastModeCompareReport=null,_batchPollTimer=null,_lastBatchLogId=0,_activeBatchJobId=null,_activeProcessJobId=null,_activeModeCompareJobId=null,_activeModeCompareMode='',_processProgressHideTimer=null,_processProgressCollapseTimer=null,_dependencyState=null,_isProcessing=false,_isModeComparing=false,_processCancelRequested=false,_modeCompareCancelRequested=false;
+let _activeProcessJobIds=new Set();
+let _currentProcessStartedAt=0,_lastProcessWallMs=0;
+let _processRunSeq=0,_activeProcessRunId=0,_lastProcessRunId=0;
 let history=[];
 const PREF_KEY='df_ui_prefs_v2';
 try{history=JSON.parse(localStorage.getItem('df_history')||'[]');}catch(e){history=[];}
@@ -875,10 +1053,18 @@ TYPE.tiff={icon:TYPE.png.icon};
 TYPE.webp={icon:TYPE.png.icon};
 function ext(n){return n.split('.').pop().toLowerCase();}
 function fmtSz(b){if(b<1024)return b+'B';if(b<1048576)return (b/1024).toFixed(1)+'KB';return (b/1048576).toFixed(1)+'MB';}
+function fmtDuration(ms){
+  const value=Number(ms||0);
+  if(!Number.isFinite(value) || value<=0)return '—';
+  const seconds=value/1000;
+  if(seconds<10)return `${seconds.toFixed(1)}s`;
+  if(seconds<100)return `${seconds.toFixed(1).replace(/\.0$/,'')}s`;
+  return `${Math.round(seconds)}s`;
+}
 function nowStr(){const d=new Date();return[d.getHours(),d.getMinutes(),d.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');}
 function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m]));}
 function readPrefs(){try{return JSON.parse(localStorage.getItem(PREF_KEY)||'{}');}catch(e){return {};}}
-const PANEL_DEFAULTS={mode_compare:false,batch_test:false,batch_summary:false,dependency_check:false,history_panel:true,invoice_records:false};
+const PANEL_DEFAULTS={mode_compare:false,batch_test:false,batch_summary:false,dependency_check:false,history_panel:true,invoice_records:false,invoice_templates:false};
 function getPanelOpen(panelId){
   const panel=document.querySelector(`.collapsible-panel[data-panel="${panelId}"]`);
   return panel?!panel.classList.contains('collapsed'):!!PANEL_DEFAULTS[panelId];
@@ -983,9 +1169,10 @@ function addFiles(list){
     const e=ext(f.name);
     if(!TYPE[e]){log('WARN',`不支持的格式，已跳过: ${f.name}`);return;}
     const existingIndex=files.findIndex(x=>x.name===f.name);
-    const nextFile={file:f,name:f.name,size:f.size,ext:e,status:'ready',result:null};
+    const nextFile={file:f,name:f.name,size:f.size,ext:e,status:'ready',result:null,processRunId:null};
     if(existingIndex>=0){
-      files[existingIndex]={...files[existingIndex],...nextFile};
+      const forceReprocess=!!files[existingIndex].result;
+      files[existingIndex]={...files[existingIndex],...nextFile,forceReprocess};
       replaced++;
       return;
     }
@@ -993,6 +1180,8 @@ function addFiles(list){
     added++;
   });
   if(added || replaced){
+    _lastProcessWallMs=0;
+    _lastProcessRunId=0;
     renderFiles();updateRunBtn();updateBatchBar();
     if(added)log('INFO',`已添加 ${added} 个文件，队列共 ${files.length} 个`);
     if(replaced)log('INFO',`已覆盖 ${replaced} 个同名文件，重新处理后会替换旧结果`);
@@ -1002,6 +1191,7 @@ function addFiles(list){
 function clearAllFiles(){
   if(!files.length)return;
   files=[];activeIdx=-1;_lastResult=null;
+  _currentProcessStartedAt=0;_lastProcessWallMs=0;_activeProcessRunId=0;_lastProcessRunId=0;
   renderFiles();updateRunBtn();updateBatchBar();
   log('INFO','队列已清空');
 }
@@ -1033,7 +1223,7 @@ function renderFiles(){
           <span>${fmtSz(f.size)}</span>
           ${f.status==='proc'?`<span>${Math.round(Number(f.progress_pct||0))}%</span>`:''}
           ${chars?`<span class="fi-chars">${chars.toLocaleString()}字</span>`:''}
-          ${ms?`<span>${Math.round(ms)}ms</span>`:''}
+          ${ms?`<span>${fmtDuration(ms)}</span>`:''}
         </div>
       </div>
       <div class="fi-right">
@@ -1048,7 +1238,15 @@ function renderFiles(){
   refreshModeComparePanel();
 }
 
-function removeFile(i){files.splice(i,1);if(activeIdx>=files.length)activeIdx=files.length-1;renderFiles();updateRunBtn();updateBatchBar();}
+function removeFile(i){
+  files.splice(i,1);
+  if(activeIdx>=files.length)activeIdx=files.length-1;
+  if(_lastProcessRunId && !files.some(f=>f.processRunId===_lastProcessRunId)){
+    _lastProcessRunId=0;
+    _lastProcessWallMs=0;
+  }
+  renderFiles();updateRunBtn();updateBatchBar();
+}
 function selectFile(i){activeIdx=i;renderFiles();if(files[i].result)showResult(files[i].result,files[i].name);}
 function setProcessActionState(mode='idle'){
   const runBtn=document.getElementById('run-btn');
@@ -1096,10 +1294,16 @@ function updateBatchBar(){
   const totalChars=done.reduce((a,f)=>a+(f.result?.stats?.char_count||f.result?.stats?.chars||0),0);
   const totalTables=done.reduce((a,f)=>a+(f.result?.tables?.length||0),0);
   const totalMs=done.reduce((a,f)=>a+(f.result?.stats?.processing_ms||0),0);
+  const visibleRunId=_isProcessing?_activeProcessRunId:_lastProcessRunId;
+  const runDoneCount=visibleRunId?done.filter(f=>f.processRunId===visibleRunId).length:0;
+  const wallMs=_isProcessing&&_currentProcessStartedAt?(performance.now()-_currentProcessStartedAt):(_lastProcessRunId?_lastProcessWallMs:0);
   document.getElementById('b-files').textContent=done.length;
   document.getElementById('b-chars').textContent=totalChars.toLocaleString();
   document.getElementById('b-tables').textContent=totalTables;
-  document.getElementById('b-time').textContent=Math.round(totalMs)+'ms';
+  const timeEl=document.getElementById('b-time');
+  const actualText=wallMs>0?fmtDuration(wallMs):'—';
+  timeEl.textContent=actualText;
+  timeEl.title=`实际等待时间：${actualText}${runDoneCount?`（本轮 ${runDoneCount} 个文件）`:''}；累计文件耗时：${fmtDuration(totalMs)}`;
 }
 
 // Options
@@ -1243,13 +1447,14 @@ function updateDependencyCommandBox(data, summary=null){
   return info;
 }
 function updateBatchSummaryPanel(data){
+  if(!document.getElementById('batch-stat-rate'))return;
   const s=data?.summary||{};
   const total=s.total??data?.total??0;
   const success=s.success??0;
   const failed=s.failed??Math.max((data?.completed_count||0)-success,0);
   const rate=total?`${(((s.success_rate_pct??((success/total)*100))||0)).toFixed(1)}%`:'--';
   document.getElementById('batch-stat-rate').textContent=rate;
-  document.getElementById('batch-stat-avg').textContent=s.avg_processing_ms!=null?String(s.avg_processing_ms):'--';
+  document.getElementById('batch-stat-avg').textContent=s.avg_processing_ms!=null?fmtDuration(s.avg_processing_ms):'--';
   document.getElementById('batch-stat-okfail').textContent=`${success} / ${failed}`;
   document.getElementById('batch-stat-expected').textContent=s.expected_checked?`${s.expected_matched||0}/${s.expected_checked}`:'--';
   document.getElementById('batch-summary-last').textContent=s.generated_at||data?.state||'等待批测';
@@ -1268,6 +1473,7 @@ function resetBatchSummaryPanel(){
   updateBatchSummaryPanel({summary:{},total:0,state:'未开始'});
 }
 function renderDependencyStatus(data){
+  if(!document.getElementById('dep-overview'))return;
   _dependencyState=data;
   const summary=data.summary||{};
   const env=data.environment||{};
@@ -1640,7 +1846,7 @@ function buildBatchSummaryText(data){
     `总数: ${s.total ?? data.total ?? '--'}`,
     `成功/失败: ${(s.success ?? '--')}/${(s.failed ?? '--')}`,
     `成功率: ${s.success_rate_pct!=null?`${s.success_rate_pct}%`:'--'}`,
-    `平均耗时: ${s.avg_processing_ms ?? '--'} ms`,
+    `平均耗时: ${s.avg_processing_ms!=null?fmtDuration(s.avg_processing_ms):'--'}`,
     `预期匹配: ${s.expected_checked?`${s.expected_matched}/${s.expected_checked}`:'--'}`,
     `返回码: ${data.return_code ?? '--'}`,
   ];
@@ -1689,7 +1895,7 @@ function buildBatchResult(data){
       '成功':s.success??'--',
       '失败':s.failed??'--',
       '成功率':s.success_rate_pct!=null?`${s.success_rate_pct}%`:'--',
-      '平均耗时(ms)':s.avg_processing_ms??'--',
+      '平均耗时':s.avg_processing_ms!=null?fmtDuration(s.avg_processing_ms):'--',
       '预期匹配':s.expected_checked?`${s.expected_matched}/${s.expected_checked}`:'--',
       '执行返回码':data.return_code??'--',
     },
@@ -1835,6 +2041,11 @@ function getTabEl(name){
 // Log
 function log(level,msg){
   const body=document.getElementById('log-body');
+  if(!body){
+    const fn=level==='ERROR'?'error':level==='WARN'?'warn':'log';
+    console[fn](`[${level}] ${msg}`);
+    return;
+  }
   const line=document.createElement('div');
   line.className='log-line log-'+level;
   line.innerHTML=`<span class="log-t">${nowStr()}</span><span class="log-lv">${level}</span><span class="log-msg">${msg}</span>`;
@@ -2054,6 +2265,7 @@ function setModeCompareActionState(mode='idle'){
 
 function refreshModeComparePanel(){
   const target=document.getElementById('mode-compare-target');
+  if(!target)return;
   const status=document.getElementById('mode-compare-status');
   const last=document.getElementById('mode-compare-last');
   const reco=document.getElementById('mode-compare-reco');
@@ -2246,7 +2458,7 @@ function renderModeCompareReport(report){
           </div>
           <div class="mode-metric">
             <div class="mode-metric-lbl">总耗时</div>
-            <div class="mode-metric-val">${entry.success?`${Math.round(entry.processing_ms)}ms`:'—'}</div>
+            <div class="mode-metric-val">${entry.success?fmtDuration(entry.processing_ms):'—'}</div>
             <div class="mode-metric-sub">${entry.success?`文本层 ${entry.text_pages} ｜ OCR ${entry.ocr_pages}`:'请查看错误信息'}</div>
           </div>
         </div>
@@ -2280,7 +2492,7 @@ function renderModeCompareReport(report){
       <div class="mode-table-cell${recommendedMode==='fast'?' recommended':''}">快速</div>
     </div>`,
     renderRow('状态',entry=>entry.success?'成功':'失败'),
-    renderRow('总耗时',entry=>entry.success?`${Math.round(entry.processing_ms)} ms`:'—'),
+    renderRow('总耗时',entry=>entry.success?fmtDuration(entry.processing_ms):'—'),
     renderRow('字符数',entry=>entry.success?entry.chars.toLocaleString():'—'),
     renderRow('覆盖率',entry=>entry.success?`${entry.coverage_pct}%`:'—'),
     renderRow('文本层页',entry=>entry.success?`${entry.text_pages}`:'—'),
@@ -2320,7 +2532,7 @@ function downloadModeCompareReport(fmt){
     const entryMap=Object.fromEntries(report.entries.map(entry=>[entry.mode,entry]));
     const row=(label,pick)=>`| ${label} | ${pick(entryMap.accurate)} | ${pick(entryMap.balanced)} | ${pick(entryMap.fast)} |`;
     lines.push(row('状态',entry=>entry.success?'成功':'失败'));
-    lines.push(row('总耗时',entry=>entry.success?`${Math.round(entry.processing_ms)} ms`:'—'));
+    lines.push(row('总耗时',entry=>entry.success?fmtDuration(entry.processing_ms):'—'));
     lines.push(row('字符数',entry=>entry.success?entry.chars.toLocaleString():'—'));
     lines.push(row('覆盖率',entry=>entry.success?`${entry.coverage_pct}%`:'—'));
     lines.push(row('文本层页',entry=>entry.success?`${entry.text_pages}`:'—'));
@@ -2412,7 +2624,7 @@ async function runPdfModeCompare(){
         const metrics=buildModeCompareMetrics(mode,uiResult,errorMessage);
         entries.push(metrics);
         if(metrics.success){
-          log('INFO',`[模式实验] ${label} 完成：${metrics.chars.toLocaleString()} 字符，${Math.round(metrics.processing_ms)}ms`);
+          log('INFO',`[模式实验] ${label} 完成：${metrics.chars.toLocaleString()} 字符，${fmtDuration(metrics.processing_ms)}`);
         }else{
           log('WARN',`[模式实验] ${label} 失败：${metrics.error}`);
         }
@@ -2522,11 +2734,43 @@ function updateRealtimeProgressUI(completedBefore,totalFiles,jobData,fileName=''
   }
 }
 
-async function startProcessJob(file,fmt,pdfMode){
+function updateParallelProgressUI(totalFiles){
+  const completed=files.filter(f=>f.status==='done' || f.status==='error' || f.status==='cancel').length;
+  const running=files.filter(f=>f.status==='proc').length;
+  const progressSum=files.reduce((sum,f)=>{
+    if(f.status==='done' || f.status==='error' || f.status==='cancel')return sum+100;
+    return sum+Math.max(0,Math.min(100,Number(f.progress_pct||0)));
+  },0);
+  const overallPct=Math.max(0,Math.min(100,progressSum/Math.max(totalFiles,1)));
+  const gbar=document.getElementById('gbar');
+  const progRow=document.getElementById('progress-row');
+  const progFill=document.getElementById('prog-fill');
+  const progLabel=document.getElementById('prog-label');
+  const progHint=document.getElementById('prog-hint');
+  const resultStatus=document.getElementById('result-status');
+  gbar.classList.remove('ind');
+  gbar.style.width=`${overallPct}%`;
+  progRow.classList.add('visible');
+  progFill.style.width=`${overallPct}%`;
+  progLabel.textContent=`${completed}/${totalFiles} · ${Math.round(overallPct)}%`;
+  const activeNames=files.filter(f=>f.status==='proc').slice(0,2).map(f=>f.name);
+  const activeText=activeNames.length?`｜${activeNames.join('、')}${running>2?' 等':''}`:'';
+  progHint.textContent=running?`⚙ 并行处理中：${running} 个任务${activeText}`:`📦 正在准备处理队列…`;
+  if(resultStatus)resultStatus.textContent=`处理中 ${completed}/${totalFiles} · ${Math.round(overallPct)}%`;
+}
+
+function getProcessWorkerCount(totalFiles){
+  const configured=Number(localStorage.getItem('df_process_workers')||'');
+  if(Number.isFinite(configured) && configured>0)return Math.max(1,Math.min(Math.floor(configured),totalFiles));
+  return Math.max(1,Math.min(2,totalFiles));
+}
+
+async function startProcessJob(file,fmt,pdfMode,forceReprocess=false){
   const fd=new FormData();
   fd.append('file',file);
   fd.append('format',fmt);
   fd.append('pdf_mode',pdfMode);
+  if(forceReprocess)fd.append('force_reprocess','1');
   const invoiceOpt=document.querySelector('.opt-item[data-opt="invoice"]');
   if(invoiceOpt&&invoiceOpt.classList.contains('on'))fd.append('invoice_extract','1');
   const res=await fetch('/process/start',{method:'POST',body:fd});
@@ -2571,16 +2815,116 @@ async function cancelCurrentProcessing(){
   if(_processCancelRequested)return;
   _processCancelRequested=true;
   updateRunBtn();
-  log('WARN',_activeProcessJobId?`请求取消处理任务：${_activeProcessJobId}`:'请求取消当前处理队列');
+  const jobIds=[..._activeProcessJobIds];
+  log('WARN',jobIds.length?`请求取消处理任务：${jobIds.join(', ')}`:'请求取消当前处理队列');
   document.getElementById('prog-hint').textContent='⏳ 正在取消当前处理任务...';
-  if(!_activeProcessJobId)return;
+  if(!jobIds.length)return;
   try{
-    await cancelProcessJob(_activeProcessJobId);
+    await Promise.allSettled(jobIds.map(jobId=>cancelProcessJob(jobId)));
   }catch(e){
     _processCancelRequested=false;
     updateRunBtn();
     log('ERROR',`取消处理任务失败: ${e.message}`);
     toast(`取消处理任务失败: ${e.message}`,'var(--accent2)');
+  }
+}
+
+async function clearOcrCache(){
+  const btn=document.getElementById('clear-ocr-cache-btn');
+  if(_isProcessing){
+    toast('处理中不能删除 OCR 缓存，请先取消或等待完成','var(--amber)');
+    return;
+  }
+  if(!confirm('确认删除图片 OCR 缓存吗？下次识别会重新处理图片。'))return;
+  if(btn){
+    btn.disabled=true;
+    btn.textContent='正在删除...';
+  }
+  try{
+    const res=await fetch('/system/cache/image-ocr',{method:'DELETE',cache:'no-store'});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok || !data.success)throw new Error(data.error||data.message||'删除缓存失败');
+    const count=Number(data.deleted_files||0);
+    const mem=Number(data.cleared_memory_items||0);
+    log('INFO',`OCR 缓存已删除：磁盘 ${count} 个文件，内存 ${mem} 项`);
+    toast(`✓ 已删除 OCR 缓存：${count} 个文件`,'var(--accent3)');
+  }catch(e){
+    log('ERROR',`删除 OCR 缓存失败: ${e.message}`);
+    toast(`删除 OCR 缓存失败: ${e.message}`,'var(--accent2)');
+  }finally{
+    if(btn){
+      btn.disabled=false;
+      btn.textContent='删除 OCR 缓存';
+    }
+  }
+}
+
+async function clearUploadBuffer(){
+  const btn=document.getElementById('clear-upload-buffer-btn');
+  if(_isProcessing){
+    toast('处理中不能删除临时缓冲，请先取消或等待完成','var(--amber)');
+    return;
+  }
+  if(!confirm('确认删除临时缓冲文件吗？这会清理历史上传文件和中间图片，但不会删除 OCR 缓存、发票记录或当前页面结果。'))return;
+  if(btn){
+    btn.disabled=true;
+    btn.textContent='正在删除...';
+  }
+  try{
+    const res=await fetch('/system/cache/upload-buffer',{method:'DELETE',cache:'no-store'});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok || !data.success)throw new Error(data.error||data.message||'删除缓冲失败');
+    const count=Number(data.deleted_files||0);
+    const bytes=Number(data.deleted_bytes||0);
+    const skipped=Number(data.skipped_active_files||0);
+    const size=fmtSz(bytes);
+    const suffix=skipped?`，跳过正在处理 ${skipped} 个文件`:'';
+    log('INFO',`临时缓冲已删除：${count} 个文件，释放 ${size}${suffix}`);
+    toast(`✓ 已删除临时缓冲：${count} 个文件`,'var(--accent3)');
+  }catch(e){
+    log('ERROR',`删除临时缓冲失败: ${e.message}`);
+    toast(`删除临时缓冲失败: ${e.message}`,'var(--accent2)');
+  }finally{
+    if(btn){
+      btn.disabled=false;
+      btn.textContent='删除临时缓冲';
+    }
+  }
+}
+
+async function shutdownServer(){
+  const btn=document.getElementById('shutdown-btn');
+  if(_isProcessing || _isModeComparing){
+    toast('当前仍有任务运行，请先取消或等待完成','var(--amber)');
+    return;
+  }
+  if(!confirm('确定要结束当前 DocFlow 项目服务吗？页面随后会断开连接。'))return;
+  if(btn){
+    btn.disabled=true;
+    btn.textContent='正在结束...';
+  }
+  log('WARN','正在请求关闭 DocFlow 本地服务');
+  const markShutdownStarted=()=>{
+    toast('服务正在关闭，稍后可直接关闭此页面','var(--accent3)');
+    document.getElementById('result-status').textContent='服务正在关闭';
+    setTimeout(()=>{document.body.classList.add('server-stopped');},500);
+  };
+  try{
+    const res=await fetch('/system/shutdown',{method:'POST',cache:'no-store'});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok || !data.success)throw new Error(data.error||'结束项目失败');
+    markShutdownStarted();
+  }catch(e){
+    if(String(e?.message||'').toLowerCase().includes('failed to fetch')){
+      markShutdownStarted();
+      return;
+    }
+    if(btn){
+      btn.disabled=false;
+      btn.textContent='结束项目';
+    }
+    log('ERROR',`结束项目失败: ${e.message}`);
+    toast(`结束项目失败: ${e.message}`,'var(--accent2)');
   }
 }
 
@@ -2629,29 +2973,47 @@ async function runProcess(){
   progFill.style.width='0%';
   progLabel.textContent='0%';
   progHint.textContent='📦 正在准备处理队列…';
+  _currentProcessStartedAt=performance.now();
+  _lastProcessWallMs=0;
+  _activeProcessRunId=++_processRunSeq;
+  _lastProcessRunId=0;
   const fmt=getFormat();
   const pdfMode=getPdfMode();
   const total=files.length;
   let done=0;
   let cancelled=false;
+  const workerCount=getProcessWorkerCount(total);
+  let nextIndex=0;
   try{
-    files.forEach(f=>{f.status='ready';f.progress_pct=0;});
+    files.forEach(f=>{
+      f.status='ready';
+      f.progress_pct=0;
+      f.progress_stage='';
+      f.processJobId=null;
+      f.processRunId=null;
+      f.processStarted=false;
+    });
     renderFiles();
-    log('INFO',`开始处理 ${total} 个文件（会覆盖旧结果）｜ PDF模式：${pdfMode}`);
-    for(let i=0;i<files.length;i++){
+    log('INFO',`开始处理 ${total} 个文件（并行 ${workerCount} 个，会覆盖旧结果）｜ PDF模式：${pdfMode}`);
+
+    async function processOne(i){
       if(_processCancelRequested){
         cancelled=true;
-        break;
+        return;
       }
       const f=files[i];
-      f.status='proc';f.progress_pct=0;activeIdx=i;
-      updateRealtimeProgressUI(i,total,{progress_pct:0,stage:'queued',message:'文件已进入处理队列'},f.name);
+      if(f.result && f.status==='done')return;
+      f.status='proc';f.progress_pct=0;f.processStarted=true;activeIdx=i;
+      updateParallelProgressUI(total);
       renderFiles();
       log('INFO',`[${i+1}/${total}] → ${f.name}`);
       try{
-        const startData=await startProcessJob(f.file,fmt,pdfMode);
+        const forceReprocess=!!f.result || !!f.forceReprocess;
+        const startData=await startProcessJob(f.file,fmt,pdfMode,forceReprocess);
+        f.processJobId=startData.job_id;
         _activeProcessJobId=startData.job_id;
-        updateRealtimeProgressUI(i,total,startData,f.name);
+        _activeProcessJobIds.add(startData.job_id);
+        updateParallelProgressUI(total);
         const data=await pollProcessJob(startData.job_id,(jobData)=>{
           const nextProgress=Math.max(0,Math.min(100,Number(jobData?.progress_pct||0)));
           const roundedNext=Math.round(nextProgress);
@@ -2661,63 +3023,86 @@ async function runProcess(){
             f.progress_stage=jobData?.stage||'';
             renderFiles();
           }
-          updateRealtimeProgressUI(i,total,jobData,f.name);
+          updateParallelProgressUI(total);
         });
         if(data.state==='cancelled'){
           cancelled=true;
           f.progress_pct=Math.max(0,Math.min(100,Number(data.progress_pct||f.progress_pct||0)));
           f.result=buildUiResult(f,data.result||{error:data.error||'任务已取消'},data.result?.error_info||buildClientErrorInfo(data.error||'任务已取消'));
           f.status='cancel';
+          f.processRunId=_activeProcessRunId;
           log('WARN',`⏹ ${f.name}: ${data.error||'任务已取消'}`);
-          showResult(f.result,f.name);
-          updateRealtimeProgressUI(i,total,{...data,stage:'cancelled',message:data.error||'任务已取消'},f.name);
-          break;
+          if(activeIdx===i)showResult(f.result,f.name);
+          updateParallelProgressUI(total);
+          return;
         }
         const resultPayload=data.result||{};
         if(data.state!=='completed' || !resultPayload.success){
           f.progress_pct=100;
           f.result=buildUiResult(f,resultPayload,resultPayload.error_info||buildClientErrorInfo(data.error||resultPayload.error||'处理失败'));
           f.status='error';
+          f.processRunId=_activeProcessRunId;
           log('ERROR',`✗ ${f.name}: ${data.error||resultPayload.error||'处理失败'}`);
-          showResult(f.result,f.name);
-          updateRealtimeProgressUI(i,total,{...data,progress_pct:100,stage:'error'},f.name);
-          continue;
+          if(activeIdx===i)showResult(f.result,f.name);
+          updateParallelProgressUI(total);
+          return;
         }
         f.progress_pct=100;
         f.result=buildUiResult(f,resultPayload);
+        f.forceReprocess=false;
         f.status='done';done++;
+        f.processRunId=_activeProcessRunId;
         const chars=resultPayload.statistics?.char_count||0;
         const ms=resultPayload.processing_ms||resultPayload.statistics?.processing_ms||0;
-        updateRealtimeProgressUI(i,total,{...data,progress_pct:100,stage:'done',message:'处理完成'},f.name);
-        log('INFO',`✓ ${f.name} — ${chars.toLocaleString()} 字符，${Math.round(ms)}ms`);
-        showResult(f.result,f.name);
+        updateParallelProgressUI(total);
+        log('INFO',`✓ ${f.name} — ${chars.toLocaleString()} 字符，${fmtDuration(ms)}`);
+        if(activeIdx===i)showResult(f.result,f.name);
         saveToHistory(f,f.result);
       }catch(e){
         f.progress_pct=100;
         f.status='error';
+        f.processRunId=_activeProcessRunId;
         f.result=buildUiResult(f,{error:e.message},buildClientErrorInfo(e.message));
         log('ERROR',`✗ ${f.name}: ${e.message}`);
-        showResult(f.result,f.name);
-        updateRealtimeProgressUI(i,total,{progress_pct:100,stage:'error',message:e.message},f.name);
+        if(activeIdx===i)showResult(f.result,f.name);
+        updateParallelProgressUI(total);
       }finally{
-        _activeProcessJobId=null;
+        if(f.processJobId)_activeProcessJobIds.delete(f.processJobId);
+        f.processJobId=null;
+        _activeProcessJobId=_activeProcessJobIds.size?[..._activeProcessJobIds][0]:null;
+        renderFiles();updateBatchBar();
       }
-      renderFiles();updateBatchBar();
     }
+
+    async function worker(){
+      while(!_processCancelRequested){
+        const i=nextIndex++;
+        if(i>=files.length)return;
+        await processOne(i);
+      }
+    }
+
+    await Promise.all(Array.from({length:workerCount},()=>worker()));
+    _lastProcessWallMs=_currentProcessStartedAt?(performance.now()-_currentProcessStartedAt):0;
+    _lastProcessRunId=_activeProcessRunId;
+    cancelled=cancelled || _processCancelRequested || files.some(f=>f.status==='cancel');
+    done=files.filter(f=>f.status==='done').length;
+    updateBatchBar();
+
     if(cancelled){
       progHint.textContent='⏹ 处理已取消，可重新开始或查看当前结果';
       progLabel.textContent=`${done}/${total}`;
-      document.getElementById('result-status').textContent=`${done}/${total} 完成 · 已取消`;
+      document.getElementById('result-status').textContent=`${done}/${total} 完成 · 已取消 · ${fmtDuration(_lastProcessWallMs)}`;
       log('WARN',`处理队列已取消：已完成 ${done}/${total} 个文件`);
       toast(`处理已取消：已完成 ${done}/${total} 个文件`,'var(--amber)');
     }else{
       progFill.style.width='100%';progLabel.textContent=`${done}/${total}`;
-      progHint.textContent=done===total?'🎉 本轮文件已全部处理完成':'📌 本轮处理结束，可查看失败项日志';
+      progHint.textContent=done===total?`🎉 本轮文件已全部处理完成，用时 ${fmtDuration(_lastProcessWallMs)}`:`📌 本轮处理结束，用时 ${fmtDuration(_lastProcessWallMs)}，可查看失败项日志`;
       gbar.style.width='100%';
-      document.getElementById('result-status').textContent=`${done}/${total} 完成`;
+      document.getElementById('result-status').textContent=`${done}/${total} 完成 · ${fmtDuration(_lastProcessWallMs)}`;
       const totalChars=files.filter(f=>f.status==='done').reduce((a,f)=>a+(f.result?.stats?.char_count||f.result?.stats?.chars||0),0);
-      log('INFO',`全部完成 ✓  共提取 ${totalChars.toLocaleString()} 字符`);
-      toast(`✓ ${done}/${total} 处理完成，共提取 ${totalChars.toLocaleString()} 字符`);
+      log('INFO',`全部完成 ✓  共提取 ${totalChars.toLocaleString()} 字符，实际用时 ${fmtDuration(_lastProcessWallMs)}`);
+      toast(`✓ ${done}/${total} 处理完成，用时 ${fmtDuration(_lastProcessWallMs)}`);
     }
     _processProgressHideTimer=setTimeout(()=>{
       gbar.style.transition='width 1s';
@@ -2733,6 +3118,8 @@ async function runProcess(){
   }finally{
     _isProcessing=false;
     _processCancelRequested=false;
+    _currentProcessStartedAt=0;
+    _activeProcessRunId=0;
     updateRunBtn();
     refreshModeComparePanel();
   }
@@ -2789,7 +3176,7 @@ function showResult(result,fname){
   document.getElementById('s-readtime').textContent=readTimeStr;
   document.getElementById('s-pages').textContent=String(pages);
   document.getElementById('s-tables').textContent=(result.tables||[]).length;
-  document.getElementById('s-time').textContent=s.processing_ms?Math.round(s.processing_ms):'—';
+  document.getElementById('s-time').textContent=s.processing_ms?fmtDuration(s.processing_ms):'—';
   document.getElementById('s-size').textContent=result.file?fmtSz(result.file.size):'—';
   document.getElementById('s-files').textContent=files.filter(f=>f.status==='done').length;
   document.getElementById('s-density').textContent=density>0?density.toLocaleString():'—';
@@ -2899,6 +3286,7 @@ function _persistHistory(){
 function renderHistory(){
   const list=document.getElementById('hist-list');
   const empty=document.getElementById('hist-empty');
+  if(!list || !empty)return;
   list.querySelectorAll('.hist-item').forEach(el=>el.remove());
   empty.style.display=history.length?'none':'block';
   history.forEach((h,i)=>{
@@ -2932,9 +3320,39 @@ function clearHistory(){history=[];try{localStorage.removeItem('df_history');}ca
 
 
 // Download
+function resultText(result){
+  return (result?.text||'').replace(/<[^>]+>/g,'');
+}
+function downloadContent(content,mime,ext2,prefix){
+  const blob=new Blob(['\ufeff'+content],{type:mime+';charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`${prefix}_${Date.now()}.${ext2}`;a.click();
+  URL.revokeObjectURL(url);
+}
+function csvCell(value){
+  return '"'+String(value??'').replace(/"/g,'""')+'"';
+}
+function invoiceFieldValue(invoice,key){
+  const field=invoice?.fields?.[key];
+  if(field&&typeof field==='object')return field.value||'';
+  return field||'';
+}
+function invoiceMarkdown(invoice){
+  if(!invoice?.is_invoice)return '';
+  const rows=invoiceDisplayFields(invoice).map(key=>{
+    const label=INVOICE_FIELD_LABELS[key]||key;
+    const value=invoiceFieldValue(invoice,key)||invoice?.missing_fields?.[key]?.message||invoice?.not_applicable_fields?.[key]?.message||'';
+    return `| ${label} | ${String(value).replace(/\|/g,'\\|')} |`;
+  });
+  return `\n## 发票字段\n\n| 字段 | 识别值 |\n| --- | --- |\n${rows.join('\n')}\n`;
+}
+function completedResults(){
+  return files.filter(f=>f.status==='done'&&f.result);
+}
 function dl(fmt){
   if(!_lastResult){toast('⚠ 请先处理文件','var(--amber)');return;}
-  const rawText=(_lastResult.text||'').replace(/<[^>]+>/g,'');
+  const rawText=resultText(_lastResult);
   let content,mime,ext2;
   if(fmt==='json'){
     content=JSON.stringify({exported_at:new Date().toISOString(),files:files.filter(f=>f.status==='done').map(f=>f.name),text:rawText,tables:_lastResult.tables,statistics:_lastResult.stats,metadata:_lastResult.meta},null,2);
@@ -2950,12 +3368,80 @@ function dl(fmt){
   }else{
     content=rawText;mime='text/plain';ext2='txt';
   }
-  const blob=new Blob(['\ufeff'+content],{type:mime+';charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`docflow_${Date.now()}.${ext2}`;a.click();
-  URL.revokeObjectURL(url);
+  downloadContent(content,mime,ext2,'docflow');
   toast(`✓ 已下载 .${ext2} 文件`,'var(--accent3)');
+}
+function dlAll(fmt){
+  const done=completedResults();
+  if(!done.length){toast('⚠ 暂无已完成结果','var(--amber)');return;}
+  let content,mime,ext2;
+  if(fmt==='json'){
+    content=JSON.stringify({
+      exported_at:new Date().toISOString(),
+      file_count:done.length,
+      files:done.map((f,i)=>({
+        index:i+1,
+        file_name:f.name,
+        file_size:f.size,
+        statistics:f.result.stats||{},
+        metadata:f.result.meta||{},
+        table_count:(f.result.tables||[]).length,
+        invoice_fields:f.result.stats?.invoice_fields||null
+      }))
+    },null,2);
+    mime='application/json';ext2='json';
+  }else if(fmt==='md'){
+    const parts=[`# DocFlow 批量提取结果\n\n> 导出时间：${new Date().toLocaleString()}\n> 文件数：${done.length}\n`];
+    done.forEach((f,i)=>{
+      const r=f.result||{},s=r.stats||{},text=resultText(r);
+      parts.push(`\n# ${i+1}. ${f.name}\n\n## 统计\n\n- 字符数：${s.char_count||s.chars||text.length||0}\n- 段落数：${s.paragraph_count||s.paras||0}\n- 表格数：${(r.tables||[]).length}\n`);
+      parts.push(invoiceMarkdown(s.invoice_fields));
+    });
+    content=parts.join('\n');
+    mime='text/markdown';ext2='md';
+  }else if(fmt==='csv'){
+    const dynamicFields=[...INVOICE_FIELD_ORDER];
+    done.forEach(f=>{
+      const invoice=f.result?.stats?.invoice_fields||{};
+      invoiceDisplayFields(invoice).forEach(key=>{if(!dynamicFields.includes(key))dynamicFields.push(key);});
+    });
+    const headers=['文件名','字符数','处理耗时(s)','是否发票','票据类别',...dynamicFields.map(key=>INVOICE_FIELD_LABELS[key]||key)];
+    const rows=[headers];
+    done.forEach(f=>{
+      const r=f.result||{},s=r.stats||{},invoice=s.invoice_fields||{},text=resultText(r);
+      rows.push([
+        f.name,
+        s.char_count||s.chars||text.length||0,
+        s.processing_s??(s.processing_ms?Number(s.processing_ms/1000).toFixed(2):''),
+        invoice.is_invoice?'是':'否',
+        invoice.schema_name||invoice.invoice_category||'',
+        ...dynamicFields.map(key=>invoiceFieldValue(invoice,key)||invoice.missing_fields?.[key]?.message||invoice.not_applicable_fields?.[key]?.message||'')
+      ]);
+    });
+    content=rows.map(row=>row.map(csvCell).join(',')).join('\n');
+    mime='text/csv';ext2='csv';
+  }else{
+    content=done.map((f,i)=>{
+      const r=f.result||{},s=r.stats||{},text=resultText(r);
+      const invoice=s.invoice_fields||{};
+      const lines=[
+        `===== ${i+1}. ${f.name} =====`,
+        `字符数：${s.char_count||s.chars||text.length||0}`,
+        `表格数：${(r.tables||[]).length}`,
+        `是否发票：${invoice.is_invoice?'是':'否'}`,
+        `票据类别：${invoice.schema_name||invoice.invoice_category||'—'}`
+      ];
+      invoiceDisplayFields(invoice).forEach(key=>{
+        const label=INVOICE_FIELD_LABELS[key]||key;
+        const value=invoiceFieldValue(invoice,key)||invoice.missing_fields?.[key]?.message||invoice.not_applicable_fields?.[key]?.message||'—';
+        lines.push(`${label}：${value}`);
+      });
+      return lines.join('\n');
+    }).join('\n\n');
+    mime='text/plain';ext2='txt';
+  }
+  downloadContent(content,mime,ext2,'docflow_all');
+  toast(`✓ 已导出 ${done.length} 个结果到 .${ext2}`,'var(--accent3)');
 }
 
 // Copy
@@ -2974,26 +3460,438 @@ function toast(msg,color){
 }
 
 applyPrefs();
-renderHistory();
-renderModeCompareReport(null);
 refreshModeComparePanel();
-resetBatchSummaryPanel();
-loadDependencyStatus();
-loadInvoiceRecords();
 window.addEventListener('resize',()=>requestAnimationFrame(syncCollapsibleHeights));
+window.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&_isInvoiceTemplateModalOpen)closeInvoiceTemplateModal();
+});
 log('INFO','💡 多文件：处理完成后点击文件列表条目可切换查看各自的结果');
 log('INFO','💡 搜索：在搜索框输入关键词，↑↓ 键跳转匹配位置');
 
 // ── 发票识别相关函数 ──
 
-const INVOICE_FIELD_LABELS={
+let INVOICE_FIELD_LABELS={
   invoice_code:'发票代码',invoice_number:'发票号码',invoice_date:'开票日期',
   amount:'金额（不含税）',tax:'税额',total:'价税合计',
   buyer_name:'购买方',seller_name:'销售方',
   buyer_tax_id:'购买方税号',seller_tax_id:'销售方税号',
-  invoice_type:'发票类型',machine_number:'机器编号',check_code:'校验码'
+  invoice_type:'发票类型',machine_number:'机器编号',check_code:'校验码',
+  passenger_name:'乘车人',train_no:'车次',departure_station:'出发站',
+  arrival_station:'到达站',travel_date:'乘车日期',seat_class:'席别',
+  fare:'票价',taxi_car_no:'车牌号',taxi_start_time:'上车时间',
+  taxi_end_time:'下车时间',quota_amount:'定额金额'
 };
-const INVOICE_FIELD_ORDER=['invoice_type','invoice_code','invoice_number','invoice_date','total','amount','tax','buyer_name','buyer_tax_id','seller_name','seller_tax_id','machine_number','check_code'];
+let INVOICE_FIELD_ORDER=['invoice_type','invoice_code','invoice_number','invoice_date','total','amount','tax','buyer_name','buyer_tax_id','seller_name','seller_tax_id','machine_number','check_code','passenger_name','train_no','departure_station','arrival_station','travel_date','seat_class','fare','taxi_car_no','taxi_start_time','taxi_end_time','quota_amount'];
+let _invoiceTemplates=[];
+let _activeInvoiceTemplateKey='';
+let _isInvoiceTemplateModalOpen=false;
+let _templateDraft=createEmptyInvoiceTemplateDraft();
+function invoiceDisplayFields(inv){
+  const expected=Array.isArray(inv?.expected_fields)?inv.expected_fields:[];
+  const category=inv?.invoice_category;
+  let tplFields=[];
+  if(category&&category!=='unknown'){
+    const tpl=_invoiceTemplates.find(t=>t.key===category);
+    if(tpl&&Array.isArray(tpl.fields))tplFields=tpl.fields;
+  }
+  const merged=[...new Set([...expected,...tplFields])];
+  const base=merged.length?merged:INVOICE_FIELD_ORDER;
+  const extras=Object.keys(inv?.fields||{}).filter(key=>!base.includes(key));
+  return [...base,...extras].filter((key,index,arr)=>arr.indexOf(key)===index);
+}
+function createEmptyInvoiceTemplateDraft(){
+  return {
+    sourceKey:'',
+    sourceBuiltin:false,
+    selectedKnownFields:['invoice_type'],
+    customFields:[],
+    labels:{invoice_type:INVOICE_FIELD_LABELS.invoice_type||'发票类型'}
+  };
+}
+function splitTemplateList(value){
+  return String(value||'').split(/[,，\n]/).map(item=>item.trim()).filter(Boolean);
+}
+function normalizeTemplateFieldKey(value){
+  return String(value||'')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g,'_')
+    .replace(/^_+|_+$/g,'')
+    .slice(0,40);
+}
+function refreshInvoiceTemplateState(data){
+  _invoiceTemplates=Array.isArray(data?.templates)?data.templates:[];
+  if(data?.field_labels)INVOICE_FIELD_LABELS={...INVOICE_FIELD_LABELS,...data.field_labels};
+  if(Array.isArray(data?.field_order)&&data.field_order.length)INVOICE_FIELD_ORDER=data.field_order;
+}
+function getSelectedKnownTemplateFields(){
+  const selected=new Set(_templateDraft.selectedKnownFields||[]);
+  selected.add('invoice_type');
+  return INVOICE_FIELD_ORDER.filter(key=>selected.has(key));
+}
+function getNormalizedCustomTemplateFields(){
+  const reserved=new Set(getSelectedKnownTemplateFields());
+  const deduped=[];
+  (_templateDraft.customFields||[]).forEach(item=>{
+    const key=normalizeTemplateFieldKey(item?.key);
+    const label=String(item?.label||'').trim();
+    if(!key || reserved.has(key) || deduped.some(existing=>existing.key===key))return;
+    deduped.push({key,label});
+  });
+  return deduped;
+}
+function buildInvoiceTemplatePayload({normalizeKey=false}={}){
+  const rawKey=String(document.getElementById('tpl-key')?.value||'').trim();
+  const name=String(document.getElementById('tpl-name')?.value||'').trim();
+  const key=normalizeKey?normalizeTemplateFieldKey(rawKey||name):rawKey;
+  const labels={};
+  getSelectedKnownTemplateFields().forEach(fieldKey=>{
+    const label=String(_templateDraft.labels?.[fieldKey]||INVOICE_FIELD_LABELS[fieldKey]||'').trim();
+    if(label)labels[fieldKey]=label;
+  });
+  getNormalizedCustomTemplateFields().forEach(item=>{
+    if(item.label)labels[item.key]=item.label;
+  });
+  return {
+    key,
+    name,
+    aliases:splitTemplateList(document.getElementById('tpl-aliases')?.value||''),
+    fields:[...getSelectedKnownTemplateFields(),...getNormalizedCustomTemplateFields().map(item=>item.key)],
+    labels
+  };
+}
+function createInvoiceTemplate(){
+  _activeInvoiceTemplateKey='';
+  _templateDraft=createEmptyInvoiceTemplateDraft();
+  const keyInput=document.getElementById('tpl-key');
+  const nameInput=document.getElementById('tpl-name');
+  const aliasInput=document.getElementById('tpl-aliases');
+  if(keyInput)keyInput.value='';
+  if(nameInput)nameInput.value='';
+  if(aliasInput)aliasInput.value='';
+  renderInvoiceTemplates();
+  renderInvoiceTemplateEditor();
+}
+function openInvoiceTemplateModal(createFresh=false){
+  const modal=document.getElementById('invoice-template-modal');
+  if(!modal)return;
+  if(createFresh)createInvoiceTemplate();
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+  _isInvoiceTemplateModalOpen=true;
+  requestAnimationFrame(()=>{
+    const focusTarget=createFresh?document.getElementById('tpl-name'):document.getElementById('tpl-key');
+    focusTarget?.focus();
+  });
+}
+function closeInvoiceTemplateModal(){
+  const modal=document.getElementById('invoice-template-modal');
+  if(!modal)return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden','true');
+  _isInvoiceTemplateModalOpen=false;
+}
+function handleInvoiceTemplateModalBackdrop(event){
+  if(event.target?.id==='invoice-template-modal')closeInvoiceTemplateModal();
+}
+function suggestInvoiceTemplateKey(baseKey){
+  const normalizedBase=normalizeTemplateFieldKey(baseKey)||'custom_template';
+  let candidate=`${normalizedBase}_custom`;
+  let index=2;
+  while(_invoiceTemplates.some(item=>item.key===candidate)){
+    candidate=`${normalizedBase}_custom_${index}`;
+    index+=1;
+  }
+  return candidate;
+}
+function renderInvoiceTemplates(){
+  const list=document.getElementById('invoice-template-list');
+  const summary=document.getElementById('invoice-template-summary');
+  if(!list)return;
+  const customCount=_invoiceTemplates.filter(t=>!t.builtin).length;
+  const builtinCount=_invoiceTemplates.filter(t=>t.builtin).length;
+  if(summary)summary.textContent=`${_invoiceTemplates.length||0} 个模板 · 自定义 ${customCount} · 内置 ${builtinCount}`;
+  if(!_invoiceTemplates.length){
+    list.innerHTML='<div class="template-empty">暂无模板</div>';
+    return;
+  }
+  list.innerHTML=_invoiceTemplates.map(t=>{
+    const isActive=_activeInvoiceTemplateKey===t.key;
+    const fieldPills=(t.fields||[]).slice(0,4).map(key=>`<span class="template-pill field">${esc((t.labels&&t.labels[key])||INVOICE_FIELD_LABELS[key]||key)}</span>`).join('');
+    const aliasPills=(t.aliases||[]).slice(0,3).map(alias=>`<span class="template-pill alias">${esc(alias)}</span>`).join('');
+    const extraFieldCount=Math.max((t.fields||[]).length-4,0);
+    const extraAliasCount=Math.max((t.aliases||[]).length-3,0);
+    return `<div class="template-item ${isActive?'active':''}" onclick="editInvoiceTemplate('${t.key}',${t.builtin?'true':'false'})">
+      <div class="template-item-head">
+        <div>
+          <div class="template-name">${esc(t.name||t.key)}</div>
+          <div class="template-meta">${esc(t.key)} · ${(t.fields||[]).length} 个字段 · ${(t.aliases||[]).length} 个别名</div>
+        </div>
+        <span class="invoice-conf ${t.builtin?'low':'medium'}">${t.builtin?'内置':'自定义'}</span>
+      </div>
+      <div class="template-pill-row">
+        ${fieldPills||'<span class="template-pill soft">未配置字段</span>'}
+        ${extraFieldCount?`<span class="template-pill soft">+${extraFieldCount}</span>`:''}
+      </div>
+      <div class="template-pill-row">
+        ${aliasPills||'<span class="template-pill soft">未配置别名</span>'}
+        ${extraAliasCount?`<span class="template-pill soft">+${extraAliasCount}</span>`:''}
+      </div>
+      <div class="template-item-actions">
+        ${t.builtin
+          ? `<button class="panel-action-btn subtle" onclick="event.stopPropagation();cloneInvoiceTemplate('${t.key}')">复制为自定义</button>`
+          : `<button class="panel-action-btn warn" onclick="event.stopPropagation();deleteInvoiceTemplate('${t.key}')">删除</button>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderInvoiceTemplateEditor(){
+  renderTemplateEditorHeader();
+  renderKnownTemplateFields();
+  renderCustomTemplateFields();
+  renderTemplateLabelGrid();
+  renderTemplatePreview();
+}
+function renderTemplateEditorHeader(){
+  const title=document.getElementById('tpl-editor-title');
+  const meta=document.getElementById('tpl-editor-meta');
+  if(!title||!meta)return;
+  const name=String(document.getElementById('tpl-name')?.value||'').trim();
+  if(_templateDraft.sourceBuiltin){
+    title.textContent=name?`复制模板：${name}`:'复制内置模板';
+    meta.textContent='内置模板不能直接修改。保存后会创建一个新的自定义模板。';
+  }else if(_templateDraft.sourceKey){
+    title.textContent=name?`编辑模板：${name}`:`编辑模板：${_templateDraft.sourceKey}`;
+    meta.textContent='当前正在编辑自定义模板。修改模板标识会另存为新的模板。';
+  }else{
+    title.textContent='新建自定义模板';
+    meta.textContent='从空白开始创建，或从左侧复制内置模板。';
+  }
+}
+function renderKnownTemplateFields(){
+  const container=document.getElementById('tpl-known-fields');
+  if(!container)return;
+  const selected=new Set(getSelectedKnownTemplateFields());
+  container.innerHTML=INVOICE_FIELD_ORDER.map(key=>{
+    const label=INVOICE_FIELD_LABELS[key]||key;
+    if(key==='invoice_type'){
+      return `<div class="template-chip locked"><span>${esc(label)}</span><small>${esc(key)}</small></div>`;
+    }
+    return `<button type="button" class="template-chip ${selected.has(key)?'active':''}" onclick="toggleTemplateKnownField('${key}')"><span>${esc(label)}</span><small>${esc(key)}</small></button>`;
+  }).join('');
+}
+function renderCustomTemplateFields(){
+  const container=document.getElementById('tpl-custom-fields');
+  if(!container)return;
+  if(!_templateDraft.customFields.length){
+    container.innerHTML='<div class="template-empty">暂无自定义字段。只有新增业务字段时才需要在这里补充字段 key 和中文名。</div>';
+    return;
+  }
+  const reserved=new Set(getSelectedKnownTemplateFields());
+  const seen=new Set();
+  container.innerHTML=_templateDraft.customFields.map((item,index)=>{
+    const normalized=normalizeTemplateFieldKey(item.key);
+    let note=normalized?`保存后字段标识：${normalized}`:'字段标识只能包含英文、数字和下划线';
+    let noteClass=normalized?'':'warn';
+    if(normalized && (reserved.has(normalized)||seen.has(normalized))){
+      note='字段标识重复，保存时会按一个字段处理';
+      noteClass='warn';
+    }else if(normalized){
+      seen.add(normalized);
+    }
+    return `<div class="template-custom-card">
+      <div class="template-custom-row">
+        <input class="template-custom-input" value="${esc(item.key||'')}" placeholder="字段 key，如 hotel_name" oninput="updateCustomTemplateField(${index},'key',this.value)" onblur="normalizeCustomTemplateFieldKey(${index})">
+        <input class="template-custom-input" value="${esc(item.label||'')}" placeholder="字段中文名，如 酒店名称" oninput="updateCustomTemplateField(${index},'label',this.value)">
+        <button class="panel-action-btn warn" type="button" onclick="removeCustomTemplateField(${index})">移除</button>
+      </div>
+      <div class="template-custom-note ${noteClass}">${esc(note)}</div>
+    </div>`;
+  }).join('');
+}
+function renderTemplateLabelGrid(){
+  const container=document.getElementById('tpl-label-grid');
+  if(!container)return;
+  const fields=getSelectedKnownTemplateFields();
+  container.innerHTML=fields.map(key=>{
+    const label=INVOICE_FIELD_LABELS[key]||key;
+    const current=String(_templateDraft.labels?.[key]||label).trim();
+    return `<div class="template-label-row">
+      <div class="template-label-meta">
+        <div class="template-label-name">${esc(label)}</div>
+        <div class="template-label-key">${esc(key)}</div>
+      </div>
+      <input class="template-label-input" value="${esc(current)}" placeholder="${esc(label)}" oninput="updateTemplateLabel('${key}',this.value)">
+    </div>`;
+  }).join('');
+}
+function renderTemplatePreview(){
+  const preview=document.getElementById('tpl-preview');
+  const meta=document.getElementById('tpl-preview-meta');
+  if(!preview)return;
+  const payload=buildInvoiceTemplatePayload({normalizeKey:true});
+  const customFields=getNormalizedCustomTemplateFields();
+  const fieldEntries=[
+    ...getSelectedKnownTemplateFields().map(key=>({
+      key,
+      label:String(_templateDraft.labels?.[key]||INVOICE_FIELD_LABELS[key]||key).trim()||key,
+      custom:false
+    })),
+    ...customFields.map(item=>({
+      key:item.key,
+      label:item.label||item.key,
+      custom:true
+    }))
+  ];
+  if(meta)meta.textContent=`${fieldEntries.length} 个字段 · ${payload.aliases.length} 个别名`;
+  preview.innerHTML=`<div class="template-preview-name">${esc(payload.name||'未填写模板名称')}</div>
+    <div class="template-preview-sub">${esc(payload.key||'未填写模板标识')}${_templateDraft.sourceBuiltin?' · 保存后生成自定义模板':''}</div>
+    <div class="template-preview-section">
+      <div class="template-preview-label">识别别名</div>
+      <div class="template-preview-pills">
+        ${payload.aliases.length?payload.aliases.map(alias=>`<span class="template-pill alias">${esc(alias)}</span>`).join(''):'<span class="template-pill soft">未配置</span>'}
+      </div>
+    </div>
+    <div class="template-preview-section">
+      <div class="template-preview-label">字段顺序</div>
+      <div class="template-preview-pills">
+        ${fieldEntries.length?fieldEntries.map(item=>`<span class="template-pill ${item.custom?'alias':'field'}">${esc(item.label)} <small>${esc(item.key)}</small></span>`).join(''):'<span class="template-pill soft">请至少保留 invoice_type</span>'}
+      </div>
+    </div>`;
+}
+function handleTemplateMetaChange(){
+  renderTemplateEditorHeader();
+  renderTemplatePreview();
+}
+function normalizeTemplateKeyInput(){
+  const input=document.getElementById('tpl-key');
+  if(!input)return;
+  const normalized=normalizeTemplateFieldKey(input.value);
+  if(normalized)input.value=normalized;
+  handleTemplateMetaChange();
+}
+function toggleTemplateKnownField(key){
+  if(key==='invoice_type')return;
+  const selected=new Set(_templateDraft.selectedKnownFields||[]);
+  if(selected.has(key)){
+    selected.delete(key);
+    delete _templateDraft.labels[key];
+  }else{
+    selected.add(key);
+    if(!_templateDraft.labels[key])_templateDraft.labels[key]=INVOICE_FIELD_LABELS[key]||key;
+  }
+  selected.add('invoice_type');
+  _templateDraft.selectedKnownFields=[...selected];
+  renderKnownTemplateFields();
+  renderTemplateLabelGrid();
+  renderTemplatePreview();
+}
+function addCustomTemplateField(){
+  _templateDraft.customFields.push({key:'',label:''});
+  renderCustomTemplateFields();
+  renderTemplatePreview();
+}
+function updateCustomTemplateField(index,fieldName,value){
+  const row=_templateDraft.customFields[index];
+  if(!row)return;
+  row[fieldName]=value;
+  renderTemplatePreview();
+}
+function normalizeCustomTemplateFieldKey(index){
+  const row=_templateDraft.customFields[index];
+  if(!row)return;
+  row.key=normalizeTemplateFieldKey(row.key);
+  renderCustomTemplateFields();
+  renderTemplatePreview();
+}
+function removeCustomTemplateField(index){
+  _templateDraft.customFields.splice(index,1);
+  renderCustomTemplateFields();
+  renderTemplatePreview();
+}
+function updateTemplateLabel(key,value){
+  _templateDraft.labels[key]=value;
+  renderTemplatePreview();
+}
+async function loadInvoiceTemplates(silent=false){
+  try{
+    const res=await fetch('/invoice-templates');
+    const data=await res.json();
+    if(!res.ok||!data.success)throw new Error(data.message||data.error||'加载失败');
+    refreshInvoiceTemplateState(data);
+    renderInvoiceTemplates();
+    renderInvoiceTemplateEditor();
+    if(!silent)log('INFO',`已加载 ${_invoiceTemplates.length} 个发票模板`);
+  }catch(e){
+    if(!silent)toast(e.message||'发票模板加载失败','var(--accent2)');
+  }
+}
+function editInvoiceTemplate(key,cloneMode=false){
+  const tpl=_invoiceTemplates.find(t=>t.key===key);
+  if(!tpl)return;
+  _activeInvoiceTemplateKey=key;
+  const knownFields=(tpl.fields||[]).filter(field=>INVOICE_FIELD_ORDER.includes(field));
+  _templateDraft={
+    sourceKey:tpl.key||'',
+    sourceBuiltin:!!tpl.builtin||cloneMode,
+    selectedKnownFields:knownFields.includes('invoice_type')?knownFields:['invoice_type',...knownFields],
+    customFields:(tpl.fields||[]).filter(field=>!INVOICE_FIELD_ORDER.includes(field)).map(field=>({
+      key:field,
+      label:(tpl.labels&&tpl.labels[field])||''
+    })),
+    labels:{...(tpl.labels||{})}
+  };
+  document.getElementById('tpl-key').value=(cloneMode||tpl.builtin)?suggestInvoiceTemplateKey(tpl.key||tpl.name):tpl.key||'';
+  document.getElementById('tpl-name').value=tpl.name||'';
+  document.getElementById('tpl-aliases').value=(tpl.aliases||[]).join('\n');
+  renderInvoiceTemplates();
+  renderInvoiceTemplateEditor();
+}
+function cloneInvoiceTemplate(key){
+  editInvoiceTemplate(key,true);
+}
+function resetInvoiceTemplateForm(){
+  createInvoiceTemplate();
+}
+async function saveInvoiceTemplate(){
+  normalizeTemplateKeyInput();
+  const payload=buildInvoiceTemplatePayload({normalizeKey:true});
+  if(!payload.key||!payload.name||!payload.fields.includes('invoice_type')){
+    toast('请填写模板标识、名称，并保证字段包含 invoice_type','var(--amber)');
+    return;
+  }
+  try{
+    const res=await fetch('/invoice-templates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(!res.ok||!data.success)throw new Error(data.message||data.error||'保存失败');
+    refreshInvoiceTemplateState(data);
+    if(_lastResult)renderInvoiceTab(_lastResult);
+    renderInvoiceTemplates();
+    if(_invoiceTemplates.some(item=>item.key===payload.key)){
+      editInvoiceTemplate(payload.key,false);
+    }else{
+      createInvoiceTemplate();
+    }
+    toast('✓ 模板已保存','var(--accent3)');
+  }catch(e){
+    toast(e.message||'模板保存失败','var(--accent2)');
+  }
+}
+async function deleteInvoiceTemplate(key){
+  if(!confirm('确认删除这个自定义模板吗？'))return;
+  try{
+    const res=await fetch(`/invoice-templates/${encodeURIComponent(key)}`,{method:'DELETE'});
+    const data=await res.json();
+    if(!res.ok||!data.success)throw new Error(data.message||data.error||'删除失败');
+    refreshInvoiceTemplateState(data);
+    if(_lastResult)renderInvoiceTab(_lastResult);
+    if(_activeInvoiceTemplateKey===key)createInvoiceTemplate();
+    else renderInvoiceTemplates();
+    toast('✓ 模板已删除','var(--accent3)');
+  }catch(e){
+    toast(e.message||'模板删除失败','var(--accent2)');
+  }
+}
 
 function renderInvoiceTab(result){
   const out=document.getElementById('invoice-out');
@@ -3010,16 +3908,32 @@ function renderInvoiceTab(result){
   ph.style.display='none';out.style.display='block';
   badge.textContent=inv.field_count||0;
   const fields=inv.fields||{};
+  const missingFields=inv.missing_fields||{};
+  const notApplicableFields=inv.not_applicable_fields||{};
   let html='';
-  INVOICE_FIELD_ORDER.forEach(key=>{
+  invoiceDisplayFields(inv).forEach(key=>{
     const f=fields[key];
-    const label=INVOICE_FIELD_LABELS[key]||key;
+    const missing=missingFields[key];
+    const notApplicable=notApplicableFields[key];
+    const storedLabel=f?.label||missing?.label||notApplicable?.label;
+    const label=INVOICE_FIELD_LABELS[key]||storedLabel||key;
     if(f&&f.value){
       const confCls=f.confidence||'medium';
       const confLabel={high:'高',medium:'中',low:'低'}[confCls]||confCls;
       html+=`<div class="invoice-field">
         <div class="invoice-field-label">${esc(label)} <span class="invoice-conf ${confCls}">${confLabel}</span></div>
         <div class="invoice-field-value">${esc(f.value)}</div>
+      </div>`;
+    }else if(missing){
+      html+=`<div class="invoice-field">
+        <div class="invoice-field-label">${esc(label)} <span class="invoice-conf missing">缺失</span></div>
+        <div class="invoice-field-value missing">${esc(missing.message||'原图疑似为空/未识别')}</div>
+        <div class="invoice-field-hint">保持空值，避免误填其他编号</div>
+      </div>`;
+    }else if(notApplicable){
+      html+=`<div class="invoice-field">
+        <div class="invoice-field-label">${esc(label)} <span class="invoice-conf low">不适用</span></div>
+        <div class="invoice-field-value empty">${esc(notApplicable.message||'该类型不适用')}</div>
       </div>`;
     }else{
       html+=`<div class="invoice-field">
@@ -3030,20 +3944,30 @@ function renderInvoiceTab(result){
   });
   grid.innerHTML=html;
   if(inv.saved_record_id){
-    saveStatus.innerHTML=`<span style="color:var(--accent3)">✓ 已自动保存到发票记录 (ID: ${inv.saved_record_id})</span>`;
+    saveStatus.innerHTML=`<a class="invoice-save-link" onclick="jumpToInvoiceRecord(${inv.saved_record_id})">✓ 已自动保存到发票记录 (ID: ${inv.saved_record_id})</a>`;
     loadInvoiceRecords();
   }else{
     saveStatus.innerHTML='<span style="color:var(--dim)">未检测到有效发票或未启用发票识别</span>';
   }
 }
 
+async function jumpToInvoiceRecord(id){
+  setPanelOpen('invoice_records',true);
+  await loadInvoiceRecords();
+  const item=document.querySelector(`#invoice-records-list [data-id="${id}"]`);
+  if(!item)return;
+  item.scrollIntoView({block:'nearest',behavior:'smooth'});
+  item.classList.add('highlight');
+  setTimeout(()=>item.classList.remove('highlight'),1800);
+}
 async function loadInvoiceRecords(){
   try{
+    const list=document.getElementById('invoice-records-list');
+    const empty=document.getElementById('invoice-records-empty');
+    if(!list || !empty)return;
     const res=await fetch('/invoices?per_page=50');
     const data=await res.json();
     if(!data.success)return;
-    const list=document.getElementById('invoice-records-list');
-    const empty=document.getElementById('invoice-records-empty');
     const records=data.records||[];
     if(!records.length){list.innerHTML='';list.appendChild(empty);empty.style.display='block';return;}
     empty.style.display='none';
@@ -3052,7 +3976,7 @@ async function loadInvoiceRecords(){
       const date=r.invoice_date||'';
       const num=r.invoice_number||'';
       const meta=[num,date,amt?`¥${amt}`:''].filter(Boolean).join(' · ');
-      return `<div class="invoice-record-item" onclick="viewInvoiceRecord(${r.id})">
+      return `<div class="invoice-record-item" data-id="${r.id}" onclick="viewInvoiceRecord(${r.id})">
         <div class="invoice-record-info">
           <div class="invoice-record-name">${esc(r.file_name)}</div>
           <div class="invoice-record-meta">${esc(meta)}</div>
@@ -3111,6 +4035,8 @@ async function viewInvoiceRecord(id){
 function exportInvoices(){
   window.open('/invoices/export','_blank');
 }
+createInvoiceTemplate();
+loadInvoiceTemplates(true);
 </script>
 </body>
 </html>

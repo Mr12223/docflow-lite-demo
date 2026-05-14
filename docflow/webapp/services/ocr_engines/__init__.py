@@ -4,18 +4,20 @@ import base64
 import hashlib
 import json
 import os
+import shutil
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional
 
 from docflow.paths import IMAGE_OCR_CACHE_DIR
 from docflow.settings import env_flag as _env_flag
 from docflow.settings import env_int as _env_int
-from docflow_core import import_with_base_fallback
-from docflow_support import collect_dependency_status, prepare_pytesseract
+from docflow.core import import_with_base_fallback
+from docflow.support import collect_dependency_status, prepare_pytesseract
 
-from ..core import UPLOAD_FOLDER, logger
+from ...core import UPLOAD_FOLDER, logger
 
 _GOOGLE_VISION_READY_CACHE = None
 
@@ -33,9 +35,44 @@ _RAPIDOCR_WARMUP_LOCK = threading.Lock()
 _RAPIDOCR_WARMUP_STARTED = False
 _RAPIDOCR_WARMUP_FINISHED = False
 
-IMAGE_OCR_CACHE_VERSION = 4
+IMAGE_OCR_CACHE_VERSION = 5
 IMAGE_OCR_MEMORY_CACHE: dict[str, dict] = {}
 IMAGE_OCR_CACHE_LOCK = threading.Lock()
+_OCR_VARIANT_PARALLEL_PROVIDERS = {"tesseract", "easyocr", "rapidocr"}
+
+
+def clear_image_ocr_cache() -> dict:
+    """Clear image OCR disk and in-memory caches."""
+
+    cache_dir = IMAGE_OCR_CACHE_DIR
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    target = cache_dir.resolve()
+    expected = IMAGE_OCR_CACHE_DIR.resolve()
+    if target != expected:
+        raise RuntimeError(f"Unsafe OCR cache path: {target}")
+
+    file_count = 0
+    byte_count = 0
+    for item in target.rglob("*"):
+        try:
+            if item.is_file() or item.is_symlink():
+                file_count += 1
+                byte_count += item.stat().st_size
+        except OSError:
+            continue
+
+    with IMAGE_OCR_CACHE_LOCK:
+        memory_count = len(IMAGE_OCR_MEMORY_CACHE)
+        IMAGE_OCR_MEMORY_CACHE.clear()
+
+    shutil.rmtree(target)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return {
+        "cache_dir": str(cache_dir),
+        "deleted_files": file_count,
+        "deleted_bytes": byte_count,
+        "cleared_memory_items": memory_count,
+    }
 
 
 def _is_cloud_runtime() -> bool:
@@ -150,15 +187,40 @@ def _parse_binary_thresholds(raw_value: str, default_values: tuple[int, ...]) ->
     return tuple(default_values or ())
 
 
+def _get_image_ocr_speed_profile() -> str:
+    profile = str(os.getenv("DOCFLOW_IMAGE_OCR_SPEED_PROFILE", "fast")).strip().lower()
+    if profile in {"accurate", "full", "quality"}:
+        return "accurate"
+    if profile in {"balanced", "normal"}:
+        return "balanced"
+    return "fast"
+
+
 def _get_image_ocr_variant_config(provider: str = "") -> dict:
     normalized_provider = str(provider or "").strip().lower()
     env_prefix = normalized_provider.upper()
-    default_variants_map = {
-        "rapidocr": "rgb,gray,detail,contrast,binary",
-        "paddleocr": "rgb,gray,detail,contrast,binary",
-        "tesseract": "gray,detail,contrast,binary",
-        "easyocr": "rgb,gray,detail,contrast",
+    speed_profile = _get_image_ocr_speed_profile()
+    default_variants_by_profile = {
+        "fast": {
+            "rapidocr": "gray,detail",
+            "paddleocr": "gray,detail",
+            "tesseract": "gray",
+            "easyocr": "gray",
+        },
+        "balanced": {
+            "rapidocr": "gray,detail,contrast",
+            "paddleocr": "gray,detail,contrast",
+            "tesseract": "gray,contrast",
+            "easyocr": "gray,contrast",
+        },
+        "accurate": {
+            "rapidocr": "rgb,gray,detail,contrast,binary",
+            "paddleocr": "rgb,gray,detail,contrast,binary",
+            "tesseract": "gray,detail,contrast,binary",
+            "easyocr": "rgb,gray,detail,contrast",
+        },
     }
+    default_variants_map = default_variants_by_profile[speed_profile]
     default_thresholds_map = {
         "rapidocr": (170, 190),
         "paddleocr": (170, 190),
@@ -226,6 +288,73 @@ def _get_image_ocr_variant_config(provider: str = "") -> dict:
         "binary_thresholds": tuple(binary_thresholds),
         "variant_names": tuple(variant_names),
     }
+
+
+def _get_ocr_variant_worker_count(provider: str, variant_count: int) -> int:
+    if variant_count <= 1:
+        return 1
+    provider_name = str(provider or "").strip().lower()
+    default_workers = min(4, variant_count) if provider_name in _OCR_VARIANT_PARALLEL_PROVIDERS else 1
+    configured_workers = _env_int("DOCFLOW_IMAGE_OCR_VARIANT_WORKERS", default_workers)
+    provider_env = f"DOCFLOW_{provider_name.upper()}_IMAGE_OCR_VARIANT_WORKERS" if provider_name else ""
+    if provider_env:
+        configured_workers = _env_int(provider_env, configured_workers)
+    return max(1, min(int(configured_workers or 1), variant_count))
+
+
+def _run_ocr_variant_tasks(provider: str, variant_entries: list[tuple[str, object, dict]], worker, close_image: bool = True) -> list[dict]:
+    if not variant_entries:
+        return []
+
+    worker_count = _get_ocr_variant_worker_count(provider, len(variant_entries))
+    if worker_count <= 1:
+        results: list[dict] = []
+        last_error: Optional[Exception] = None
+        for variant_index, entry in enumerate(variant_entries):
+            try:
+                item = worker(variant_index, entry)
+                if item:
+                    results.append(item)
+            except Exception as exc:
+                last_error = exc
+            finally:
+                if close_image:
+                    try:
+                        entry[1].close()
+                    except Exception:
+                        pass
+        if results:
+            return sorted(results, key=lambda item: int((item.get("meta") or {}).get("variant_index") or 0))
+        if last_error is not None:
+            raise last_error
+        return []
+
+    futures = {}
+    last_error: Optional[Exception] = None
+    with ThreadPoolExecutor(max_workers=worker_count, thread_name_prefix=f"{provider}-ocr") as executor:
+        for variant_index, entry in enumerate(variant_entries):
+            futures[executor.submit(worker, variant_index, entry)] = entry
+        results = []
+        for future in as_completed(futures):
+            entry = futures[future]
+            try:
+                item = future.result()
+                if item:
+                    results.append(item)
+            except Exception as exc:
+                last_error = exc
+            finally:
+                if close_image:
+                    try:
+                        entry[1].close()
+                    except Exception:
+                        pass
+
+    if results:
+        return sorted(results, key=lambda item: int((item.get("meta") or {}).get("variant_index") or 0))
+    if last_error is not None:
+        raise last_error
+    return []
 
 
 def _get_provider_resize_policy(provider: str) -> dict:
@@ -441,16 +570,14 @@ def _build_image_variant_entries(base_image, provider: str) -> list[tuple[str, o
 
 def _run_path_based_ocr_variants(image_path: str, provider: str, ocr_runner) -> list[dict]:
     import tempfile
-
-    results: list[dict] = []
-    last_error: Optional[Exception] = None
     base_image, base_meta = _load_base_image_for_ocr(image_path, provider)
     try:
         variant_entries = _build_image_variant_entries(base_image, provider)
     finally:
         base_image.close()
 
-    for variant_index, (variant_name, variant_image, variant_meta) in enumerate(variant_entries):
+    def run_entry(variant_index: int, entry: tuple[str, object, dict]) -> dict:
+        variant_name, variant_image, variant_meta = entry
         temp_path = ""
         try:
             temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png", dir=UPLOAD_FOLDER)
@@ -460,77 +587,56 @@ def _run_path_based_ocr_variants(image_path: str, provider: str, ocr_runner) -> 
             candidate_text, extra_meta = ocr_runner(temp_path)
             normalized_text = str(candidate_text or "").strip()
             if not normalized_text:
-                continue
-            results.append(
-                {
-                    "text": normalized_text,
-                    "meta": {
-                        **dict(base_meta or {}),
-                        **dict(variant_meta or {}),
-                        **dict(extra_meta or {}),
-                        "provider": provider,
-                        "variant_name": variant_name,
-                        "variant_index": variant_index,
-                        "transport_format": "png",
-                        "path_sanitized": True,
-                    },
-                }
-            )
-        except Exception as exc:
-            last_error = exc
+                return {}
+            return {
+                "text": normalized_text,
+                "meta": {
+                    **dict(base_meta or {}),
+                    **dict(variant_meta or {}),
+                    **dict(extra_meta or {}),
+                    "provider": provider,
+                    "variant_name": variant_name,
+                    "variant_index": variant_index,
+                    "transport_format": "png",
+                    "path_sanitized": True,
+                },
+            }
         finally:
-            variant_image.close()
             if temp_path:
                 try:
                     os.remove(temp_path)
                 except Exception:
                     pass
 
-    if results:
-        return results
-    if last_error is not None:
-        raise last_error
-    return []
+    return _run_ocr_variant_tasks(provider, variant_entries, run_entry)
 
 
 def _run_pil_ocr_variants(image_path: str, provider: str, ocr_runner) -> list[dict]:
-    results: list[dict] = []
-    last_error: Optional[Exception] = None
     base_image, base_meta = _load_base_image_for_ocr(image_path, provider)
     try:
         variant_entries = _build_image_variant_entries(base_image, provider)
     finally:
         base_image.close()
 
-    for variant_index, (variant_name, variant_image, variant_meta) in enumerate(variant_entries):
-        try:
-            candidate_text, extra_meta = ocr_runner(variant_image)
-            normalized_text = str(candidate_text or "").strip()
-            if not normalized_text:
-                continue
-            results.append(
-                {
-                    "text": normalized_text,
-                    "meta": {
-                        **dict(base_meta or {}),
-                        **dict(variant_meta or {}),
-                        **dict(extra_meta or {}),
-                        "provider": provider,
-                        "variant_name": variant_name,
-                        "variant_index": variant_index,
-                    },
-                }
-            )
-        except Exception as exc:
-            last_error = exc
-        finally:
-            variant_image.close()
+    def run_entry(variant_index: int, entry: tuple[str, object, dict]) -> dict:
+        variant_name, variant_image, variant_meta = entry
+        candidate_text, extra_meta = ocr_runner(variant_image)
+        normalized_text = str(candidate_text or "").strip()
+        if not normalized_text:
+            return {}
+        return {
+            "text": normalized_text,
+            "meta": {
+                **dict(base_meta or {}),
+                **dict(variant_meta or {}),
+                **dict(extra_meta or {}),
+                "provider": provider,
+                "variant_name": variant_name,
+                "variant_index": variant_index,
+            },
+        }
 
-    if results:
-        return results
-    if last_error is not None:
-        raise last_error
-    return []
+    return _run_ocr_variant_tasks(provider, variant_entries, run_entry)
 
 
 def _select_best_ocr_variant_result(results: list[dict]) -> tuple[str, dict]:
@@ -990,7 +1096,7 @@ def _run_rapidocr(image_path: str) -> tuple[str, dict]:
 
 
 def _should_prewarm_rapidocr() -> bool:
-    return _env_flag("DOCFLOW_RAPIDOCR_PREWARM", _is_cloud_runtime())
+    return _env_flag("DOCFLOW_RAPIDOCR_PREWARM", True)
 
 
 def _run_rapidocr_warmup() -> None:
@@ -1365,6 +1471,7 @@ def _get_image_ocr_profile() -> dict:
     }
     result = {
         "version": IMAGE_OCR_CACHE_VERSION,
+        "speed_profile": _get_image_ocr_speed_profile(),
         "order": _get_image_ocr_order(),
         "max_long_edge": resize_config["max_long_edge"],
         "target_long_edge": resize_config["target_long_edge"],
@@ -1538,10 +1645,12 @@ def _build_image_ocr_cache_meta(
     profile: Optional[dict] = None,
     saved_at: Optional[float] = None,
     original_processing_ms: Optional[float] = None,
+    bypassed: bool = False,
 ) -> dict:
     payload = {
         "enabled": _is_image_ocr_cache_enabled(),
         "hit": bool(cache_hit),
+        "bypassed": bool(bypassed),
         "file_sha256": file_sha256,
         "profile": profile or {},
     }

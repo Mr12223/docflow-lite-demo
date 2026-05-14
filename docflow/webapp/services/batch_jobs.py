@@ -13,7 +13,7 @@ from typing import Optional
 from docflow.paths import PROJECT_ROOT, REPORTS_DIR, SAMPLE_DATA_DIR, SCRIPTS_DIR
 from docflow.settings import DEFAULT_PDF_MODE
 from docflow.settings import normalize_pdf_mode as _normalize_pdf_mode
-from docflow_support import build_error_info
+from docflow.support import build_error_info
 
 BATCH_SUITE_ALIASES = {
     "test_documents": SAMPLE_DATA_DIR / "test_documents",

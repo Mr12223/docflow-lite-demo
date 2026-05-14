@@ -10,7 +10,7 @@ from flask import jsonify, request
 
 from docflow.settings import DEFAULT_PDF_MODE
 from docflow.settings import normalize_pdf_mode as _normalize_pdf_mode
-from docflow_support import augment_result_payload
+from docflow.support import augment_result_payload
 
 from ..core import UPLOAD_FOLDER, app
 from ..responses import error_response
@@ -52,6 +52,7 @@ def start_process_file():
     output_format = request.form.get("format", "txt")
     pdf_mode = _normalize_pdf_mode(request.form.get("pdf_mode", DEFAULT_PDF_MODE))
     invoice_extract = request.form.get("invoice_extract", "0") == "1"
+    force_reprocess = request.form.get("force_reprocess", "0") == "1"
     file_ext = Path(safe_name).suffix.lower()
     now = time.time()
 
@@ -68,6 +69,7 @@ def start_process_file():
             "output_format": output_format,
             "pdf_mode": pdf_mode,
             "invoice_extract": invoice_extract,
+            "force_reprocess": force_reprocess,
             "result": None,
             "error": "",
             "cancel_requested": False,
@@ -154,11 +156,12 @@ def process_file():
     output_format = request.form.get("format", "txt")
     pdf_mode = _normalize_pdf_mode(request.form.get("pdf_mode", DEFAULT_PDF_MODE))
     invoice_extract = request.form.get("invoice_extract", "0") == "1"
+    force_reprocess = request.form.get("force_reprocess", "0") == "1"
     ext = Path(safe_name).suffix.lower()
 
     try:
         if ext in IMAGE_EXTS:
-            result = process_image_ocr(save_path, safe_name)
+            result = process_image_ocr(save_path, safe_name, force_reprocess=force_reprocess)
             result = _maybe_attach_invoice_fields(result, invoice_extract)
         else:
             result = processor.process(

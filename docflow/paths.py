@@ -18,6 +18,7 @@ UPLOADS_DIR = PROJECT_ROOT / "uploads_temp"
 IMAGE_OCR_CACHE_DIR = UPLOADS_DIR / "ocr_cache"
 DATA_DIR = PROJECT_ROOT / "data"
 INVOICE_DB_PATH = DATA_DIR / "invoices.db"
+INVOICE_TEMPLATES_PATH = DATA_DIR / "invoice_templates.json"
 
 
 def ensure_runtime_directories() -> None:
@@ -25,4 +26,3 @@ def ensure_runtime_directories() -> None:
 
     for path in (REPORTS_DIR, UPLOADS_DIR, IMAGE_OCR_CACHE_DIR, DATA_DIR):
         path.mkdir(parents=True, exist_ok=True)
-
