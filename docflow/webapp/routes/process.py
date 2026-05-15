@@ -53,6 +53,10 @@ def start_process_file():
     pdf_mode = _normalize_pdf_mode(request.form.get("pdf_mode", DEFAULT_PDF_MODE))
     invoice_extract = request.form.get("invoice_extract", "0") == "1"
     force_reprocess = request.form.get("force_reprocess", "0") == "1"
+    try:
+        confidence_threshold = max(0.0, min(1.0, float(request.form.get("confidence_threshold", "0.0"))))
+    except (ValueError, TypeError):
+        confidence_threshold = 0.0
     file_ext = Path(safe_name).suffix.lower()
     now = time.time()
 
@@ -69,6 +73,7 @@ def start_process_file():
             "output_format": output_format,
             "pdf_mode": pdf_mode,
             "invoice_extract": invoice_extract,
+            "confidence_threshold": confidence_threshold,
             "force_reprocess": force_reprocess,
             "result": None,
             "error": "",

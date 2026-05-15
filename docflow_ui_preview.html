@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocFlow 文档自动化处理系统</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --orange: #E8722A;
+  --orange-light: #FFF3EC;
+  --orange-hover: #D4621C;
+  --green: #22C55E;
+  --red: #EF4444;
+  --text-primary: #1A1A1A;
+  --text-secondary: #6B7280;
+  --border: #E5E7EB;
+  --card-bg: #FFFFFF;
+  --page-bg: #F3F4F6;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--page-bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+/* NAVBAR */
+.navbar {
+  background: var(--card-bg);
+  box-shadow: 0 1px 0 var(--border), var(--shadow);
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-logo .logo-icon {
+  width: 34px;
+  height: 34px;
+  background: var(--orange-light);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.nav-logo .logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--orange);
+  letter-spacing: -0.3px;
+}
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.nav-title {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 2px rgba(34,197,94,0.2);
+  animation: pulse-green 2s infinite;
+}
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(34,197,94,0.2); }
+  50% { box-shadow: 0 0 0 4px rgba(34,197,94,0.15); }
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1.5px solid transparent;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn-outline {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+.btn-outline:hover { border-color: #9CA3AF; background: #F9FAFB; }
+.btn-red {
+  background: var(--red);
+  color: white;
+  border-color: var(--red);
+}
+.btn-red:hover { background: #DC2626; border-color: #DC2626; }
+.btn-orange {
+  background: var(--orange);
+  color: white;
+  border-color: var(--orange);
+}
+.btn-orange:hover { background: var(--orange-hover); border-color: var(--orange-hover); }
+.btn-orange-outline {
+  background: transparent;
+  border-color: var(--orange);
+  color: var(--orange);
+}
+.btn-orange-outline:hover { background: var(--orange-light); }
+.btn-green-outline {
+  background: transparent;
+  border-color: #16A34A;
+  color: #16A34A;
+}
+.btn-green-outline:hover { background: #F0FDF4; }
+
+/* MAIN LAYOUT */
+.main {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  padding: 20px 24px;
+  min-height: 0;
+}
+.panel {
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-header {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.badge {
+  background: #F3F4F6;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+/* LEFT PANEL */
+.panel-left { width: 300px; flex-shrink: 0; }
+.panel-body { padding: 16px 20px; flex: 1; overflow-y: auto; }
+.dropzone {
+  background: var(--orange-light);
+  border: 2px dashed #F0A070;
+  border-radius: 10px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 16px;
+}
+.dropzone:hover { border-color: var(--orange); background: #FFEEDD; }
+.dropzone-icon {
+  font-size: 36px;
+  margin-bottom: 10px;
+  display: block;
+}
+.dropzone-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.dropzone-types {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 0;
+  gap: 8px;
+}
+.empty-icon { font-size: 32px; opacity: 0.35; }
+.empty-text { font-size: 13px; color: var(--text-secondary); }
+.panel-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+}
+.btn-start {
+  flex: 1;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  justify-content: center;
+}
+.btn-cancel {
+  padding: 10px 16px;
+  background: #F3F4F6;
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+.btn-cancel:hover { background: #E5E7EB; }
+
+/* MIDDLE PANEL */
+.panel-mid { width: 280px; flex-shrink: 0; }
+.setting-section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.setting-section:last-child { border-bottom: none; }
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.checkbox-custom {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--orange);
+  border: 2px solid var(--orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.checkbox-custom svg { width: 11px; height: 11px; }
+.checkbox-label { font-size: 14px; font-weight: 600; }
+.setting-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.section-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.info-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--text-secondary);
+  cursor: help;
+}
+.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mode-btn {
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  padding: 12px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+  background: white;
+}
+.mode-btn.active {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: white;
+}
+.mode-btn:not(.active):hover { border-color: var(--orange); background: var(--orange-light); }
+.mode-icon { font-size: 20px; margin-bottom: 4px; }
+.mode-name { font-size: 13px; font-weight: 600; }
+.mode-sub { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+.record-count {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.record-label { font-size: 13px; color: var(--text-secondary); }
+.record-num { font-size: 22px; font-weight: 700; color: var(--text-primary); }
+.record-unit { font-size: 13px; color: var(--text-secondary); }
+.btn-row { display: flex; gap: 8px; }
+.btn-row .btn { flex: 1; justify-content: center; font-size: 12px; padding: 7px 10px; }
+
+/* CONFIDENCE SLIDER */
+.confidence-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.confidence-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orange);
+  background: var(--orange-light);
+  border: 1px solid #F0A070;
+  border-radius: 6px;
+  padding: 2px 8px;
+  min-width: 42px;
+  text-align: center;
+}
+.slider-wrap { position: relative; padding: 4px 0 2px; }
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--orange) 0%, var(--orange) 60%, #E5E7EB 60%, #E5E7EB 100%);
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  border: 2.5px solid var(--orange);
+  box-shadow: 0 1px 4px rgba(232,114,42,0.3);
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+input[type=range]::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 5px rgba(232,114,42,0.15);
+}
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+.confidence-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  line-height: 1.5;
+  padding: 6px 8px;
+  background: #F9FAFB;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+/* RIGHT PANEL */
+.panel-right { flex: 1; min-width: 0; }
+.status-bar {
+  margin: 0 20px 0;
+  padding: 10px 14px;
+  background: #FAFAFA;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 20px 0;
+  font-size: 12px;
+}
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.status-info-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--orange-light);
+  border: 1.5px solid var(--orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--orange);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--text-secondary);
+}
+.status-item { display: flex; align-items: center; gap: 4px; }
+.status-dot-sm {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+}
+.tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  margin-top: 14px;
+}
+.tab {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2.5px solid transparent;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -1px;
+}
+.tab:hover { color: var(--text-primary); }
+.tab.active { color: var(--orange); border-bottom-color: var(--orange); font-weight: 600; }
+.tab-content { display: none; flex: 1; }
+.tab-content.active { display: flex; flex-direction: column; flex: 1; }
+.result-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 16px;
+}
+.result-empty-icon-wrap {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: var(--orange-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.result-empty-icon-wrap .main-icon { font-size: 40px; }
+.sparkle {
+  position: absolute;
+  font-size: 14px;
+}
+.sparkle-1 { top: 4px; right: 6px; }
+.sparkle-2 { bottom: 6px; left: 4px; }
+.sparkle-3 { top: 10px; left: 8px; font-size: 10px; }
+.result-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.result-empty-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 360px;
+  line-height: 1.7;
+}
+.panel-right-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.export-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-right: 4px;
+}
+.select-dropdown {
+  padding: 6px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: white;
+  cursor: pointer;
+  outline: none;
+}
+.select-dropdown:hover { border-color: #9CA3AF; }
+.fmt-item {
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.fmt-item:hover { background: var(--orange-light); color: var(--orange); }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-logo">
+    <div class="logo-icon">📁</div>
+    <span class="logo-text">DocFlow</span>
+  </div>
+  <div class="nav-right">
+    <span class="nav-title">DocFlow 文档自动化处理系统</span>
+    <div class="status-badge">
+      <span class="status-dot"></span>
+      服务运行中
+    </div>
+    <button class="btn btn-outline">依赖检查</button>
+    <button class="btn btn-red">■ 结束服务</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT: 文件队列 -->
+  <div class="panel panel-left">
+    <div class="panel-header">
+      <span class="panel-title">文件队列</span>
+      <span class="badge">0个</span>
+    </div>
+    <div class="panel-body">
+      <div class="dropzone" onclick="document.getElementById('fileInput').click()">
+        <span class="dropzone-icon">📂</span>
+        <div class="dropzone-title">拖拽文件到此处</div>
+        <div class="dropzone-types">PDF / DOC / DOCX / XLSX / PPTX / TXT / CSV / 图片 / JSON</div>
+        <button class="btn btn-outline" style="font-size:13px;padding:6px 16px;">+ 选择文件</button>
+        <input type="file" id="fileInput" multiple style="display:none">
+      </div>
+      <div class="section-label">队列列表</div>
+      <div class="empty-state">
+        <span class="empty-icon">📄</span>
+        <span class="empty-text">暂无文件，请上传</span>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <button class="btn btn-orange btn-start">▶ 开始处理</button>
+      <button class="btn btn-cancel">■ 取消处理</button>
+    </div>
+  </div>
+
+  <!-- MIDDLE: 识别设置 -->
+  <div class="panel panel-mid">
+    <div class="panel-header">
+      <span class="panel-title">识别设置</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;">
+
+      <div class="setting-section">
+        <div class="checkbox-row">
+          <div class="checkbox-custom" id="invoiceCheckbox" onclick="toggleCheckbox()">
+            <svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="2,6 5,9 10,3"/>
+            </svg>
+          </div>
+          <span class="checkbox-label">启用发票识别</span>
+        </div>
+        <p class="setting-desc">开启后系统会自动判断文件是否为发票，并提取代码、号码、日期、金额、税号等字段。</p>
+      </div>
+
+      <div class="setting-section">
+        <div class="section-heading">
+          处理模式
+          <span class="info-icon" title="选择处理速度与精度的平衡">i</span>
+        </div>
+        <div class="mode-grid">
+          <div class="mode-btn active" id="modeFast" onclick="selectMode('fast')">
+            <div class="mode-icon">⚡</div>
+            <div class="mode-name">快速模式</div>
+            <div class="mode-sub">处理速度快</div>
+          </div>
+          <div class="mode-btn" id="modeAccurate" onclick="selectMode('accurate')">
+            <div class="mode-icon">🎯</div>
+            <div class="mode-name">精准模式</div>
+            <div class="mode-sub">识别更准确</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="setting-section">
+        <div class="section-heading">
+          识别置信度
+          <span class="info-icon" title="低于此阈值的识别结果将被过滤，值越高要求越严格">i</span>
+        </div>
+        <div class="confidence-header">
+          <span style="font-size:12px;color:var(--text-secondary);">字段匹配阈值</span>
+          <span class="confidence-value" id="confVal">0.60</span>
+        </div>
+        <div class="slider-wrap">
+          <input type="range" id="confSlider" min="0" max="100" value="60"
+            oninput="updateConf(this.value)">
+        </div>
+        <div class="slider-labels">
+          <span>宽松 0.0</span>
+          <span>严格 1.0</span>
+        </div>
+        <div class="confidence-hint">低于阈值的字段将标记为"未识别"，提高阈值可减少误识别。</div>
+      </div>
+
+      <div class="setting-section">
+        <div class="section-heading">📋 发票记录</div>
+        <div class="record-count">
+          <span class="record-label">已保存</span>
+          <span class="record-num">0</span>
+          <span class="record-unit">条</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-outline">查看记录</button>
+          <button class="btn btn-orange-outline">⬇ 导出 CSV</button>
+        </div>
+      </div>
+
+      <div class="setting-section">
+        <div class="section-heading">⚙ 系统维护</div>
+        <div class="btn-row">
+          <button class="btn btn-outline">清理 OCR 缓存</button>
+          <button class="btn btn-outline">🗑 删除临时缓存</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT: 结果预览 -->
+  <div class="panel panel-right">
+    <div class="panel-header">
+      <span class="panel-title">结果预览</span>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-left">
+        <div class="status-info-icon">i</div>
+        当前状态：等待上传文件
+      </div>
+      <div class="status-right">
+        <span class="status-item">文件名：-</span>
+        <span class="status-item">文件类型：-</span>
+        <span class="status-item">耗时：-</span>
+        <span class="status-item"><span class="status-dot-sm"></span> 状态：-</span>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(0)">📄 文本结果</div>
+      <div class="tab" onclick="switchTab(1)">⊞ 表格数据</div>
+      <div class="tab" onclick="switchTab(2)">🏷 发票字段</div>
+      <div class="tab" onclick="switchTab(3)">📊 统计信息</div>
+    </div>
+
+    <div class="tab-content active" id="tab0">
+      <div class="result-empty">
+        <div class="result-empty-icon-wrap">
+          <span class="main-icon">📄</span>
+          <span class="sparkle sparkle-1">✨</span>
+          <span class="sparkle sparkle-2">✦</span>
+          <span class="sparkle sparkle-3">✦</span>
+        </div>
+        <div class="result-empty-title">暂无处理结果</div>
+        <div class="result-empty-desc">请先在左侧上传文件，随后点击"开始处理"。系统将自动提取文本、表格和发票字段。</div>
+      </div>
+    </div>
+    <div class="tab-content" id="tab1">
+      <div class="result-empty">
+        <div class="result-empty-icon-wrap">
+          <span class="main-icon">⊞</span>
+        </div>
+        <div class="result-empty-title">暂无表格数据</div>
+        <div class="result-empty-desc">处理含表格的文件后，表格内容将在此显示。</div>
+      </div>
+    </div>
+    <div class="tab-content" id="tab2">
+      <div class="result-empty">
+        <div class="result-empty-icon-wrap">
+          <span class="main-icon">🏷</span>
+        </div>
+        <div class="result-empty-title">暂无发票字段</div>
+        <div class="result-empty-desc">上传发票文件并处理后，提取的字段将在此显示。</div>
+      </div>
+    </div>
+    <div class="tab-content" id="tab3">
+      <div class="result-empty">
+        <div class="result-empty-icon-wrap">
+          <span class="main-icon">📊</span>
+        </div>
+        <div class="result-empty-title">暂无统计信息</div>
+        <div class="result-empty-desc">处理文件后，统计信息将在此显示。</div>
+      </div>
+    </div>
+
+    <div class="panel-right-footer">
+      <span class="export-label">⬇ 导出结果</span>
+      <select class="select-dropdown">
+        <option>当前文件</option>
+        <option>全部文件</option>
+      </select>
+      <button class="btn btn-orange-outline">📄 导出 TXT</button>
+      <button class="btn btn-green-outline">{ } 导出 JSON</button>
+      <button class="btn btn-outline" onclick="toggleMoreFormats(this)" style="position:relative">
+        更多格式 <span style="font-size:10px;margin-left:2px">▾</span>
+        <div id="more-formats-menu" style="display:none;position:absolute;bottom:calc(100% + 6px);right:0;background:white;border:1.5px solid var(--border);border-radius:8px;box-shadow:var(--shadow-md);min-width:120px;z-index:50;overflow:hidden">
+          <div class="fmt-item" onclick="event.stopPropagation()">⬇ 导出 MD</div>
+          <div class="fmt-item" onclick="event.stopPropagation()">⬇ 导出 CSV</div>
+          <div class="fmt-item" onclick="event.stopPropagation()">📋 复制文本</div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function switchTab(idx) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+  document.querySelectorAll('.tab-content').forEach((c, i) => c.classList.toggle('active', i === idx));
+}
+function selectMode(mode) {
+  document.getElementById('modeFast').classList.toggle('active', mode === 'fast');
+  document.getElementById('modeAccurate').classList.toggle('active', mode === 'accurate');
+}
+let checked = true;
+function toggleCheckbox() {
+  checked = !checked;
+  const cb = document.getElementById('invoiceCheckbox');
+  cb.style.background = checked ? 'var(--orange)' : 'white';
+  cb.style.borderColor = checked ? 'var(--orange)' : 'var(--border)';
+  cb.querySelector('svg').style.opacity = checked ? '1' : '0';
+}
+const dz = document.querySelector('.dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--orange)'; dz.style.background = '#FFEEDD'; });
+dz.addEventListener('dragleave', () => { dz.style.borderColor = '#F0A070'; dz.style.background = 'var(--orange-light)'; });
+dz.addEventListener('drop', e => { e.preventDefault(); dz.style.borderColor = '#F0A070'; dz.style.background = 'var(--orange-light)'; });
+
+function updateConf(val) {
+  const pct = val + '%';
+  document.getElementById('confVal').textContent = (val / 100).toFixed(2);
+  const slider = document.getElementById('confSlider');
+  slider.style.background = `linear-gradient(to right, var(--orange) 0%, var(--orange) ${pct}, #E5E7EB ${pct}, #E5E7EB 100%)`;
+}
+
+function toggleMoreFormats(btn) {
+  const menu = document.getElementById('more-formats-menu');
+  const isOpen = menu.style.display === 'block';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    const close = (e) => { if (!btn.contains(e.target)) { menu.style.display = 'none'; document.removeEventListener('click', close); } };
+    setTimeout(() => document.addEventListener('click', close), 0);
+  }
+}
+</script>
+</body>
+</html>
+</style>

@@ -13,6 +13,37 @@ from .ocr import IMAGE_EXTS, extract_invoice_fields, process_image_ocr
 
 PROCESS_JOBS = {}
 PROCESS_JOB_LOCK = threading.Lock()
+
+# 字段置信度字符串到数值的映射
+_CONF_SCORE = {"high": 0.9, "medium": 0.6, "low": 0.3, "none": 0.0}
+
+
+def _apply_confidence_threshold(inv_data: dict, threshold: float) -> dict:
+    """将低于阈值的字段从 fields 移入 missing_fields。"""
+    if threshold <= 0.0 or not isinstance(inv_data, dict):
+        return inv_data
+
+    fields = dict(inv_data.get("fields") or {})
+    missing = dict(inv_data.get("missing_fields") or {})
+    filtered = 0
+
+    for key in list(fields):
+        field_conf = _CONF_SCORE.get(fields[key].get("confidence", "low"), 0.3)
+        if field_conf < threshold:
+            missing[key] = {
+                "message": f"置信度低于阈值（{fields[key].get('confidence', 'low')}，阈值 {threshold:.2f}）",
+                "filtered": True,
+            }
+            del fields[key]
+            filtered += 1
+
+    if filtered:
+        inv_data = dict(inv_data)
+        inv_data["fields"] = fields
+        inv_data["missing_fields"] = missing
+        inv_data["field_count"] = len(fields)
+        inv_data["filtered_count"] = filtered
+    return inv_data
 processor = DocFlowProcessor()
 
 
@@ -65,7 +96,7 @@ def _build_cancelled_process_result(file_name: str, file_ext: str) -> dict:
     }
 
 
-def _maybe_attach_invoice_fields(result: dict, enabled: bool) -> dict:
+def _maybe_attach_invoice_fields(result: dict, enabled: bool, confidence_threshold: float = 0.0) -> dict:
     if not enabled or not isinstance(result, dict) or not result.get("success"):
         return result
 
@@ -78,7 +109,8 @@ def _maybe_attach_invoice_fields(result: dict, enabled: bool) -> dict:
         return result
 
     try:
-        stats["invoice_fields"] = extract_invoice_fields(text)
+        inv_data = extract_invoice_fields(text)
+        stats["invoice_fields"] = _apply_confidence_threshold(inv_data, confidence_threshold)
     except Exception as exc:
         logger.warning("发票提取失败: %s", exc)
         stats["invoice_fields"] = {
@@ -137,6 +169,7 @@ def _run_process_job(job_id: str) -> None:
         pdf_mode = job["pdf_mode"]
         file_ext = job["file_ext"]
         invoice_extract = job.get("invoice_extract", False)
+        confidence_threshold = float(job.get("confidence_threshold", 0.0))
         force_reprocess = job.get("force_reprocess", False)
         if job.get("state") == "cancelled" or job.get("cancel_requested"):
             PROCESS_JOBS[job_id]["state"] = "cancelled"
@@ -183,7 +216,7 @@ def _run_process_job(job_id: str) -> None:
                 cancel_callback=cancel_requested,
                 force_reprocess=force_reprocess,
             )
-            result = _maybe_attach_invoice_fields(result, invoice_extract)
+            result = _maybe_attach_invoice_fields(result, invoice_extract, confidence_threshold)
         else:
             result = job_processor.process(
                 save_path,
@@ -194,6 +227,15 @@ def _run_process_job(job_id: str) -> None:
                 progress_callback=report,
                 cancel_callback=cancel_requested,
             )
+            # 对非图片路径的发票字段应用阈值过滤
+            if invoice_extract and confidence_threshold > 0.0:
+                stats = result.get("statistics")
+                if stats is None:
+                    stats = result.get("stats")
+                if isinstance(stats, dict) and isinstance(stats.get("invoice_fields"), dict):
+                    stats["invoice_fields"] = _apply_confidence_threshold(
+                        stats["invoice_fields"], confidence_threshold
+                    )
 
         if cancel_requested():
             raise DocFlowCancelledError(cancelled_message)
