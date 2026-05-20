@@ -133,6 +133,7 @@ def process_image_ocr(
     progress_callback=None,
     cancel_callback=None,
     force_reprocess: bool = False,
+    extract_invoice: bool = True,
 ) -> dict:
     import time
     start = time.time()
@@ -297,6 +298,9 @@ def process_image_ocr(
                 emit(90, "image_cache_hit", "OCR cache hit")
                 cached_result = _restore_cached_image_ocr_result(filename, cached_payload, elapsed)
                 if cached_result:
+                    if not extract_invoice:
+                        cached_stats = cached_result.setdefault("statistics", {})
+                        cached_stats["invoice_fields"] = _empty_invoice_fields_payload()
                     return cached_result
             if force_reprocess:
                 emit(13, "image_cache_bypass", "Skipping OCR cache")
@@ -309,7 +313,7 @@ def process_image_ocr(
 
     speculative_refinement_holder: list = [None]
     speculative_refinement_thread = None
-    if _env_flag("DOCFLOW_IMAGE_OCR_INVOICE_REFINEMENT", True) and _env_flag(
+    if extract_invoice and _env_flag("DOCFLOW_IMAGE_OCR_INVOICE_REFINEMENT", True) and _env_flag(
         "DOCFLOW_IMAGE_OCR_INVOICE_REFINEMENT_SPECULATIVE", False
     ):
         def _run_speculative_refinement() -> None:
@@ -387,10 +391,15 @@ def process_image_ocr(
         text = str(selected_candidate.get("text") or "")
         engine_used = str(selected_candidate.get("engine") or "")
         prepared_meta = dict(selected_candidate.get("meta") or {})
-        selected_invoice_eval = selected_candidate.get("invoice_eval") or _evaluate_ocr_invoice_text(text)
-        should_refine, invoice_refinement_reason = _should_run_invoice_refinement(
-            selected_candidate,
-            selected_invoice_eval,
+        selected_invoice_eval = (
+            selected_candidate.get("invoice_eval") or _evaluate_ocr_invoice_text(text)
+            if extract_invoice
+            else _evaluate_ocr_invoice_text("")
+        )
+        should_refine, invoice_refinement_reason = (
+            _should_run_invoice_refinement(selected_candidate, selected_invoice_eval)
+            if extract_invoice
+            else (False, "disabled")
         )
         if should_refine:
             invoice_refinement_applied = True
@@ -486,7 +495,11 @@ def process_image_ocr(
             "table_count": 0,
             "keywords": [],
             "processing_ms": elapsed,
-            "invoice_fields": merged_invoice_fields or selected_invoice_eval.get("invoice_fields") or _empty_invoice_fields_payload(),
+            "invoice_fields": (
+                merged_invoice_fields or selected_invoice_eval.get("invoice_fields") or _empty_invoice_fields_payload()
+                if extract_invoice
+                else _empty_invoice_fields_payload()
+            ),
         },
         "processing_ms": elapsed,
         "formatted_output": _format_image_ocr_output(

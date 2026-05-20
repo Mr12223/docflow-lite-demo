@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocFlow · Design System</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #faf9f7; --card: #ffffff;
+  --primary: #f97316; --primary-h: #ea6c0a;
+  --primary-light: #fff7ed; --primary-mid: #fed7aa;
+  --border: #e5e7eb; --border-s: #d1d5db;
+  --text: #111827; --text-2: #6b7280; --text-3: #9ca3af;
+  --success: #16a34a; --success-l: #f0fdf4;
+  --danger: #ef4444; --danger-l: #fef2f2;
+  --amber: #d97706; --amber-l: #fffbeb;
+  --sh: 0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --sh-md: 0 4px 12px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.04);
+  --sh-lg: 0 12px 36px rgba(0,0,0,.09),0 4px 8px rgba(0,0,0,.05);
+  --r: 10px; --r-sm: 6px; --r-lg: 16px;
+  --font: 'Outfit', sans-serif;
+  --display: 'Cormorant Garamond', Georgia, serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+/* ── Layout ── */
+.page{max-width:1080px;margin:0 auto;padding:0 32px 120px}
+.section{margin-bottom:80px}
+.sec-kicker{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--primary);margin-bottom:10px}
+.sec-title{font-family:var(--display);font-size:38px;font-weight:500;line-height:1.05;margin-bottom:6px}
+.sec-sub{font-size:14px;color:var(--text-2);margin-bottom:32px;max-width:560px}
+.divider{height:1px;background:var(--border);margin:64px 0}
+
+/* ── Hero ── */
+.hero{padding:88px 0 72px;position:relative;overflow:hidden;border-bottom:1px solid var(--border);margin-bottom:80px}
+.hero::before{content:'';position:absolute;top:-80px;right:-60px;width:480px;height:480px;background:radial-gradient(circle,rgba(249,115,22,.1) 0%,transparent 68%);pointer-events:none}
+.hero::after{content:'';position:absolute;bottom:-40px;left:30%;width:300px;height:300px;background:radial-gradient(circle,rgba(249,115,22,.05) 0%,transparent 70%);pointer-events:none}
+.hero-tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--primary);background:var(--primary-light);border:1px solid var(--primary-mid);border-radius:999px;padding:5px 14px;margin-bottom:28px}
+.hero-tag-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hero-title{font-family:var(--display);font-size:clamp(56px,8vw,96px);font-weight:300;line-height:.95;letter-spacing:-.02em;color:var(--text);margin-bottom:24px}
+.hero-title em{font-style:italic;color:var(--primary)}
+.hero-desc{font-size:16px;color:var(--text-2);max-width:500px;line-height:1.75}
+.hero-tokens{display:flex;flex-wrap:wrap;gap:8px;margin-top:32px}
+.hero-token{display:flex;align-items:center;gap:6px;padding:5px 12px;background:var(--card);border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--text-2)}
+.hero-token-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* ── Color swatches ── */
+.color-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px}
+.swatch{border-radius:var(--r);overflow:hidden;border:1px solid var(--border);background:var(--card);box-shadow:var(--sh);transition:transform .18s,box-shadow .18s;cursor:default}
+.swatch:hover{transform:translateY(-3px);box-shadow:var(--sh-md)}
+.swatch-block{height:68px}
+.swatch-info{padding:10px 12px}
+.swatch-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.swatch-hex{font-size:11px;color:var(--text-3);font-family:'Courier New',monospace;letter-spacing:.04em}
+.swatch-role{font-size:10px;color:var(--text-3);margin-top:3px}
+
+/* ── Typography ── */
+.type-table{display:flex;flex-direction:column}
+.type-row{display:grid;grid-template-columns:130px 1fr;gap:28px;align-items:baseline;padding:22px 0;border-bottom:1px solid var(--border)}
+.type-row:first-child{border-top:1px solid var(--border)}
+.type-meta{font-size:11px;color:var(--text-3);line-height:1.7}
+.type-meta strong{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:2px}
+
+/* ── Buttons ── */
+.btn-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:var(--r-sm);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;border:1.5px solid transparent;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn-primary:hover{background:var(--primary-h);border-color:var(--primary-h);box-shadow:0 4px 16px rgba(249,115,22,.35);transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--primary);border-color:var(--primary)}
+.btn-outline:hover{background:var(--primary-light)}
+.btn-ghost{background:var(--card);color:var(--text);border-color:var(--border)}
+.btn-ghost:hover{border-color:var(--border-s);background:var(--bg)}
+.btn-success{background:var(--success);color:#fff;border-color:var(--success)}
+.btn-success:hover{background:#15803d;box-shadow:0 4px 16px rgba(22,163,74,.3);transform:translateY(-1px)}
+.btn-danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn-danger:hover{background:#dc2626;box-shadow:0 4px 16px rgba(239,68,68,.3);transform:translateY(-1px)}
+.btn-sm{padding:6px 14px;font-size:13px}
+.btn-lg{padding:12px 28px;font-size:16px}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+
+/* ── Inputs ── */
+.input-row{display:flex;flex-wrap:wrap;gap:16px}
+.input-wrap{display:flex;flex-direction:column;gap:5px;min-width:200px;flex:1}
+.input-label{font-size:12px;font-weight:600;color:var(--text-2)}
+.input{padding:9px 13px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:var(--font);font-size:14px;color:var(--text);background:var(--card);outline:none;transition:border-color .15s,box-shadow .15s;width:100%}
+.input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(249,115,22,.12)}
+.input::placeholder{color:var(--text-3)}
+.input.err{border-color:var(--danger)}
+.input-hint{font-size:11px;color:var(--text-3)}
+.input-hint.err{color:var(--danger)}
+
+/* ── Badges ── */
+.badge-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:500;border:1px solid transparent}
+.b-orange{background:var(--primary-light);color:var(--primary);border-color:#fed7aa}
+.b-green{background:var(--success-l);color:var(--success);border-color:#bbf7d0}
+.b-red{background:var(--danger-l);color:var(--danger);border-color:#fecaca}
+.b-amber{background:var(--amber-l);color:var(--amber);border-color:#fde68a}
+.b-gray{background:#f3f4f6;color:var(--text-2);border-color:var(--border)}
+.bdot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* ── Alerts ── */
+.alert{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:var(--r);border:1px solid transparent;font-size:14px;margin-bottom:10px}
+.alert-icon{font-size:15px;flex-shrink:0;margin-top:1px}
+.alert-body{flex:1}
+.alert-title{font-weight:600;margin-bottom:2px}
+.alert-msg{font-size:13px;opacity:.85}
+.a-info{background:var(--primary-light);border-color:#fed7aa;color:#9a3412}
+.a-success{background:var(--success-l);border-color:#bbf7d0;color:#14532d}
+.a-warn{background:var(--amber-l);border-color:#fde68a;color:#78350f}
+.a-danger{background:var(--danger-l);border-color:#fecaca;color:#7f1d1d}
+
+/* ── Status bar ── */
+.status-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);font-size:13px;box-shadow:var(--sh)}
+.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sdot.on{background:var(--success);box-shadow:0 0 0 3px rgba(22,163,74,.18);animation:pulse-s 2s infinite}
+.sdot.warn{background:var(--amber);box-shadow:0 0 0 3px rgba(217,119,6,.18)}
+.sdot.err{background:var(--danger);box-shadow:0 0 0 3px rgba(239,68,68,.18)}
+@keyframes pulse-s{0%,100%{box-shadow:0 0 0 3px rgba(22,163,74,.18)}50%{box-shadow:0 0 0 5px rgba(22,163,74,.07)}}
+.ssep{flex:1}
+.smeta{color:var(--text-3);font-size:12px}
+
+/* ── Progress ── */
+.prog-item{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.prog-head{display:flex;justify-content:space-between;font-size:12px;color:var(--text-2)}
+.prog-track{height:6px;background:var(--border);border-radius:999px;overflow:hidden}
+.prog-fill{height:100%;border-radius:999px;transition:width .4s ease}
+.pf-orange{background:linear-gradient(90deg,var(--primary),#fb923c)}
+.pf-green{background:linear-gradient(90deg,var(--success),#4ade80)}
+.pf-amber{background:linear-gradient(90deg,var(--amber),#fbbf24)}
+
+/* ── Stat cards ── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh)}
+.stat-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px}
+.stat-val{font-family:var(--display);font-size:38px;font-weight:500;color:var(--primary);line-height:1;margin-bottom:4px}
+.stat-sub{font-size:12px;color:var(--text-3)}
+
+/* ── Cards ── */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px;box-shadow:var(--sh);transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:var(--sh-lg);transform:translateY(-2px)}
+.card-icon{font-size:26px;margin-bottom:12px}
+.card-title{font-size:15px;font-weight:600;margin-bottom:6px}
+.card-desc{font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:16px}
+.card-foot{display:flex;align-items:center;justify-content:space-between}
+.card-accent{border-left:3px solid var(--primary);background:var(--primary-light)}
+.card-success{border-left:3px solid var(--success);background:var(--success-l)}
+.card-danger{border-left:3px solid var(--danger);background:var(--danger-l)}
+
+/* ── Animations ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fadeUp .55s ease both}
+.d1{animation-delay:.07s}.d2{animation-delay:.14s}.d3{animation-delay:.21s}.d4{animation-delay:.28s}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- HERO -->
+<header class="hero fu">
+  <div class="hero-tag"><span class="hero-tag-dot"></span>Design System · v1.0</div>
+  <h1 class="hero-title">Doc<em>Flow</em></h1>
+  <p class="hero-desc">所有颜色、排版、组件的统一规范。基于暖橙主色构建，兼顾专业感与亲和力。</p>
+  <div class="hero-tokens">
+    <span class="hero-token"><span class="hero-token-dot" style="background:#f97316"></span>#f97316 Primary</span>
+    <span class="hero-token"><span class="hero-token-dot" style="background:#16a34a"></span>#16a34a Success</span>
+    <span class="hero-token"><span class="hero-token-dot" style="background:#ef4444"></span>#ef4444 Danger</span>
+    <span class="hero-token"><span class="hero-token-dot" style="background:#111827"></span>#111827 Text</span>
+    <span class="hero-token"><span class="hero-token-dot" style="background:#e5e7eb;border:1px solid #d1d5db"></span>#e5e7eb Border</span>
+  </div>
+</header>
+
+<!-- 01 COLORS -->
+<section class="section fu d1">
+  <div class="sec-kicker">01 · Colors</div>
+  <h2 class="sec-title">色彩系统</h2>
+  <p class="sec-sub">10 个语义化 Token，覆盖背景、文字、交互、状态四个维度。</p>
+  <div class="color-grid">
+    <div class="swatch"><div class="swatch-block" style="background:#faf9f7;border-bottom:1px solid #e5e7eb"></div><div class="swatch-info"><div class="swatch-name">Background</div><div class="swatch-hex">#faf9f7</div><div class="swatch-role">页面底色</div></div></div>
+    <div class="swatch"><div class="swatch-block" style="background:#ffffff;border-bottom:1px solid #e5e7eb"></div><div class="swatch-info"><div class="swatch-name">Card</div><div class="swatch-hex">#ffffff</div><div class="swatch-role">卡片 / 面板</div></div></div>
+    <div class="swatch"><div class="swatch-block" style="background:#f97316"></div><div class="swatch-info"><div class="swatch-name">Primary</div><div class="swatch-hex">#f97316</div><div class="swatch-role">主色 · 橙</div></div></div>
+    <div class="swatch"><div class="swatch-block" style="background:#fff7ed;border-bottom:1px solid #e5e7eb"></div><div class="swatch-info"><div class="swatch-name">Primary Light</div><div class="swatch-hex">#fff7ed</div><div class="swatch-role">浅橙背景</div></div></div>
+    <div class="swatch"><div class="swatch-block" style="background:#e5e7eb"></div><div class="swatch-info"><div class="swatch-name">Border</div><div class="swatch-hex">#e5e7eb</div><div class="swatch-role">边框 / 分割线</div></div></div>
+    <div class="swatch"><div class="swatch-block" style="background:#111827"></div><div class="swatch-info"><div class="swatch-name">Text</div><div class="swatch-hex">#111827</div><div class="swatch-role">主文字</div></div></div>
+    <div class="swatch"><div class="swatch-block" style="background:#6b7280"></div><div class="swatch-info"><div class="swatch-name">Text Secondary</div><div class="swatch-hex">#6b7280</div><div class="swatch-role">说明文字</div></div></div>
+    <div class="swatch"><div class="swatch-block" style="background:#9ca3af"></div><div class="swatch-info"><div class="swatch-name">Text Muted</div><div class="swatch-hex">#9ca3af</div><div class="swatch-role">弱文字 / 占位</div></div></div>
+    <div class="swatch"><div class="swatch-block" style="background:#16a34a"></div><div class="swatch-info"><div class="swatch-name">Success</div><div class="swatch-hex">#16a34a</div><div class="swatch-role">成功 · 绿</div></div></div>
+    <div class="swatch"><div class="swatch-block" style="background:#ef4444"></div><div class="swatch-info"><div class="swatch-name">Danger</div><div class="swatch-hex">#ef4444</div><div class="swatch-role">危险 · 红</div></div></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- 02 TYPOGRAPHY -->
+<section class="section fu d2">
+  <div class="sec-kicker">02 · Typography</div>
+  <h2 class="sec-title">字体排版</h2>
+  <p class="sec-sub">Cormorant Garamond 用于展示标题，Outfit 用于正文与 UI 元素。</p>
+  <div class="type-table">
+    <div class="type-row">
+      <div class="type-meta"><strong>Display / 96</strong>Cormorant Garamond<br>weight 300 · italic</div>
+      <div style="font-family:var(--display);font-size:96px;font-weight:300;font-style:italic;line-height:.95;color:var(--text)">DocFlow</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><strong>H1 / 48</strong>Cormorant Garamond<br>weight 500</div>
+      <div style="font-family:var(--display);font-size:48px;font-weight:500;line-height:1.1;color:var(--text)">智能文档处理</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><strong>H2 / 28</strong>Outfit<br>weight 600</div>
+      <div style="font-size:28px;font-weight:600;color:var(--text)">识别设置 · 结果预览</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><strong>Body / 15</strong>Outfit<br>weight 400</div>
+      <div style="font-size:15px;color:var(--text-2);line-height:1.75;max-width:560px">开启后系统会自动判断文件是否为发票，并提取代码、号码、日期、金额、税号等字段。支持 PDF · DOC · XLSX · 图片等多种格式。</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><strong>Caption / 11</strong>Outfit<br>weight 700 · uppercase</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3)">文件队列 · 处理状态 · 导出结果</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- 03 BUTTONS -->
+<section class="section fu">
+  <div class="sec-kicker">03 · Buttons</div>
+  <h2 class="sec-title">按钮</h2>
+  <p class="sec-sub">五种语义变体 × 三种尺寸，统一圆角与过渡动效。</p>
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div class="btn-row">
+      <button class="btn btn-primary btn-lg">▶ 开始处理</button>
+      <button class="btn btn-primary">▶ 开始处理</button>
+      <button class="btn btn-primary btn-sm">▶ 开始处理</button>
+      <button class="btn btn-primary" disabled>▶ 开始处理</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline">⬇ 导出结果</button>
+      <button class="btn btn-ghost">依赖检查</button>
+      <button class="btn btn-success">✓ 保存模板</button>
+      <button class="btn btn-danger">■ 结束服务</button>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- 04 INPUTS -->
+<section class="section fu">
+  <div class="sec-kicker">04 · Inputs</div>
+  <h2 class="sec-title">输入框</h2>
+  <p class="sec-sub">三种状态：默认、聚焦（橙色描边 + 光晕）、错误（红色描边）。</p>
+  <div class="input-row">
+    <div class="input-wrap">
+      <label class="input-label">模板标识</label>
+      <input class="input" placeholder="如 hotel_receipt">
+      <span class="input-hint">仅支持英文字母和下划线</span>
+    </div>
+    <div class="input-wrap">
+      <label class="input-label">模板名称（聚焦态）</label>
+      <input class="input" value="酒店收据" style="border-color:var(--primary);box-shadow:0 0 0 3px rgba(249,115,22,.12)">
+      <span class="input-hint">聚焦时橙色描边</span>
+    </div>
+    <div class="input-wrap">
+      <label class="input-label">识别关键词（错误态）</label>
+      <input class="input err" value="hotel住宿费">
+      <span class="input-hint err">⚠ 关键词格式有误，请用逗号分隔</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- 05 BADGES -->
+<section class="section fu">
+  <div class="sec-kicker">05 · Badges</div>
+  <h2 class="sec-title">标签 / 徽章</h2>
+  <p class="sec-sub">语义化颜色，配合状态点使用。</p>
+  <div class="badge-row">
+    <span class="badge b-orange"><span class="bdot"></span>处理中</span>
+    <span class="badge b-green"><span class="bdot"></span>已完成</span>
+    <span class="badge b-red"><span class="bdot"></span>处理失败</span>
+    <span class="badge b-amber"><span class="bdot"></span>已取消</span>
+    <span class="badge b-gray">等待中</span>
+    <span class="badge b-orange">PDF</span>
+    <span class="badge b-green">发票识别</span>
+    <span class="badge b-gray">快速模式</span>
+    <span class="badge b-amber">精准模式</span>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- 06 ALERTS -->
+<section class="section fu">
+  <div class="sec-kicker">06 · Alerts</div>
+  <h2 class="sec-title">提示条</h2>
+  <p class="sec-sub">四种语义，左边框 + 浅色背景的组合。</p>
+  <div class="alert a-info"><span class="alert-icon">ℹ</span><div class="alert-body"><div class="alert-title">处理提示</div><div class="alert-msg">当前队列共 5 个文件，预计耗时约 12 秒。</div></div></div>
+  <div class="alert a-success"><span class="alert-icon">✓</span><div class="alert-body"><div class="alert-title">处理完成</div><div class="alert-msg">5/5 文件已处理，共提取 24,831 字符，用时 9.4s。</div></div></div>
+  <div class="alert a-warn"><span class="alert-icon">⚠</span><div class="alert-body"><div class="alert-title">依赖缺失</div><div class="alert-msg">LibreOffice 未安装，DOC/DOCX 文件将无法处理。</div></div></div>
+  <div class="alert a-danger"><span class="alert-icon">✕</span><div class="alert-body"><div class="alert-title">处理失败</div><div class="alert-msg">文件损坏或格式不受支持，请检查后重新上传。</div></div></div>
+</section>
+
+<div class="divider"></div>
+
+<!-- 07 STATUS + PROGRESS + STATS -->
+<section class="section fu">
+  <div class="sec-kicker">07 · Status &amp; Progress</div>
+  <h2 class="sec-title">状态与进度</h2>
+  <p class="sec-sub">服务状态栏、进度条、统计卡片。</p>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:28px">
+    <div class="status-bar"><span class="sdot on"></span><span style="font-weight:600">服务运行中</span><span class="ssep"></span><span class="smeta">已处理 142 个文件 · 本次会话</span></div>
+    <div class="status-bar"><span class="sdot warn"></span><span style="font-weight:600">依赖降级</span><span class="ssep"></span><span class="smeta">LibreOffice 未安装，部分功能受限</span></div>
+    <div class="status-bar"><span class="sdot err"></span><span style="font-weight:600">服务异常</span><span class="ssep"></span><span class="smeta">无法连接后端，请检查服务状态</span></div>
+  </div>
+  <div style="margin-bottom:28px">
+    <div class="prog-item"><div class="prog-head"><span>处理进度</span><span>3/5 · 62%</span></div><div class="prog-track"><div class="prog-fill pf-orange" style="width:62%"></div></div></div>
+    <div class="prog-item"><div class="prog-head"><span>发票识别</span><span>完成</span></div><div class="prog-track"><div class="prog-fill pf-green" style="width:100%"></div></div></div>
+    <div class="prog-item"><div class="prog-head"><span>OCR 队列</span><span>28%</span></div><div class="prog-track"><div class="prog-fill pf-amber" style="width:28%"></div></div></div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-lbl">总字符数</div><div class="stat-val">24.8k</div><div class="stat-sub">有效字符</div></div>
+    <div class="stat-card"><div class="stat-lbl">处理耗时</div><div class="stat-val" style="color:var(--success)">9.4s</div><div class="stat-sub">实际用时</div></div>
+    <div class="stat-card"><div class="stat-lbl">表格数</div><div class="stat-val" style="color:var(--text)">12</div><div class="stat-sub">检测到的表格</div></div>
+    <div class="stat-card"><div class="stat-lbl">置信度</div><div class="stat-val" style="color:var(--amber)">0.82</div><div class="stat-sub">平均识别置信</div></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- 08 CARDS -->
+<section class="section fu">
+  <div class="sec-kicker">08 · Cards</div>
+  <h2 class="sec-title">卡片</h2>
+  <p class="sec-sub">默认卡片 + 三种语义强调变体（橙 / 绿 / 红左边框）。</p>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">📕</div>
+      <div class="card-title">年度财务报告.pdf</div>
+      <div class="card-desc">共 48 页，提取 18,432 字符，检测到 6 张表格。</div>
+      <div class="card-foot"><span class="badge b-green"><span class="bdot"></span>已完成</span><span style="font-size:12px;color:var(--text-3)">3.2s</span></div>
+    </div>
+    <div class="card card-accent">
+      <div class="card-icon">🏷</div>
+      <div class="card-title">发票识别结果</div>
+      <div class="card-desc">检测到增值税专用发票，置信度 0.94，已提取 11 个字段。</div>
+      <div class="card-foot"><span class="badge b-orange">发票</span><button class="btn btn-outline btn-sm">查看详情</button></div>
+    </div>
+    <div class="card card-success">
+      <div class="card-icon">✓</div>
+      <div class="card-title">批量处理完成</div>
+      <div class="card-desc">本轮 8 个文件全部处理成功，总字符 52,109，用时 24.1s。</div>
+      <div class="card-foot"><span class="badge b-green">全部成功</span><button class="btn btn-ghost btn-sm">⬇ 导出</button></div>
+    </div>
+    <div class="card card-danger">
+      <div class="card-icon">✕</div>
+      <div class="card-title">处理失败</div>
+      <div class="card-desc">文件已损坏或格式不受支持，请检查文件后重新上传。</div>
+      <div class="card-foot"><span class="badge b-red">失败</span><button class="btn btn-ghost btn-sm">重试</button></div>
+    </div>
+  </div>
+</section>
+
+<footer style="text-align:center;padding:48px 0 32px;border-top:1px solid var(--border);margin-top:72px;color:var(--text-3);font-size:13px">
+  <div style="font-family:var(--display);font-size:32px;font-weight:400;color:var(--text-2);margin-bottom:8px">Doc<em style="font-style:italic;color:var(--primary)">Flow</em> Design System</div>
+  <div>10 tokens · 8 sections · 1 cohesive language</div>
+</footer>
+
+</div>
+<script>
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.style.animationPlayState='running';obs.unobserve(e.target);}});
+},{threshold:0.06});
+document.querySelectorAll('.fu').forEach(el=>{el.style.animationPlayState='paused';obs.observe(el);});
+</script>
+</body>
+</html>

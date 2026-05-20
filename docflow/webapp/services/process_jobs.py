@@ -215,6 +215,7 @@ def _run_process_job(job_id: str) -> None:
                 progress_callback=report,
                 cancel_callback=cancel_requested,
                 force_reprocess=force_reprocess,
+                extract_invoice=invoice_extract,
             )
             result = _maybe_attach_invoice_fields(result, invoice_extract, confidence_threshold)
         else:
