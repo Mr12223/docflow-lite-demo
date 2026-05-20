@@ -1003,8 +1003,55 @@ nav{height:54px;padding:0 24px;background:#fff;border-bottom:1px solid var(--bor
 .dl-btn.jsn:hover{background:#F1FAF4;color:#237A41}
 .dl-scope{min-width:132px;padding:0 12px;background:#fff;border:1px solid var(--border);color:#374151}
 .more-fmt-menu{border-color:var(--border);border-radius:10px}
+.stats-body{padding:16px;background:#FBF8F2;gap:14px}
+.stats-section,.keyword-card,.more-stats-card,#detail-card{background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 8px 22px rgba(0,0,0,.035)}
+.stats-section{padding:14px}
+.stats-section-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:12px}
+.stats-alert{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid rgba(249,115,22,.22);border-radius:16px;background:#FFF4EA;color:#9A5A1E;box-shadow:0 6px 16px rgba(249,115,22,.05)}
+.stats-alert-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#F97316;color:#fff;font-size:14px;font-weight:900;flex-shrink:0}
+.stats-alert-title{font-size:14px;font-weight:800;color:#9A5A1E;line-height:1.25}
+.stats-alert-text{font-size:12px;color:#8A6A4E;line-height:1.55;margin-top:2px}
+.stats-core-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.stat-card.stat-core{min-height:104px;border-radius:16px;padding:13px 14px;background:#FFFDFB;border-color:var(--border);box-shadow:none}
+.stat-card.stat-core:hover{border-color:rgba(249,115,22,.26);background:#fff}
+.stat-lbl{font-family:var(--font);font-size:12px;letter-spacing:0;text-transform:none;color:var(--dim);font-weight:800;margin-bottom:8px}
+.stat-val{font-family:var(--font);font-size:26px;line-height:1.05;font-weight:850;color:var(--accent);display:flex;align-items:baseline;gap:4px;min-height:28px}
+.stat-number{color:var(--accent);font-size:26px;font-weight:850;letter-spacing:0}
+.stat-unit{font-size:12px;color:var(--dim);font-weight:700}
+.stat-sub{font-size:12px;color:var(--muted);line-height:1.45;margin-top:7px}
+.keyword-card{padding:14px}
+.kw-cloud{gap:7px;margin-top:10px}
+.kw-tag{font-family:var(--font);font-size:12px;font-weight:700;padding:6px 10px;background:#FFF7ED;border:1px solid rgba(249,115,22,.18);border-radius:999px;color:#9A5A1E}
+.kw-cnt{font-size:11px;color:#B08255;margin-left:4px}
+.kw-empty{width:100%;padding:14px;border:1px dashed var(--border);border-radius:14px;background:#FFFDFB;color:var(--muted);font-size:12px;text-align:center}
+.more-stats-card{padding:14px}
+.more-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.mini-stat{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border:1px solid var(--border);border-radius:12px;background:#FFFDFB}
+.mini-stat span{font-size:12px;color:var(--dim);font-weight:700}
+.mini-stat b{font-size:13px;color:#374151;font-weight:800;text-align:right}
+#detail-card{padding:14px}
+#detail-card .detail-title,.more-stats-card .detail-title{font-family:var(--font);font-size:14px;letter-spacing:0;text-transform:none;color:var(--text);font-weight:800;margin-bottom:12px}
+#detail-rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#detail-card .detail-row{display:grid;grid-template-columns:minmax(78px,112px) minmax(0,1fr);gap:8px;align-items:center;margin:0;padding:9px 10px;border:1px solid var(--border);border-radius:12px;background:#FFFDFB;font-size:12px}
+#detail-card .detail-key{font-family:var(--font);font-size:12px;color:var(--dim);font-weight:800;line-height:1.35}
+#detail-card .detail-val{font-family:var(--font);font-size:12px;color:#374151;line-height:1.45;max-height:none;overflow:hidden;white-space:normal;text-overflow:ellipsis}
+.detail-val.status-cancelled{color:#B45309;font-weight:800}
+.report-detail-row{grid-column:1/-1!important;grid-template-columns:minmax(78px,112px) minmax(0,1fr) auto!important}
+.report-folder{font-size:12px;font-weight:800;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.report-actions{display:flex;gap:6px;justify-content:flex-end}
+.report-btn{height:28px;padding:0 10px;border-radius:8px;border:1px solid rgba(249,115,22,.24);background:#FFF4EA;color:#F97316;font-size:12px;font-weight:800;cursor:pointer;transition:all .15s}
+.report-btn:hover{border-color:rgba(249,115,22,.42);background:#FFE8D2}
+.report-btn.secondary{border-color:var(--border);background:#fff;color:#6B7280}
+.report-btn.secondary:hover{background:#FFFDFB;color:#374151}
+.summary-card{border-radius:16px;padding:13px 14px}
+.stats-body.fs-sm .stat-card.stat-core .stat-val,.stats-body.fs-sm .stat-number{font-size:22px}
+.stats-body.fs-sm .stat-card.stat-core .stat-lbl,.stats-body.fs-sm .stat-card.stat-core .stat-sub,.stats-body.fs-sm .stat-unit,.stats-body.fs-sm .kw-tag,.stats-body.fs-sm .kw-cnt,.stats-body.fs-sm .kw-empty,.stats-body.fs-sm .mini-stat span,.stats-body.fs-sm .mini-stat b,.stats-body.fs-sm #detail-card .detail-key,.stats-body.fs-sm #detail-card .detail-val{font-size:12px}
 @media (min-width:1481px){
   :root{--left-w:300px;--mid-w:320px}
+}
+@media (max-width:1180px){
+  .stats-core-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .more-stats-grid,#detail-rows{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:860px){
   .opts-col .col-body{padding:10px}
@@ -1026,6 +1073,9 @@ nav{height:54px;padding:0 24px;background:#fff;border-bottom:1px solid var(--bor
   .result-foot{height:auto}
   .dl-scope{width:100%}
   .ph-feat-card{width:100%;max-width:none}
+  .stats-core-grid,.more-stats-grid,#detail-rows{grid-template-columns:1fr}
+  .report-detail-row{grid-template-columns:1fr!important}
+  .report-actions{justify-content:flex-start;flex-wrap:wrap}
 }
 /* Nav status */
 .nav-status{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);font-weight:500}
@@ -1356,27 +1406,38 @@ nav{height:54px;padding:0 24px;background:#fff;border-bottom:1px solid var(--bor
     <div class="tab-pane" id="tab-stats">
       <div class="placeholder" id="ph-stats"><div class="ph-icon">📊</div><div class="ph-txt">暂无统计数据</div><div class="ph-sub">处理文件后，这里将显示字符数、段落数、关键词分布等详细统计信息</div></div>
       <div class="stats-body" id="stats-body" style="display:none">
-        <div class="stat-row">
-          <div class="stat-card"><div class="stat-lbl">总字符数</div><div class="stat-val" id="s-chars">—</div><div class="stat-sub">有效字符</div></div>
-          <div class="stat-card"><div class="stat-lbl">中文字数</div><div class="stat-val" id="s-zh">—</div><div class="stat-sub">汉字数量</div></div>
-          <div class="stat-card"><div class="stat-lbl">英文单词</div><div class="stat-val" id="s-en">—</div><div class="stat-sub">估算词数</div></div>
-          <div class="stat-card"><div class="stat-lbl">段落数</div><div class="stat-val" id="s-para">—</div><div class="stat-sub">文本段落</div></div>
+        <div class="stats-alert" id="stats-cancel-banner" style="display:none">
+          <div class="stats-alert-icon">!</div>
+          <div>
+            <div class="stats-alert-title">任务已取消</div>
+            <div class="stats-alert-text">批量测试已停止，部分统计数据可能未生成。</div>
+          </div>
         </div>
-        <div class="stat-row">
-          <div class="stat-card stat-half"><div class="stat-lbl">预计阅读时长</div><div class="stat-val" id="s-readtime">—</div><div class="stat-sub">按400字/分钟估算</div></div>
-          <div class="stat-card stat-half"><div class="stat-lbl">页数 / 幻灯片</div><div class="stat-val" id="s-pages">—</div><div class="stat-sub">文档页数</div></div>
-          <div class="stat-card"><div class="stat-lbl">表格数</div><div class="stat-val" id="s-tables">—</div><div class="stat-sub">检测到的表格</div></div>
-          <div class="stat-card"><div class="stat-lbl">处理耗时</div><div class="stat-val" id="s-time">—</div><div class="stat-sub">秒</div></div>
+        <div class="stats-section">
+          <div class="stats-section-title">核心统计</div>
+          <div class="stats-core-grid">
+            <div class="stat-card stat-core" id="card-s-chars"><div class="stat-lbl">总字符数</div><div class="stat-val" id="s-chars"></div><div class="stat-sub">有效字符</div></div>
+            <div class="stat-card stat-core" id="card-s-zh"><div class="stat-lbl">中文字数</div><div class="stat-val" id="s-zh"></div><div class="stat-sub">汉字数量</div></div>
+            <div class="stat-card stat-core" id="card-s-en"><div class="stat-lbl">英文单词</div><div class="stat-val" id="s-en"></div><div class="stat-sub">估算词数</div></div>
+            <div class="stat-card stat-core" id="card-s-time"><div class="stat-lbl">处理耗时</div><div class="stat-val" id="s-time"></div><div class="stat-sub">任务用时</div></div>
+            <div class="stat-card stat-core" id="card-s-tables"><div class="stat-lbl">表格数</div><div class="stat-val" id="s-tables"></div><div class="stat-sub">检测到的表格</div></div>
+            <div class="stat-card stat-core" id="card-s-size"><div class="stat-lbl">文件大小</div><div class="stat-val" id="s-size"></div><div class="stat-sub">原始文件</div></div>
+            <div class="stat-card stat-core" id="card-s-files"><div class="stat-lbl">已处理文件</div><div class="stat-val" id="s-files"></div><div class="stat-sub">本次会话</div></div>
+            <div class="stat-card stat-core" id="card-s-readtime"><div class="stat-lbl">预计阅读时长</div><div class="stat-val" id="s-readtime"></div><div class="stat-sub">按常规阅读速度估算</div></div>
+          </div>
         </div>
-        <div class="stat-row">
-          <div class="stat-card"><div class="stat-lbl">文件大小</div><div class="stat-val" id="s-size">—</div><div class="stat-sub">原始文件</div></div>
-          <div class="stat-card"><div class="stat-lbl">已处理文件</div><div class="stat-val" id="s-files">—</div><div class="stat-sub">本次会话</div></div>
-          <div class="stat-card"><div class="stat-lbl">标点符号</div><div class="stat-val" id="s-punct">—</div><div class="stat-sub">标点数量</div></div>
-          <div class="stat-card"><div class="stat-lbl">字符密度</div><div class="stat-val" id="s-density">—</div><div class="stat-sub">字符/KB</div></div>
-        </div>
-        <div class="stat-card stat-full">
+        <div class="stat-card stat-full keyword-card">
           <div class="stat-lbl">关键词分布</div>
-          <div class="kw-cloud" id="kw-cloud"><span style="color:var(--dim);font-size:11px">处理后自动提取</span></div>
+          <div class="kw-cloud" id="kw-cloud"><div class="kw-empty">暂无关键词</div></div>
+        </div>
+        <div class="detail-card more-stats-card" id="more-stats-card" style="display:none">
+          <div class="detail-title">更多统计</div>
+          <div class="more-stats-grid">
+            <div class="mini-stat" id="more-s-para"><span>段落数</span><b id="s-para"></b></div>
+            <div class="mini-stat" id="more-s-pages"><span>页数 / 幻灯片</span><b id="s-pages"></b></div>
+            <div class="mini-stat" id="more-s-punct"><span>标点符号</span><b id="s-punct"></b></div>
+            <div class="mini-stat" id="more-s-density"><span>字符密度</span><b id="s-density"></b></div>
+          </div>
         </div>
         <div class="summary-card" id="summary-card" style="display:none">
           <div class="summary-title">自动摘要</div>
@@ -1400,7 +1461,7 @@ nav{height:54px;padding:0 24px;background:#fff;border-bottom:1px solid var(--bor
           <div id="error-rows"></div>
         </div>
         <div class="detail-card" id="detail-card" style="display:none">
-          <div class="detail-title">文档元数据</div>
+          <div class="detail-title">任务详情</div>
           <div id="detail-rows"></div>
         </div>
       </div>
@@ -2369,6 +2430,7 @@ function buildBatchResult(data){
       char_count:text.length,
       processing_ms:Math.round((data.finished_at&&data.started_at?(data.finished_at-data.started_at)*1000:0)),
       file_count:s.total||data.total||0,
+      completed_count:data.completed_count ?? ((Number(s.success||0)+Number(s.failed||0))||0),
       failed_count:s.failed||0,
     },
     meta:{
@@ -2384,6 +2446,9 @@ function buildBatchResult(data){
       '预期匹配':s.expected_checked?`${s.expected_matched}/${s.expected_checked}`:'--',
       '执行返回码':data.return_code??'--',
     },
+    report_dir:data.report_dir||'',
+    report_urls:data.report_urls||{},
+    state:data.state||'',
     file:{name:'batch_test_report',size:0},
   };
 }
@@ -2600,6 +2665,122 @@ function formatMetaValue(value){
     }).join(' ｜ ')+(entries.length>3?' …':'');
   }
   return String(value);
+}
+function isEmptyMetric(value){
+  return value==null || value==='' || value==='—' || value==='--' || value==='[]' || value==='{}';
+}
+function splitNumberUnit(value,defaultUnit=''){
+  if(value==null || value==='')return {num:'',unit:defaultUnit};
+  const text=String(value).trim();
+  const match=text.match(/^([<>]?\s*[-\d.,]+(?:\.\d+)?)\s*(.*)$/);
+  if(match)return {num:match[1].replace(/\s+/g,' '),unit:match[2]||defaultUnit};
+  return {num:text,unit:defaultUnit};
+}
+function jsStringArg(value){
+  return esc(String(value||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' '));
+}
+function formatDurationStat(ms){
+  const value=Number(ms||0);
+  if(!Number.isFinite(value) || value<=0)return null;
+  const seconds=value/1000;
+  if(seconds<60){
+    const num=seconds<10?seconds.toFixed(1):seconds.toFixed(1).replace(/\.0$/,'');
+    return {num,unit:'秒'};
+  }
+  const minutes=seconds/60;
+  if(minutes<60)return {num:minutes.toFixed(1).replace(/\.0$/,''),unit:'分钟'};
+  return {num:(minutes/60).toFixed(1).replace(/\.0$/,''),unit:'小时'};
+}
+function formatSizeStat(bytes){
+  const value=Number(bytes||0);
+  if(!Number.isFinite(value) || value<0)return null;
+  if(value<1024)return {num:String(Math.round(value)),unit:'B'};
+  if(value<1048576)return {num:(value/1024).toFixed(1).replace(/\.0$/,''),unit:'KB'};
+  return {num:(value/1048576).toFixed(1).replace(/\.0$/,''),unit:'MB'};
+}
+function setStatMetric(id,value,unit='',show=true){
+  const el=document.getElementById(id);
+  const card=document.getElementById(`card-${id}`);
+  if(!el || !card)return;
+  const shouldShow=!!show && !isEmptyMetric(value);
+  card.style.display=shouldShow?'':'none';
+  if(!shouldShow){el.innerHTML='';return;}
+  const parts=(typeof value==='object' && value && 'num' in value)?value:splitNumberUnit(value,unit);
+  el.innerHTML=`<span class="stat-number">${esc(parts.num)}</span>${parts.unit?`<span class="stat-unit">${esc(parts.unit)}</span>`:''}`;
+}
+function setMiniStat(id,value,show=true){
+  const row=document.getElementById(`more-${id}`);
+  const el=document.getElementById(id);
+  if(!row || !el)return false;
+  const shouldShow=!!show && !isEmptyMetric(value);
+  row.style.display=shouldShow?'':'none';
+  if(shouldShow)el.textContent=value;
+  else el.textContent='';
+  return shouldShow;
+}
+function resultTaskState(result){
+  const meta=result?.meta||{};
+  const value=meta['任务状态']||meta.state||meta.status||result?.state||'';
+  return String(value||'').toLowerCase();
+}
+function reportFolderName(pathValue){
+  const text=String(pathValue||'').trim();
+  if(!text || text==='--' || text==='—')return '';
+  const parts=text.split(/[\\/]+/).filter(Boolean);
+  return parts.length?parts[parts.length-1]:text;
+}
+function getReportInfo(result){
+  const meta=result?.meta||{};
+  const fullPath=result?.report_dir||meta['报告目录']||meta.report_dir||'';
+  const urls=result?.report_urls||result?.reportUrls||meta.report_urls||{};
+  return {
+    fullPath:String(fullPath||''),
+    folder:reportFolderName(fullPath),
+    url:urls.html||urls.markdown||urls.json||urls.csv||meta['报告链接']||'',
+  };
+}
+function openReportUrl(url){
+  if(!url){toast('当前没有可打开的报告链接','var(--amber)');return;}
+  window.open(url,'_blank');
+}
+async function copyReportPath(pathValue){
+  if(!pathValue){toast('当前没有可复制的报告路径','var(--amber)');return;}
+  try{
+    await navigator.clipboard.writeText(pathValue);
+    toast('已复制报告路径','var(--accent3)');
+  }catch(e){
+    toast(`复制失败: ${e.message}`,'var(--accent2)');
+  }
+}
+function renderTaskDetails(result){
+  const detCard=document.getElementById('detail-card');
+  const rows=document.getElementById('detail-rows');
+  if(!detCard || !rows)return;
+  const meta=result?.meta||{};
+  const report=getReportInfo(result);
+  const entries=[];
+  Object.entries(meta).forEach(([key,value])=>{
+    if(key==='page_sources' || key==='报告目录' || key==='report_dir' || key==='report_urls' || key==='报告链接')return;
+    const formatted=formatMetaValue(value);
+    if(isEmptyMetric(formatted))return;
+    entries.push([key,formatted]);
+  });
+  const reportHtml=report.folder?`
+    <div class="detail-row report-detail-row">
+      <span class="detail-key">报告目录</span>
+      <span class="detail-val"><span class="report-folder">${esc(report.folder)}</span></span>
+      <span class="report-actions">
+        <button class="report-btn" onclick="openReportUrl('${jsStringArg(report.url)}')">打开报告</button>
+        <button class="report-btn secondary" onclick="copyReportPath('${jsStringArg(report.fullPath)}')">复制路径</button>
+      </span>
+    </div>`:'';
+  const html=entries.slice(0,10).map(([key,value])=>{
+    const stateCls=key==='任务状态' && String(value).toLowerCase()==='cancelled'?' status-cancelled':'';
+    const label=key==='任务状态' && String(value).toLowerCase()==='cancelled'?'已取消':value;
+    return `<div class="detail-row"><span class="detail-key">${esc(key)}</span><span class="detail-val${stateCls}">${esc(label)}</span></div>`;
+  }).join('');
+  rows.innerHTML=reportHtml+html;
+  detCard.style.display=(reportHtml || html)?'block':'none';
 }
 function renderPdfCompare(result,rawText=''){
   const card=document.getElementById('pdf-compare-card');
@@ -3705,18 +3886,27 @@ function showResult(result,fname){
   const readMins=zhCount>enCount?(zhCount/400):(enCount/200);
   const readTimeStr=readMins<1?'< 1 分钟':readMins<60?`${Math.ceil(readMins)} 分钟`:`${(readMins/60).toFixed(1)} 小时`;
   const pages=result.meta?.pages||result.meta?.page_count||result.meta?.slide_count||result.meta?.['页数']||result.meta?.['幻灯片数']||s.page_count||'—';
-  document.getElementById('s-chars').textContent=totalCharCount.toLocaleString();
-  document.getElementById('s-zh').textContent=zhCount.toLocaleString();
-  document.getElementById('s-en').textContent=enCount.toLocaleString();
-  document.getElementById('s-para').textContent=s.paragraph_count||s.paras||'—';
-  document.getElementById('s-readtime').textContent=readTimeStr;
-  document.getElementById('s-pages').textContent=String(pages);
-  document.getElementById('s-tables').textContent=(result.tables||[]).length;
-  document.getElementById('s-time').textContent=s.processing_ms?fmtDuration(s.processing_ms):'—';
-  document.getElementById('s-size').textContent=result.file?fmtSz(result.file.size):'—';
-  document.getElementById('s-files').textContent=files.filter(f=>f.status==='done').length;
-  document.getElementById('s-density').textContent=density>0?density.toLocaleString():'—';
-  document.getElementById('s-punct').textContent=punctCount.toLocaleString();
+  const taskState=resultTaskState(result);
+  const cancelBanner=document.getElementById('stats-cancel-banner');
+  if(cancelBanner)cancelBanner.style.display=taskState==='cancelled'?'flex':'none';
+  setStatMetric('s-chars',totalCharCount?totalCharCount.toLocaleString():null,'字');
+  setStatMetric('s-zh',zhCount?zhCount.toLocaleString():null,'字');
+  setStatMetric('s-en',enCount?enCount.toLocaleString():null,'词');
+  setStatMetric('s-time',formatDurationStat(s.processing_ms));
+  setStatMetric('s-tables',(result.tables||[]).length,'个',true);
+  setStatMetric('s-size',result.file && Number(result.file.size)>0?formatSizeStat(result.file.size):null);
+  const queueDoneCount=files.filter(f=>f.status==='done').length;
+  const doneFileCount=Number.isFinite(Number(s.completed_count))?Number(s.completed_count):(queueDoneCount || Number(s.file_count||0));
+  setStatMetric('s-files',doneFileCount,'个');
+  setStatMetric('s-readtime',readTimeStr);
+  const moreVisible=[
+    setMiniStat('s-para',s.paragraph_count||s.paras||null),
+    setMiniStat('s-pages',!isEmptyMetric(pages)?String(pages):null),
+    setMiniStat('s-punct',punctCount?punctCount.toLocaleString():null),
+    setMiniStat('s-density',density>0?`${density.toLocaleString()} 字符/KB`:null),
+  ].some(Boolean);
+  const moreCard=document.getElementById('more-stats-card');
+  if(moreCard)moreCard.style.display=moreVisible?'block':'none';
   // Keywords
   const kwCloud=document.getElementById('kw-cloud');
   const kws=s.keywords||[];
@@ -3726,24 +3916,14 @@ function showResult(result,fname){
       const count=Array.isArray(item)?item[1]:'';
       return `<span class="kw-tag">${word}<span class="kw-cnt">${count}</span></span>`;
     }).join('');
-  }else kwCloud.innerHTML='<span style="color:var(--dim);font-size:11px">暂无关键词</span>';
+  }else kwCloud.innerHTML='<div class="kw-empty">暂无关键词</div>';
   // Summary
   const sumCard=document.getElementById('summary-card');
   if(s.summary){sumCard.style.display='block';document.getElementById('summary-text').textContent=s.summary;}
   else sumCard.style.display='none';
   renderPdfCompare(result,rawText);
   renderErrorCenter(result);
-  // Metadata
-  const detCard=document.getElementById('detail-card');
-  const meta=result.meta||{};
-  if(Object.keys(meta).length){
-    detCard.style.display='block';
-    document.getElementById('detail-rows').innerHTML=Object.entries(meta)
-      .filter(([k])=>k!=='page_sources')
-      .slice(0,16).map(([k,v])=>
-      `<div class="detail-row"><span class="detail-key">${esc(k)}</span><span class="detail-val">${esc(formatMetaValue(v))}</span></div>`
-    ).join('');
-  }else detCard.style.display='none';
+  renderTaskDetails(result);
   renderInvoiceTab(result);
   document.getElementById('result-file').textContent=fname||'—';
   // Update rsb state icon based on result
