@@ -896,16 +896,157 @@ body{background:var(--bg)}
   .batch-test-grid,.pdf-mode-row,.maintenance-grid,.batch-test-actions{grid-template-columns:1fr}
   .batch-test-opt{min-height:52px}
 }
+/* Final homepage polish layer */
+:root{
+  --bg:#F6F3EE;--s1:#FFFFFF;--s2:#FFFDFB;--s3:#F3EEE8;
+  --border:#E9E2D9;--border2:#EEE7DE;
+  --accent:#F97316;--accent2:#E85D4F;--accent3:#16A34A;
+  --text:#111827;--dim:#6B7280;--muted:#A1A1AA;
+  --wash:#FFF4EA;--mint:#F1FAF4;--shadow-md:0 8px 24px rgba(0,0,0,.06);
+  --left-w:300px;--mid-w:320px;
+}
+body{background:var(--bg);font-size:13px;color:#374151}
+nav{height:54px;padding:0 24px;background:#fff;border-bottom:1px solid var(--border2);box-shadow:0 2px 10px rgba(17,24,39,.035)}
+.logo{font-size:18px}
+.logo-box{width:32px;height:32px;border-radius:10px;background:var(--wash);border-color:rgba(249,115,22,.22)}
+.nav-title{font-size:15px;font-weight:700;color:var(--text)}
+.nav-status{font-size:13px;color:#374151;font-weight:600}
+.nav-pill,.nav-stop-btn{height:34px;border-radius:10px;padding:0 14px;font-size:13px}
+.nav-pill{background:#fff;border-color:var(--border);color:#374151}
+.nav-pill:hover{background:#FFFDFB;border-color:#DED6CA}
+.nav-stop-btn{border-color:var(--accent2);background:var(--accent2);color:#fff}
+.app{padding:18px 22px;gap:16px}
+.col{border-color:var(--border);border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.045)}
+.col-head{padding:13px 18px 12px;border-bottom-color:var(--border2);background:#fff}
+.col-title{font-size:16px;font-weight:800;color:var(--text)}
+.col-badge{background:var(--wash);color:var(--accent);border:1px solid rgba(249,115,22,.2);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+.drop-zone{margin:12px 12px 0;padding:18px 14px;background:#FFFDFB;border:1.5px dashed var(--border);border-radius:14px}
+.drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:#FFF7ED}
+.drop-zone.over{transform:translateY(-1px)}
+.drop-icon{font-size:34px;margin-bottom:9px}
+.drop-txt{font-size:14px;font-weight:800;color:var(--text);margin-bottom:5px}
+.drop-formats{font-size:12px;color:var(--muted);opacity:1;line-height:1.6;margin-bottom:12px}
+.drop-btn{height:32px;border-radius:10px;border-color:var(--border);background:#fff;color:#374151;font-size:13px}
+.drop-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--wash)}
+.file-empty{padding:28px 14px 24px;color:#9CA3AF;font-size:12px;display:flex!important;flex-direction:column;align-items:center;gap:7px}
+.file-empty[style*="none"]{display:none!important}
+.file-empty-icon{font-size:30px;opacity:.38}
+.file-empty-text{font-size:12px;color:#9CA3AF;line-height:1.65}
+.file-empty-note{font-size:12px;color:var(--muted);line-height:1.55;max-width:210px}
+.file-item{border-radius:11px;padding:9px 10px;margin-bottom:5px}
+.file-item:hover{background:#FFFDFB}
+.col-foot{padding:12px 16px;border-top-color:var(--border2);background:#FFFDFB}
+.process-actions{gap:8px}
+.run-btn,.process-cancel-btn{height:38px;padding:0 14px;border-radius:10px;font-size:13px;font-weight:800;letter-spacing:0}
+.run-btn:not(:disabled){background:#F97316;box-shadow:0 8px 18px rgba(249,115,22,.22);transform:none}
+.run-btn:hover:not(:disabled){background:#EA6C0A;box-shadow:0 10px 22px rgba(249,115,22,.26);transform:translateY(-1px)}
+.run-btn:disabled{background:#FED7AA;color:#fff;opacity:.7;cursor:not-allowed;box-shadow:none;transform:none}
+.process-cancel-btn{background:#F6F3EF;border:1px solid var(--border);color:#9CA3AF}
+.process-cancel-btn:hover:not(:disabled){background:#EEE7DE;color:#6B7280}
+.process-cancel-btn:disabled{opacity:1;background:#F7F4EF;color:#B8B3AE;cursor:not-allowed}
+.opts-col .col-body{padding:12px;display:flex;flex-direction:column;gap:10px}
+.settings-group{background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 6px 18px rgba(0,0,0,.035);overflow:hidden}
+.settings-group .opts-section{padding:13px 14px}
+.settings-group .opts-divider{height:1px;background:var(--border2);margin:0 14px}
+.invoice-toggle{gap:10px;padding:0}
+.invoice-toggle-check{width:21px;height:21px;border-radius:7px;background:var(--accent);border-color:var(--accent)}
+.invoice-toggle.off .invoice-toggle-check{background:#fff;border-color:#D7D0C6}
+.invoice-toggle-label{font-size:15px;font-weight:800;color:var(--text)}
+.invoice-toggle-desc{font-size:12px;color:var(--dim);line-height:1.65;margin:9px 0 0 31px}
+.opts-label{font-size:14px;font-weight:800;margin-bottom:9px}
+.record-count{margin-bottom:10px}
+.record-num{font-size:22px;color:var(--text)}
+.record-label,.record-unit{font-size:12px;color:var(--dim)}
+.btn-row-2{gap:8px}
+.btn-row-2 .sec-btn{height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--border);background:#fff;color:#374151;font-size:13px;font-weight:700}
+.btn-row-2 .sec-btn:hover{background:#FFFDFB;border-color:#DED6CA}
+.btn-row-2 .sec-btn.orange-outline{border-color:var(--accent);color:var(--accent);background:#fff}
+.btn-row-2 .sec-btn.orange-outline:hover{background:var(--wash)}
+.opts-col>.col-body>.opts-divider{display:none}
+.opts-col>.col-body>.opts-section{padding:0}
+.settings-panel{border-radius:18px;border-color:var(--border);box-shadow:0 6px 18px rgba(0,0,0,.04);background:#fff}
+.settings-panel .collapsible-head{height:58px;min-height:58px;padding:0 18px;border-radius:18px}
+.settings-panel .collapsible-head:hover{background:#FFF7ED}
+.settings-icon{width:32px;height:32px;border-radius:12px;background:var(--wash);color:var(--accent);font-size:16px}
+.settings-title{font-size:15px;font-weight:800}
+.settings-panel .collapsible-chevron{width:30px;height:30px;background:var(--wash);border-color:rgba(249,115,22,.2);color:var(--accent)}
+.settings-panel.advanced-card .collapsible-head{height:58px;min-height:58px}
+.result-status-bar{margin:12px 18px 0;padding:9px 12px;background:#FFFDFB;border:1px solid var(--border2);border-radius:8px;font-size:12px;gap:12px}
+.rsb-left{font-size:12px;color:#374151;min-width:0}
+.rsb-icon{width:18px;height:18px}
+.rsb-right{margin-left:auto;justify-content:flex-end;text-align:right;font-size:12px;color:var(--dim);min-width:0;flex-wrap:wrap}
+#result-file{display:inline-block;max-width:260px;vertical-align:bottom;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#374151}
+.tab-bar{padding:0 18px;background:#fff;border-bottom-color:var(--border2)}
+.tab{font-size:13px;padding:10px 12px}
+.result-body{background:#FBF8F2}
+.placeholder{padding:36px 28px 7%;background:#FFFDFB}
+.ph-illo{margin-bottom:14px;filter:drop-shadow(0 8px 18px rgba(249,115,22,.08))}
+.ph-title{font-size:15px;font-weight:800;margin-bottom:8px;color:var(--text)}
+.ph-body{font-size:12px;color:var(--dim);line-height:1.75;max-width:440px}
+.ph-feature-cards{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap;justify-content:center}
+.ph-feat-card{display:flex;flex-direction:column;gap:5px;min-width:132px;max-width:168px;padding:13px 14px;background:#FFFDFB;border:1px solid var(--border);border-radius:12px;align-items:flex-start;text-align:left;box-shadow:0 6px 16px rgba(0,0,0,.025);transition:border-color .15s,background .15s}
+.ph-feat-card:hover{border-color:rgba(249,115,22,.28);background:#FFF7ED}
+.ph-feat-icon{font-size:20px;color:var(--accent);opacity:.72}
+.ph-feat-title{font-size:14px;font-weight:800;color:var(--text)}
+.ph-feat-desc{font-size:12px;color:var(--dim);line-height:1.5}
+.ph-txt{font-size:14px;font-weight:800;color:var(--text)}
+.ph-sub{font-size:12px;color:var(--dim);max-width:300px}
+.result-foot{height:52px;padding:9px 18px;border-top:1px solid var(--border2);background:#FFFDFB;gap:10px}
+.dl-label{font-size:13px;color:#374151;letter-spacing:0}
+.dl-group{gap:8px}
+.dl-btn,.more-fmt-btn,.copy-btn,.dl-scope{height:32px;border-radius:8px;font-size:13px}
+.dl-btn,.more-fmt-btn{padding:0 14px;background:#fff;border:1px solid var(--border);color:#374151}
+.dl-btn:hover,.more-fmt-btn:hover,.copy-btn:hover{background:#FFF7ED;border-color:#DED6CA}
+.dl-btn.txt{border-color:rgba(249,115,22,.32);color:var(--accent)}
+.dl-btn.txt:hover{background:var(--wash);color:var(--accent)}
+.dl-btn.jsn{border-color:rgba(22,163,74,.24);color:#2F8C4E}
+.dl-btn.jsn:hover{background:#F1FAF4;color:#237A41}
+.dl-scope{min-width:132px;padding:0 12px;background:#fff;border:1px solid var(--border);color:#374151}
+.more-fmt-menu{border-color:var(--border);border-radius:10px}
+@media (min-width:1481px){
+  :root{--left-w:300px;--mid-w:320px}
+}
+@media (max-width:860px){
+  .opts-col .col-body{padding:10px}
+  .app{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto auto auto;
+    grid-template-areas:
+      "result"
+      "files"
+      "opts";
+    min-height:auto;
+  }
+  .result-status-bar{align-items:flex-start}
+  .rsb-right{width:100%;justify-content:flex-start;text-align:left;margin-left:25px}
+  .ph-feature-cards{justify-content:center}
+}
+@media (max-width:640px){
+  nav{height:auto}
+  .result-foot{height:auto}
+  .dl-scope{width:100%}
+  .ph-feat-card{width:100%;max-width:none}
+}
 /* Nav status */
-.ph-feature-cards{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center}
-.ph-feat-card{display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 18px;background:var(--s1);border:1px solid var(--border);border-radius:10px;min-width:100px;max-width:130px;text-align:center;transition:border-color .15s}
-.ph-feat-card:hover{border-color:rgba(249,115,22,.28)}
-.ph-feat-icon{font-size:22px;opacity:.6}
-.ph-feat-title{font-size:12px;font-weight:600;color:var(--text)}
-.ph-feat-desc{font-size:11px;color:var(--muted);line-height:1.4}
 .nav-status{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);font-weight:500}
 .nav-status-dot{width:8px;height:8px;border-radius:50%;background:var(--accent3);box-shadow:0 0 0 2px rgba(22,163,74,.2);animation:pulse-green 2s infinite}
 @keyframes pulse-green{0%,100%{box-shadow:0 0 0 2px rgba(22,163,74,.2)}50%{box-shadow:0 0 0 4px rgba(22,163,74,.12)}}
+@media (max-width:860px){
+  .app{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto auto auto;
+    grid-template-areas:
+      "result"
+      "files"
+      "opts";
+    min-height:auto;
+  }
+  .opts-col .col-body{padding:10px}
+}
+@media (max-width:640px){
+  .app{padding:10px}
+  .result-foot{height:auto}
+}
 </style>
 </head>
 <body>
@@ -941,6 +1082,7 @@ body{background:var(--bg)}
       <div class="file-empty" id="file-empty">
         <span class="file-empty-icon">📭</span>
         <span class="file-empty-text">暂无文件<br>拖拽或点击上方添加</span>
+        <span class="file-empty-note">支持单文件和多文件上传，处理后可在右侧查看结果</span>
       </div>
     </div>
     <div class="batch-bar" id="batch-bar">
@@ -972,33 +1114,35 @@ body{background:var(--bg)}
 <div class="col opts-col">
   <div class="col-head"><span class="col-title">识别设置</span></div>
   <div class="col-body">
-    <div class="opts-section invoice-section" style="padding-bottom:16px">
-      <div class="invoice-toggle" id="invoice-opt" onclick="toggleInvoiceOpt(this)">
-        <div class="invoice-toggle-check" id="invoice-ck">
-          <svg viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-            <polyline points="2,7 5.5,10.5 12,3"/>
-          </svg>
+    <div class="settings-group">
+      <div class="opts-section invoice-section" style="padding-bottom:16px">
+        <div class="invoice-toggle" id="invoice-opt" onclick="toggleInvoiceOpt(this)">
+          <div class="invoice-toggle-check" id="invoice-ck">
+            <svg viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+              <polyline points="2,7 5.5,10.5 12,3"/>
+            </svg>
+          </div>
+          <span class="invoice-toggle-label">启用发票识别</span>
         </div>
-        <span class="invoice-toggle-label">启用发票识别</span>
+        <p class="invoice-toggle-desc">开启后系统会自动判断文件是否为发票，并提取代码、号码、日期、金额、税号等字段。</p>
       </div>
-      <p class="invoice-toggle-desc">开启后系统会自动判断文件是否为发票，并提取代码、号码、日期、金额、税号等字段。</p>
-    </div>
-    <div class="opts-divider"></div>
-    <div class="opts-section" style="padding-bottom:10px">
-      <div class="opts-label">📋 发票记录</div>
-      <div class="record-count">
-        <span class="record-label">已保存</span>
-        <span class="record-num" id="invoice-record-count">0</span>
-        <span class="record-unit">条</span>
-      </div>
-      <div class="btn-row-2">
-        <button class="sec-btn" onclick="togglePanel('invoice_records')">查看记录</button>
-        <button class="sec-btn orange-outline" onclick="exportInvoices()">⬇ 导出 CSV</button>
-      </div>
-      <div class="collapsible-panel collapsed" data-panel="invoice_records" style="margin-top:10px">
-        <div class="collapsible-body" style="margin-top:0">
-          <div id="invoice-records-list"><div class="hist-empty" id="invoice-records-empty">暂无发票记录</div></div>
-          <button class="sec-btn" onclick="clearInvoiceRecords()" style="width:100%;margin-top:8px;color:var(--accent2);border-color:rgba(239,68,68,.3);font-size:12px">🗑 清空全部记录</button>
+      <div class="opts-divider"></div>
+      <div class="opts-section" style="padding-bottom:10px">
+        <div class="opts-label">📋 发票记录</div>
+        <div class="record-count">
+          <span class="record-label">已保存</span>
+          <span class="record-num" id="invoice-record-count">0</span>
+          <span class="record-unit">条</span>
+        </div>
+        <div class="btn-row-2">
+          <button class="sec-btn" onclick="togglePanel('invoice_records')">查看记录</button>
+          <button class="sec-btn orange-outline" onclick="exportInvoices()">⬇ 导出 CSV</button>
+        </div>
+        <div class="collapsible-panel collapsed" data-panel="invoice_records" style="margin-top:10px">
+          <div class="collapsible-body" style="margin-top:0">
+            <div id="invoice-records-list"><div class="hist-empty" id="invoice-records-empty">暂无发票记录</div></div>
+            <button class="sec-btn" onclick="clearInvoiceRecords()" style="width:100%;margin-top:8px;color:var(--accent2);border-color:rgba(239,68,68,.3);font-size:12px">🗑 清空全部记录</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1172,8 +1316,7 @@ body{background:var(--bg)}
         </div>
         <div class="ph-title">暂无处理结果</div>
         <div class="ph-body">
-          请先在左侧上传 PDF、Word、Excel、PPT、图片等文件<br>
-          系统将自动解析文本、表格和统计信息
+          请在左侧上传PDF、Word、Excel、PPT或图片文件，系统将自动解析文本、表格和统计信息。
         </div>
         <div class="ph-feature-cards">
           <div class="ph-feat-card">
@@ -1184,12 +1327,12 @@ body{background:var(--bg)}
           <div class="ph-feat-card">
             <span class="ph-feat-icon">📊</span>
             <div class="ph-feat-title">表格数据</div>
-            <div class="ph-feat-desc">Excel、Word、PDF 表格</div>
+            <div class="ph-feat-desc">展示表格结构内容</div>
           </div>
           <div class="ph-feat-card">
             <span class="ph-feat-icon">📈</span>
             <div class="ph-feat-title">统计信息</div>
-            <div class="ph-feat-desc">字数、段落数、关键词</div>
+            <div class="ph-feat-desc">展示字数、段落数、关键词等</div>
           </div>
         </div>
       </div>
