@@ -800,6 +800,102 @@ input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 5px rgba(249,115,
 .btn-row-2 .sec-btn.orange:hover{background:var(--wash)}
 .btn-row-2 .sec-btn.orange-outline{border-color:var(--accent);color:var(--accent);background:transparent}
 .btn-row-2 .sec-btn.orange-outline:hover{background:var(--wash)}
+/* Mobile settings card refresh */
+:root{
+  --bg:#FAF7F1;--s2:#FBF8F2;--border:#EDE7DD;--border2:#E5E0D8;
+  --accent:#FF7A1A;--wash:#FFF3E7;--shadow-md:0 8px 24px rgba(0,0,0,.06);
+}
+body{background:var(--bg)}
+.opts-col{background:#FFFDF9}
+.settings-panel{margin:0;background:#FFFDF9;border:1px solid var(--border);border-radius:24px;box-shadow:0 8px 24px rgba(0,0,0,.06);overflow:hidden}
+.settings-panel .collapsible-head{min-height:64px;padding:15px 16px;border:0;border-radius:0;background:transparent;box-shadow:none}
+.settings-panel .collapsible-head:hover{border-color:transparent;background:#FFF9F2;box-shadow:none;transform:none}
+.settings-panel .collapsible-head:focus-visible{outline:2px solid rgba(255,122,26,.24);outline-offset:-2px;border-radius:22px}
+.settings-panel.advanced-card .collapsible-head{min-height:70px}
+.settings-panel .collapsible-title-wrap{gap:11px}
+.settings-title{font-size:16px;font-weight:800;letter-spacing:0;color:var(--text);line-height:1}
+.settings-icon{width:34px;height:34px;border-radius:13px;background:#FFF1E4;color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.settings-panel .collapsible-chevron{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,122,26,.18);background:#FFF4EA;color:var(--accent);font-size:19px;font-weight:700}
+.settings-panel .collapsible-head:hover .collapsible-chevron{border-color:rgba(255,122,26,.32);background:#FFEADB;color:#E76508}
+.settings-panel.collapsed .collapsible-chevron{transform:rotate(-90deg)}
+.settings-panel .collapsible-body{gap:12px;margin-top:0;padding:0 14px 14px}
+.settings-panel.collapsed .collapsible-body{padding-top:0;padding-bottom:0}
+.settings-panel .conf-info{width:18px;height:18px;border-radius:50%;border:1px solid #D8D0C5;background:#fff;color:#8A8F98;font-size:10px;font-weight:800;line-height:1;flex-shrink:0}
+.settings-panel .conf-info:hover{border-color:rgba(255,122,26,.42);color:var(--accent);background:#FFF8F1}
+.settings-subcard{background:#fff;border:1px solid var(--border);border-radius:22px;padding:15px;box-shadow:0 6px 18px rgba(44,31,18,.035)}
+.settings-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.settings-section-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--text);line-height:1.2}
+.settings-section-sub{font-size:12px;font-weight:500;color:#7A7F89}
+.section-icon{width:28px;height:28px;border-radius:11px;background:#FFF1E4;color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.batch-test-box{margin:0;padding:0;background:transparent;border:0;border-radius:0;gap:14px}
+.batch-test-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.batch-test-opt{min-height:56px;display:grid;grid-template-columns:18px minmax(0,1fr) 16px;align-items:center;gap:6px;padding:12px 7px;background:#FFFDF9;border:1.5px solid var(--border);border-radius:17px;font-size:11.5px;font-weight:700;color:var(--text);cursor:pointer;user-select:none;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease}
+.batch-test-opt:hover{border-color:rgba(255,122,26,.34);background:#FFF9F3;box-shadow:0 8px 18px rgba(255,122,26,.05);transform:translateY(-1px)}
+.batch-test-opt:active{transform:translateY(0)}
+.batch-test-opt:has(input:checked){border-color:rgba(255,122,26,.46);background:#FFF4EA}
+.batch-test-opt input{appearance:none;-webkit-appearance:none;width:18px;height:18px;margin:0;border:1.7px solid #D0C8BD;border-radius:7px;background:#fff;display:inline-grid;place-items:center;cursor:pointer;transition:all .15s ease}
+.batch-test-opt input:checked{background:var(--accent) url("data:image/svg+xml,%3Csvg width='12' height='9' viewBox='0 0 12 9' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4.5 4.5 8 11 1' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px 9px no-repeat;border-color:var(--accent)}
+.batch-test-text{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.batch-test-opt .conf-info{width:16px;height:16px;font-size:9px;justify-self:end}
+.batch-test-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.batch-test-actions .sec-btn{min-height:46px;border-radius:16px;font-size:13px;font-weight:800;letter-spacing:0;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:transform .18s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease,color .18s ease}
+.batch-test-btn{width:100%;background:linear-gradient(135deg,#FF8A2A,#FF7A1A);border:1px solid rgba(255,122,26,.72);color:#fff;box-shadow:0 10px 20px rgba(255,122,26,.22)}
+.batch-test-btn::before{content:'▶';font-size:12px;line-height:1}
+.batch-test-btn:hover:not(:disabled){background:linear-gradient(135deg,#FF7A1A,#EB6508);box-shadow:0 12px 24px rgba(255,122,26,.28);transform:translateY(-1px)}
+.batch-stop-btn{width:100%;background:#FFF4EA;border:1px solid rgba(255,122,26,.24);color:#C96514;box-shadow:none}
+.batch-stop-btn::before{content:'■';font-size:10px;line-height:1}
+.batch-stop-btn:hover:not(:disabled){border-color:rgba(255,122,26,.42);background:#FFEADB;color:#B45309;transform:translateY(-1px)}
+.batch-test-actions .sec-btn:active:not(:disabled){transform:translateY(0)}
+.batch-test-actions .sec-btn:disabled{opacity:1;background:#F4F0EA;border-color:var(--border2);color:#9AA0AA;box-shadow:none;cursor:not-allowed;transform:none}
+.batch-test-meta{display:flex;align-items:center;justify-content:flex-start;gap:7px;font-family:var(--font);font-size:12px;font-weight:600;color:#8A8F98}
+.batch-test-meta::before{content:'◷';font-size:15px;color:#8A8F98;line-height:1}
+.batch-test-meta span:last-child{margin-left:auto;font-family:var(--mono);font-size:10px;color:#A0A5AD}
+.batch-test-box .prog-track{height:7px!important;background:#EEE8DD;border-radius:999px!important;overflow:hidden}
+.batch-test-box .prog-fill{background:linear-gradient(90deg,#FF7A1A,#FFB15C);border-radius:999px}
+.batch-test-current{font-size:11px;color:#6F7681;min-height:16px;line-height:1.45}
+.pdf-mode-box{margin:0;padding:0;background:transparent;border:0;border-radius:0;gap:0}
+.pdf-mode-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pdf-mode-chip{position:relative;min-height:104px;padding:14px 13px;border-radius:18px;background:#fff;border:1.5px solid var(--border2);color:var(--text);gap:8px;box-shadow:none}
+.pdf-mode-chip:hover{border-color:rgba(255,122,26,.34);background:#FFFDF9;transform:translateY(-1px);box-shadow:0 8px 18px rgba(255,122,26,.06)}
+.pdf-mode-chip.on{border-color:var(--accent);background:#FFF4EA;box-shadow:0 0 0 1px rgba(255,122,26,.1) inset}
+.pdf-mode-chip::after{content:'';position:absolute;top:12px;right:12px;width:18px;height:18px;border-radius:50%;border:1.6px solid #CFC8BD;background:#fff}
+.pdf-mode-chip.on::after{content:'✓';display:flex;align-items:center;justify-content:center;background:var(--accent);border-color:var(--accent);color:#fff;font-size:11px;font-weight:900}
+.pdf-mode-icon{width:32px;height:32px;border-radius:13px;background:#F6F2EC;color:#8A8F98;display:inline-flex;align-items:center;justify-content:center;font-size:18px}
+.pdf-mode-chip.on .pdf-mode-icon{background:#FFE5D1;color:var(--accent)}
+.pdf-mode-name{font-size:14px;font-weight:800;color:var(--text)}
+.pdf-mode-desc{font-size:12px;color:#7A7F89;line-height:1.45}
+.pdf-mode-chip.on .pdf-mode-desc{color:#A95B18}
+.conf-card .conf-header{margin-bottom:16px}
+.conf-card .conf-label{font-size:14px;font-weight:800}
+.conf-value{border-radius:999px;padding:5px 12px;background:#FFF0E3;border-color:rgba(255,122,26,.24);color:var(--accent);font-size:12px}
+#confSlider{height:8px;border-radius:999px;background:linear-gradient(to right,var(--accent) 0%,var(--accent) 60%,#E8E2D8 60%,#E8E2D8 100%);cursor:pointer}
+#confSlider::-webkit-slider-thumb{width:22px;height:22px;border:3px solid var(--accent);box-shadow:0 3px 10px rgba(255,122,26,.22)}
+#confSlider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--accent);box-shadow:0 3px 10px rgba(255,122,26,.22);cursor:pointer}
+#confSlider:disabled{cursor:not-allowed}
+.conf-range-labels{margin-top:9px;color:#7A7F89;font-size:11.5px;font-weight:600}
+.maintenance-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.maintenance-grid .sec-btn{min-height:50px;padding:0 12px;border-radius:17px;border:1px solid var(--border2);background:#FCFDFF;color:#334155;font-size:12.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:flex-start;gap:9px;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease}
+.maintenance-grid .sec-btn::before{width:26px;height:26px;border-radius:10px;background:#EAF2FF;color:#3B82F6;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0}
+#clear-ocr-cache-btn::before{content:'↻'}
+#clear-upload-buffer-btn::before{content:'⌫'}
+.maintenance-grid .sec-btn:hover:not(:disabled){border-color:rgba(59,130,246,.24);background:#F8FBFF;box-shadow:0 8px 18px rgba(59,130,246,.08);transform:translateY(-1px)}
+.maintenance-grid .sec-btn:active:not(:disabled){transform:translateY(0)}
+.maintenance-grid .sec-btn:disabled{background:#F4F0EA;border-color:var(--border2);color:#9AA0AA;cursor:not-allowed;box-shadow:none;transform:none}
+@media (min-width:1181px){
+  :root{--mid-w:320px}
+}
+@media (max-width:860px){
+  .settings-panel .collapsible-actions{width:auto;justify-content:flex-end;flex-wrap:nowrap}
+  .settings-panel .collapsible-head{flex-wrap:nowrap}
+  .batch-test-grid,.pdf-mode-row,.maintenance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:359px){
+  .settings-panel{border-radius:20px}
+  .settings-panel .collapsible-head{padding:14px}
+  .settings-panel .collapsible-body{padding-left:12px;padding-right:12px}
+  .batch-test-grid,.pdf-mode-row,.maintenance-grid,.batch-test-actions{grid-template-columns:1fr}
+  .batch-test-opt{min-height:52px}
+}
 /* Nav status */
 .ph-feature-cards{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center}
 .ph-feat-card{display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 18px;background:var(--s1);border:1px solid var(--border);border-radius:10px;min-width:100px;max-width:130px;text-align:center;transition:border-color .15s}
@@ -908,10 +1004,11 @@ input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 5px rgba(249,115,
     </div>
     <div class="opts-divider"></div>
     <div class="opts-section" style="padding-bottom:10px">
-      <div class="collapsible-panel collapsed" data-panel="batch_test">
+      <div class="collapsible-panel settings-panel batch-card collapsed" data-panel="batch_test">
         <div class="collapsible-head" onclick="togglePanel('batch_test')" aria-expanded="false">
           <div class="collapsible-title-wrap">
-            <span class="opts-label" style="margin:0">🧪 批量测试</span>
+            <span class="settings-icon">🧪</span>
+            <span class="settings-title">批量测试</span>
           </div>
           <div class="collapsible-actions">
             <span class="collapsible-chevron">›</span>
@@ -920,14 +1017,14 @@ input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 5px rgba(249,115,
         <div class="collapsible-body">
           <div class="batch-test-box">
             <div class="batch-test-grid">
-              <label class="batch-test-opt"><input type="checkbox" id="bt-suite-normal" checked> 正常样本集 <span class="conf-info" onmouseenter="showConfTip(this)" onmouseleave="hideConfTip()" data-tip="测试标准格式文件，包含 PDF、Word、Excel、PPT、图片、纯文本等 16 种格式的正常样本，预期全部解析成功。">i</span></label>
-              <label class="batch-test-opt"><input type="checkbox" id="bt-suite-edge" checked> 边界样本集 <span class="conf-info" onmouseenter="showConfTip(this)" onmouseleave="hideConfTip()" data-tip="测试异常与边界情况，包含空文件、损坏文件、编码异常、不支持格式等，部分样本预期失败，用于验证系统的容错能力。">i</span></label>
-              <label class="batch-test-opt"><input type="checkbox" id="bt-strict"> 严格模式 <span class="conf-info" onmouseenter="showConfTip(this)" onmouseleave="hideConfTip()" data-tip="开启后，若有任何样本结果与预期不符（异常项 > 0），测试将以失败状态结束并返回非零退出码，适合 CI 流水线使用。">i</span></label>
-              <label class="batch-test-opt"><input type="checkbox" id="bt-keywords"> 关键词提取 <span class="conf-info" onmouseenter="showConfTip(this)" onmouseleave="hideConfTip()" data-tip="对非图片文件额外执行关键词和摘要提取，会增加处理时间。默认关闭以提升测试速度。">i</span></label>
+              <label class="batch-test-opt"><input type="checkbox" id="bt-suite-normal" checked><span class="batch-test-text">正常样本集</span><span class="conf-info" onmouseenter="showConfTip(this)" onmouseleave="hideConfTip()" data-tip="测试标准格式文件，包含 PDF、Word、Excel、PPT、图片、纯文本等 16 种格式的正常样本，预期全部解析成功。">i</span></label>
+              <label class="batch-test-opt"><input type="checkbox" id="bt-suite-edge" checked><span class="batch-test-text">边界样本集</span><span class="conf-info" onmouseenter="showConfTip(this)" onmouseleave="hideConfTip()" data-tip="测试异常与边界情况，包含空文件、损坏文件、编码异常、不支持格式等，部分样本预期失败，用于验证系统的容错能力。">i</span></label>
+              <label class="batch-test-opt"><input type="checkbox" id="bt-strict"><span class="batch-test-text">严格模式</span><span class="conf-info" onmouseenter="showConfTip(this)" onmouseleave="hideConfTip()" data-tip="开启后，若有任何样本结果与预期不符（异常项 > 0），测试将以失败状态结束并返回非零退出码，适合 CI 流水线使用。">i</span></label>
+              <label class="batch-test-opt"><input type="checkbox" id="bt-keywords"><span class="batch-test-text">关键词提取</span><span class="conf-info" onmouseenter="showConfTip(this)" onmouseleave="hideConfTip()" data-tip="对非图片文件额外执行关键词和摘要提取，会增加处理时间。默认关闭以提升测试速度。">i</span></label>
             </div>
             <div class="batch-test-actions">
-              <button class="sec-btn batch-test-btn" id="batch-test-btn" onclick="runBatchTests()">▶ 开始批量测试</button>
-              <button class="sec-btn batch-stop-btn" id="batch-cancel-btn" onclick="cancelBatchTests()" disabled>⏹ 取消</button>
+              <button class="sec-btn batch-test-btn" id="batch-test-btn" onclick="runBatchTests()">开始批量测试</button>
+              <button class="sec-btn batch-stop-btn" id="batch-cancel-btn" onclick="cancelBatchTests()" disabled>取消</button>
             </div>
             <div class="batch-test-meta">
               <span id="batch-test-status">等待开始</span>
@@ -942,45 +1039,52 @@ input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 5px rgba(249,115,
     </div>
     <div class="opts-divider"></div>
     <div class="opts-section" style="padding-bottom:16px">
-      <div class="collapsible-panel collapsed" data-panel="advanced_settings">
+      <div class="collapsible-panel settings-panel advanced-card collapsed" data-panel="advanced_settings">
         <div class="collapsible-head" onclick="togglePanel('advanced_settings')" aria-expanded="false">
           <div class="collapsible-title-wrap">
-            <span class="opts-label" style="margin:0">⚙ 高级设置</span>
+            <span class="settings-icon">⚙</span>
+            <span class="settings-title">高级设置</span>
           </div>
           <div class="collapsible-actions">
             <span class="collapsible-chevron">›</span>
           </div>
         </div>
         <div class="collapsible-body">
-          <div style="padding:12px 0 0">
-            <div class="opts-label" style="margin-bottom:8px">处理模式 <span style="font-size:11px;color:var(--muted);font-weight:400">（仅对 PDF 生效）</span></div>
-            <div class="pdf-mode-box" style="margin:0">
+          <div class="settings-subcard mode-card">
+            <div class="settings-section-head">
+              <div class="settings-section-title">处理模式 <span class="settings-section-sub">（仅对 PDF 生效）</span></div>
+            </div>
+            <div class="pdf-mode-box">
               <div class="pdf-mode-row">
                 <div class="pdf-mode-chip on" data-pdf-mode="fast">
-                  <div style="font-size:18px">⚡</div>
+                  <div class="pdf-mode-icon">⚡</div>
                   <div class="pdf-mode-name">快速模式</div>
                   <div class="pdf-mode-desc">处理速度快</div>
                 </div>
                 <div class="pdf-mode-chip" data-pdf-mode="accurate">
-                  <div style="font-size:18px">🎯</div>
+                  <div class="pdf-mode-icon">🎯</div>
                   <div class="pdf-mode-name">精准模式</div>
                   <div class="pdf-mode-desc">识别更准确</div>
                 </div>
               </div>
             </div>
           </div>
-          <div style="height:10px"></div>
-          <div class="conf-header" style="margin-top:4px">
-            <span class="conf-label">识别置信度 <span class="conf-info" onmouseenter="showConfTip(this)" onmouseleave="hideConfTip()" data-tip="控制发票字段的最低可信程度：&#10;• high（高）≈ 0.9：字段由强规则精确匹配&#10;• medium（中）≈ 0.6：字段由宽松规则或推断得出&#10;• low（低）≈ 0.3：字段匹配较弱，可能有误&#10;&#10;低于阈值的字段将从结果中过滤并标注原因。&#10;建议值：0.60（过滤低置信度）/ 0.00（保留全部）">i</span></span>
-            <span class="conf-value" id="confVal">0.60</span>
+          <div class="settings-subcard conf-card">
+            <div class="conf-header">
+              <span class="conf-label">识别置信度 <span class="conf-info" onmouseenter="showConfTip(this)" onmouseleave="hideConfTip()" data-tip="控制发票字段的最低可信程度：&#10;• high（高）≈ 0.9：字段由强规则精确匹配&#10;• medium（中）≈ 0.6：字段由宽松规则或推断得出&#10;• low（低）≈ 0.3：字段匹配较弱，可能有误&#10;&#10;低于阈值的字段将从结果中过滤并标注原因。&#10;建议值：0.60（过滤低置信度）/ 0.00（保留全部）">i</span></span>
+              <span class="conf-value" id="confVal">0.60</span>
+            </div>
+            <input type="range" id="confSlider" min="0" max="100" value="60" oninput="updateConf(this.value)">
+            <div class="conf-range-labels"><span>宽松 0.0</span><span>严格 1.0</span></div>
           </div>
-          <input type="range" id="confSlider" min="0" max="100" value="60" oninput="updateConf(this.value)">
-          <div class="conf-range-labels"><span>宽松 0.0</span><span>严格 1.0</span></div>
-          <div style="height:10px"></div>
-          <div class="opts-label" style="margin-bottom:8px">🛠 系统维护</div>
-          <div class="btn-row-2">
-            <button class="sec-btn" id="clear-ocr-cache-btn" onclick="clearOcrCache()">清理 OCR 缓存</button>
-            <button class="sec-btn" id="clear-upload-buffer-btn" onclick="clearUploadBuffer()">🗑 删除临时缓存</button>
+          <div class="settings-subcard maintenance-card">
+            <div class="settings-section-head">
+              <div class="settings-section-title"><span class="section-icon">🛠</span>系统维护</div>
+            </div>
+            <div class="maintenance-grid">
+              <button class="sec-btn" id="clear-ocr-cache-btn" onclick="clearOcrCache()">清理 OCR 缓存</button>
+              <button class="sec-btn" id="clear-upload-buffer-btn" onclick="clearUploadBuffer()">删除临时缓存</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2033,10 +2137,10 @@ function setBatchActionState(mode='idle'){
   const cancelBtn=document.getElementById('batch-cancel-btn');
   if(!startBtn || !cancelBtn)return;
   const states={
-    idle:{startDisabled:false,startText:'🧪 一键批测',cancelDisabled:true,cancelText:'⏹ 停止批测'},
-    starting:{startDisabled:true,startText:'⏳ 正在启动...',cancelDisabled:true,cancelText:'⏹ 停止批测'},
-    running:{startDisabled:true,startText:'⏳ 批测中...',cancelDisabled:false,cancelText:'⏹ 停止批测'},
-    cancelling:{startDisabled:true,startText:'⏳ 取消中...',cancelDisabled:true,cancelText:'取消中...'},
+    idle:{startDisabled:false,startText:'开始批量测试',cancelDisabled:true,cancelText:'取消'},
+    starting:{startDisabled:true,startText:'正在启动...',cancelDisabled:true,cancelText:'取消'},
+    running:{startDisabled:true,startText:'批测中...',cancelDisabled:false,cancelText:'取消'},
+    cancelling:{startDisabled:true,startText:'取消中...',cancelDisabled:true,cancelText:'取消中...'},
   };
   const state=states[mode]||states.idle;
   startBtn.disabled=state.startDisabled;
@@ -3096,7 +3200,7 @@ async function clearOcrCache(){
   }finally{
     if(btn){
       btn.disabled=false;
-      btn.textContent='删除 OCR 缓存';
+      btn.textContent='清理 OCR 缓存';
     }
   }
 }
@@ -3129,7 +3233,7 @@ async function clearUploadBuffer(){
   }finally{
     if(btn){
       btn.disabled=false;
-      btn.textContent='删除临时缓冲';
+      btn.textContent='删除临时缓存';
     }
   }
 }
