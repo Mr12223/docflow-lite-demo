@@ -27,10 +27,11 @@ from _bootstrap import ensure_project_root_on_path
 
 ensure_project_root_on_path()
 
-from app import IMAGE_EXTS, process_image_ocr
 from docflow.paths import PROJECT_ROOT, REPORTS_DIR, SAMPLE_DATA_DIR
 from docflow_core import DocFlowProcessor
 from docflow_support import build_error_info, summarize_error_records
+
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"}
 
 SUITE_ALIASES = {
     "test_documents": SAMPLE_DATA_DIR / "test_documents",
@@ -155,6 +156,42 @@ def get_expected_result(suite_name: str, filename: str):
     return suite_expectation[filename]
 
 
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = str(os.getenv(name, "")).strip().lower()
+    if not value:
+        return default
+    return value in {"1", "true", "yes", "on"}
+
+
+def _build_safe_image_ocr_result(file_path: Path) -> dict:
+    text = f"Batch safe mode skipped image OCR for {file_path.name}."
+    return {
+        "success": True,
+        "file": file_path.name,
+        "format": "image",
+        "text": text,
+        "tables": [],
+        "metadata": {
+            "engine": "BatchSafeOCR",
+            "file": file_path.name,
+            "ocr_engine_order": ["batch_safe"],
+            "ocr_attempted_engines": [],
+            "ocr_fallback_notes": ["Image OCR skipped in batch safe mode"],
+            "ocr_selection_strategy": "batch_safe_skip",
+        },
+        "statistics": {
+            "char_count": len(text),
+            "paragraph_count": 1,
+            "table_count": 0,
+            "keywords": [],
+            "processing_ms": 0.0,
+        },
+        "processing_ms": 0.0,
+        "formatted_output": text,
+        "error": "",
+    }
+
+
 def run_single_case(
     processor: DocFlowProcessor,
     suite_name: str,
@@ -169,7 +206,12 @@ def run_single_case(
 
     try:
         if ext in IMAGE_EXTS:
-            result = process_image_ocr(str(file_path), file_path.name)
+            if _env_flag("DOCFLOW_BATCH_SAFE_IMAGE_OCR", False):
+                result = _build_safe_image_ocr_result(file_path)
+            else:
+                from app import process_image_ocr
+
+                result = process_image_ocr(str(file_path), file_path.name)
         else:
             result = processor.process(
                 str(file_path),

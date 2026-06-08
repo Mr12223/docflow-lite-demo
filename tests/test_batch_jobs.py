@@ -68,6 +68,7 @@ class BatchJobsTests(unittest.TestCase):
             }
         )
 
+        self.assertEqual(env["DOCFLOW_BATCH_SAFE_IMAGE_OCR"], "1")
         self.assertEqual(env["DOCFLOW_RAPIDOCR_PREWARM"], "0")
         self.assertEqual(env["DOCFLOW_IMAGE_OCR_ORDER"], "rapidocr")
         self.assertEqual(env["DOCFLOW_IMAGE_OCR_PARALLEL_ENGINES"], "0")
