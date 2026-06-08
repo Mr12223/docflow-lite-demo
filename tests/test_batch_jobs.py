@@ -69,8 +69,10 @@ class BatchJobsTests(unittest.TestCase):
         )
 
         self.assertEqual(env["DOCFLOW_RAPIDOCR_PREWARM"], "0")
+        self.assertEqual(env["DOCFLOW_IMAGE_OCR_ORDER"], "rapidocr")
         self.assertEqual(env["DOCFLOW_IMAGE_OCR_PARALLEL_ENGINES"], "0")
         self.assertEqual(env["DOCFLOW_IMAGE_OCR_VARIANT_WORKERS"], "1")
+        self.assertEqual(env["DOCFLOW_IMAGE_OCR_TESSERACT_TAX_ID_REFINEMENT"], "0")
         self.assertEqual(env["OMP_NUM_THREADS"], "1")
 
     def test_run_batch_tests_reuses_active_job(self):
