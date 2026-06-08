@@ -100,6 +100,11 @@ def parse_args() -> argparse.Namespace:
         help="报告输出根目录，默认 reports/",
     )
     parser.add_argument(
+        "--report-dir",
+        default="",
+        help="报告输出目录；设置后将直接写入该目录，不再自动追加 batch_test_* 子目录",
+    )
+    parser.add_argument(
         "--keywords",
         action="store_true",
         help="为非图片文件开启关键词/摘要提取（默认关闭以提升速度）",
@@ -919,8 +924,11 @@ def main() -> int:
         print("测试目录中没有找到可测试文件。")
         return 1
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_dir = Path(args.report_root) / f"batch_test_{timestamp}"
+    if args.report_dir:
+        report_dir = Path(args.report_dir)
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_dir = Path(args.report_root) / f"batch_test_{timestamp}"
     report_dir.mkdir(parents=True, exist_ok=True)
 
     processor = DocFlowProcessor()

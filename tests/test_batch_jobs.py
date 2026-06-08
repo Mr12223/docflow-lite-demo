@@ -76,6 +76,28 @@ class BatchJobsTests(unittest.TestCase):
         self.assertEqual(env["DOCFLOW_IMAGE_OCR_TESSERACT_TAX_ID_REFINEMENT"], "0")
         self.assertEqual(env["OMP_NUM_THREADS"], "1")
 
+    def test_batch_report_dir_is_unique_for_job(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            report_dir = batch_jobs._build_batch_report_dir("job/../123", Path(tmp_dir))
+
+        self.assertEqual(report_dir.parent, Path(tmp_dir))
+        self.assertRegex(report_dir.name, r"^batch_test_\d{8}_\d{6}_job123$")
+
+    def test_batch_command_uses_explicit_report_dir(self):
+        report_dir = Path("reports") / "batch_test_job123"
+        cmd = batch_jobs._build_batch_command(
+            ["test_documents"],
+            keywords=False,
+            strict=True,
+            pdf_mode="fast",
+            report_dir=report_dir,
+        )
+
+        self.assertIn("--report-dir", cmd)
+        self.assertEqual(cmd[cmd.index("--report-dir") + 1], str(report_dir))
+        self.assertIn("--strict", cmd)
+        self.assertEqual(cmd[cmd.index("--pdf-mode") + 1], "fast")
+
     def test_run_batch_tests_reuses_active_job(self):
         with batch_jobs.BATCH_TEST_LOCK:
             batch_jobs.BATCH_TEST_JOBS["active123"] = {

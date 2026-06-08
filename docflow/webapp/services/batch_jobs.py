@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -113,6 +114,37 @@ def _build_batch_subprocess_env(base_env: Optional[dict] = None) -> dict:
     for env_name, env_value in BATCH_SUBPROCESS_OCR_ENV.items():
         env[env_name] = env_value
     return env
+
+
+def _build_batch_report_dir(job_id: str, reports_dir: Path = REPORTS_DIR) -> Path:
+    safe_job_id = re.sub(r"[^A-Za-z0-9_-]+", "", str(job_id or ""))[:12] or "job"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return reports_dir / f"batch_test_{timestamp}_{safe_job_id}"
+
+
+def _build_batch_command(
+    suites: list[str],
+    *,
+    keywords: bool,
+    strict: bool,
+    pdf_mode: str,
+    report_dir: Path,
+) -> list[str]:
+    cmd = [
+        sys.executable,
+        "-u",
+        str(SCRIPTS_DIR / "run_batch_tests.py"),
+        "--report-dir",
+        str(report_dir),
+        *suites,
+    ]
+    if keywords:
+        cmd.append("--keywords")
+    if strict:
+        cmd.append("--strict")
+    if pdf_mode in ("accurate", "fast"):
+        cmd.extend(["--pdf-mode", pdf_mode])
+    return cmd
 
 
 def _build_report_payload(report_dir: Optional[Path]) -> tuple[dict, list, list, list, dict]:
@@ -240,16 +272,21 @@ def _run_batch_test_job(job_id: str) -> None:
         pdf_mode = _normalize_pdf_mode(job.get("pdf_mode", DEFAULT_PDF_MODE))
 
     reports_dir = REPORTS_DIR
-    before = {p.name for p in reports_dir.glob("batch_test_*") if p.is_dir()}
-    cmd = [sys.executable, "-u", str(SCRIPTS_DIR / "run_batch_tests.py"), *suites]
-    if keywords:
-        cmd.append("--keywords")
-    if strict:
-        cmd.append("--strict")
-    if pdf_mode in ("accurate", "fast"):
-        cmd.extend(["--pdf-mode", pdf_mode])
+    report_dir = _build_batch_report_dir(job_id, reports_dir)
+    cmd = _build_batch_command(
+        suites,
+        keywords=keywords,
+        strict=strict,
+        pdf_mode=pdf_mode,
+        report_dir=report_dir,
+    )
 
     env = _build_batch_subprocess_env()
+    with BATCH_TEST_LOCK:
+        job = BATCH_TEST_JOBS.get(job_id)
+        if job:
+            job["report_dir"] = str(report_dir)
+    _append_job_log(job_id, "INFO", f"Report directory: {report_dir}")
     _append_job_log(job_id, "INFO", f"开始批测：{', '.join(Path(s).name for s in suites)} ｜ PDF模式: {pdf_mode}")
 
     try:
@@ -342,13 +379,6 @@ def _run_batch_test_job(job_id: str) -> None:
     finally:
         with BATCH_TEST_LOCK:
             BATCH_TEST_PROCESSES.pop(job_id, None)
-
-    after_dirs = sorted(
-        [p for p in reports_dir.glob("batch_test_*") if p.is_dir()],
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )
-    report_dir = next((p for p in after_dirs if p.name not in before), after_dirs[0] if after_dirs else None)
 
     try:
         summary, records, failed_cases, unexpected_cases, report_urls = _build_report_payload(report_dir)
