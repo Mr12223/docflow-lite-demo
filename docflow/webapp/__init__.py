@@ -13,7 +13,7 @@ def main() -> None:
     print("  DocFlow 服务已启动！")
     print("  请用浏览器打开：http://127.0.0.1:5000")
     print("=" * 45)
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5000, use_reloader=False)
 
 
 __all__ = ["app", "main", "IMAGE_EXTS", "process_image_ocr"]

@@ -12,6 +12,7 @@ from docflow.settings import normalize_pdf_mode as _normalize_pdf_mode
 from ..core import app
 from ..responses import error_response
 from ..services.batch_jobs import (
+    BATCH_ACTIVE_STATES,
     BATCH_TEST_JOBS,
     BATCH_TEST_LOCK,
     _append_job_log,
@@ -38,6 +39,25 @@ def run_batch_tests():
     total = _count_suite_cases(suites)
     now = time.time()
     with BATCH_TEST_LOCK:
+        active_job = next(
+            (job for job in BATCH_TEST_JOBS.values() if job.get("state") in BATCH_ACTIVE_STATES),
+            None,
+        )
+        if active_job:
+            active_job_id = active_job.get("job_id", "")
+            return jsonify(
+                {
+                    "success": True,
+                    "already_running": True,
+                    "job_id": active_job_id,
+                    "state": active_job.get("state", "running"),
+                    "total": active_job.get("total", 0),
+                    "suites": active_job.get("suites", []),
+                    "pdf_mode": active_job.get("pdf_mode", pdf_mode),
+                    "poll_url": f"/run-batch-tests/{active_job_id}",
+                }
+            )
+
         BATCH_TEST_JOBS[job_id] = {
             "job_id": job_id,
             "state": "queued",

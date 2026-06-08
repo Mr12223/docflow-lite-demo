@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from docflow.paths import PROJECT_ROOT, REPORTS_DIR, SAMPLE_DATA_DIR, SCRIPTS_DIR
+from docflow.runtime import THREAD_LIMIT_ENV
 from docflow.settings import DEFAULT_PDF_MODE
 from docflow.settings import normalize_pdf_mode as _normalize_pdf_mode
 from docflow.support import build_error_info
@@ -22,6 +23,15 @@ BATCH_SUITE_ALIASES = {
 BATCH_TEST_JOBS = {}
 BATCH_TEST_PROCESSES = {}
 BATCH_TEST_LOCK = threading.Lock()
+BATCH_ACTIVE_STATES = {"queued", "running", "cancelling"}
+BATCH_SUBPROCESS_OCR_ENV = {
+    "DOCFLOW_LIMIT_OCR_THREADS": "1",
+    "DOCFLOW_RAPIDOCR_PREWARM": "0",
+    "DOCFLOW_IMAGE_OCR_PARALLEL_ENGINES": "0",
+    "DOCFLOW_IMAGE_OCR_VARIANT_WORKERS": "1",
+    "DOCFLOW_RAPIDOCR_IMAGE_OCR_VARIANT_WORKERS": "1",
+    "DOCFLOW_TESSERACT_IMAGE_OCR_VARIANT_WORKERS": "1",
+}
 
 
 def _resolve_batch_suites(suites) -> list[str]:
@@ -87,6 +97,19 @@ def _parse_log_level(line: str) -> str:
     if not match:
         return "INFO"
     return {"WARNING": "WARN"}.get(match.group(1), match.group(1))
+
+
+def _build_batch_subprocess_env(base_env: Optional[dict] = None) -> dict:
+    """Build a conservative environment for native OCR libraries in batch runs."""
+
+    env = dict(base_env or os.environ)
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
+    for env_name, env_value in THREAD_LIMIT_ENV.items():
+        env[env_name] = env_value
+    for env_name, env_value in BATCH_SUBPROCESS_OCR_ENV.items():
+        env[env_name] = env_value
+    return env
 
 
 def _build_report_payload(report_dir: Optional[Path]) -> tuple[dict, list, list, list, dict]:
@@ -223,9 +246,7 @@ def _run_batch_test_job(job_id: str) -> None:
     if pdf_mode in ("accurate", "fast"):
         cmd.extend(["--pdf-mode", pdf_mode])
 
-    env = os.environ.copy()
-    env["PYTHONUTF8"] = "1"
-    env["PYTHONIOENCODING"] = "utf-8"
+    env = _build_batch_subprocess_env()
     _append_job_log(job_id, "INFO", f"开始批测：{', '.join(Path(s).name for s in suites)} ｜ PDF模式: {pdf_mode}")
 
     try:

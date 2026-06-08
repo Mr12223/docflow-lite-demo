@@ -3,10 +3,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from app import app
 from docflow.webapp.services import batch_jobs
 
 
 class BatchJobsTests(unittest.TestCase):
+    def tearDown(self):
+        with batch_jobs.BATCH_TEST_LOCK:
+            batch_jobs.BATCH_TEST_JOBS.clear()
+            batch_jobs.BATCH_TEST_PROCESSES.clear()
+
     def test_empty_report_dir_does_not_publish_missing_report_links(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             report_dir = Path(tmp_dir) / "batch_test_empty"
@@ -52,6 +58,44 @@ class BatchJobsTests(unittest.TestCase):
         )
 
         self.assertIn("unexpected.pdf", message)
+
+    def test_batch_subprocess_env_disables_risky_ocr_parallelism(self):
+        env = batch_jobs._build_batch_subprocess_env(
+            {
+                "DOCFLOW_RAPIDOCR_PREWARM": "1",
+                "DOCFLOW_IMAGE_OCR_PARALLEL_ENGINES": "1",
+                "OMP_NUM_THREADS": "8",
+            }
+        )
+
+        self.assertEqual(env["DOCFLOW_RAPIDOCR_PREWARM"], "0")
+        self.assertEqual(env["DOCFLOW_IMAGE_OCR_PARALLEL_ENGINES"], "0")
+        self.assertEqual(env["DOCFLOW_IMAGE_OCR_VARIANT_WORKERS"], "1")
+        self.assertEqual(env["OMP_NUM_THREADS"], "1")
+
+    def test_run_batch_tests_reuses_active_job(self):
+        with batch_jobs.BATCH_TEST_LOCK:
+            batch_jobs.BATCH_TEST_JOBS["active123"] = {
+                "job_id": "active123",
+                "state": "running",
+                "total": 51,
+                "suites": ["test_documents"],
+                "pdf_mode": "fast",
+            }
+
+        client = app.test_client()
+        response = client.post(
+            "/run-batch-tests",
+            json={"suites": ["test_documents_edge_cases"], "pdf_mode": "fast"},
+        )
+        payload = response.get_json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertTrue(payload["already_running"])
+        self.assertEqual(payload["job_id"], "active123")
+        with batch_jobs.BATCH_TEST_LOCK:
+            self.assertEqual(list(batch_jobs.BATCH_TEST_JOBS), ["active123"])
 
 
 if __name__ == "__main__":
