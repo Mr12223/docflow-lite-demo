@@ -96,6 +96,9 @@ nav{position:relative;z-index:20;display:flex;align-items:center;gap:16px;paddin
 .fi-del{opacity:0;font-size:10px;cursor:pointer;color:var(--dim);background:none;border:none;padding:2px 5px;border-radius:4px;transition:all .15s}
 .file-item:hover .fi-del{opacity:1}
 .fi-del:hover{color:var(--accent2);background:rgba(192,71,58,.08)}
+.fi-retry{opacity:0;font-size:11px;cursor:pointer;color:var(--dim);background:none;border:none;padding:2px 5px;border-radius:4px;transition:all .15s}
+.file-item:hover .fi-retry{opacity:1}
+.fi-retry:hover{color:var(--accent);background:rgba(249,115,22,.08)}
 .fi-prog{position:absolute;bottom:0;left:0;width:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:0 0 9px 9px;display:none;transition:width .25s ease}
 .file-item.processing .fi-prog{display:block;animation:shimmer 1.4s ease-in-out infinite}
 @keyframes shimmer{0%,100%{opacity:.5}50%{opacity:1}}
@@ -561,6 +564,7 @@ tr:hover td{background:#F9F7F4}
 .invoice-save-link{color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .invoice-save-link:hover{color:var(--primary-h,#ea6c0a)}
 .invoice-record-item.highlight{background:rgba(249,115,22,.12);transition:background .1s}
+#invoice-records-list{max-height:320px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
 .invoice-record-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
 .invoice-record-item:hover{background:var(--s2)}
 .invoice-record-info{flex:1;min-width:0}
@@ -867,11 +871,6 @@ body{background:var(--bg)}
 .pdf-mode-chip.on .pdf-mode-desc{color:#A95B18}
 .conf-card .conf-header{margin-bottom:16px}
 .conf-card .conf-label{font-size:14px;font-weight:800}
-.conf-value{border-radius:999px;padding:5px 12px;background:#FFF0E3;border-color:rgba(255,122,26,.24);color:var(--accent);font-size:12px}
-#confSlider{height:8px;border-radius:999px;background:linear-gradient(to right,var(--accent) 0%,var(--accent) 60%,#E8E2D8 60%,#E8E2D8 100%);cursor:pointer}
-#confSlider::-webkit-slider-thumb{width:22px;height:22px;border:3px solid var(--accent);box-shadow:0 3px 10px rgba(255,122,26,.22)}
-#confSlider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--accent);box-shadow:0 3px 10px rgba(255,122,26,.22);cursor:pointer}
-#confSlider:disabled{cursor:not-allowed}
 .conf-range-labels{margin-top:9px;color:#7A7F89;font-size:11.5px;font-weight:600}
 .maintenance-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .maintenance-grid .sec-btn{min-height:50px;padding:0 12px;border-radius:17px;border:1px solid var(--border2);background:#FCFDFF;color:#334155;font-size:12.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:flex-start;gap:9px;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease}
@@ -1262,14 +1261,6 @@ nav{height:54px;padding:0 24px;background:#fff;border-bottom:1px solid var(--bor
                 </div>
               </div>
             </div>
-          </div>
-          <div class="settings-subcard conf-card">
-            <div class="conf-header">
-              <span class="conf-label">识别置信度 <span class="conf-info" onmouseenter="showConfTip(this)" onmouseleave="hideConfTip()" data-tip="控制发票字段的最低可信程度：&#10;• high（高）≈ 0.9：字段由强规则精确匹配&#10;• medium（中）≈ 0.6：字段由宽松规则或推断得出&#10;• low（低）≈ 0.3：字段匹配较弱，可能有误&#10;&#10;低于阈值的字段将从结果中过滤并标注原因。&#10;建议值：0.60（过滤低置信度）/ 0.00（保留全部）">i</span></span>
-              <span class="conf-value" id="confVal">0.60</span>
-            </div>
-            <input type="range" id="confSlider" min="0" max="100" value="60" oninput="updateConf(this.value)">
-            <div class="conf-range-labels"><span>宽松 0.0</span><span>严格 1.0</span></div>
           </div>
           <div class="settings-subcard maintenance-card">
             <div class="settings-section-head">
@@ -1666,7 +1657,7 @@ function handlePanelKey(event,panelId){
 }
 function applyPanelPrefs(){
   const prefs=readPrefs();
-  const panels={...PANEL_DEFAULTS,...(prefs.panels||{}),advanced_settings:false,batch_test:false};
+  const panels={...PANEL_DEFAULTS,...(prefs.panels||{}),advanced_settings:false,batch_test:false,invoice_records:false};
   Object.entries(panels).forEach(([panelId,isOpen])=>setPanelOpen(panelId,!!isOpen,false));
 }
 function applyPrefs(){
@@ -1770,12 +1761,14 @@ function renderFiles(){
         </div>
       </div>
       <div class="fi-right">
+        ${f.status!=='proc'?`<button class="fi-retry" title="重新处理">↺</button>`:''}
         <div class="fi-status ${f.status}"></div>
         <button class="fi-del" title="移除">✕</button>
       </div>
       <div class="fi-prog" style="width:${Math.max(0,Math.min(100,Number(f.progress_pct||0)))}%"></div>`;
-    item.addEventListener('click',e=>{if(e.target.classList.contains('fi-del'))return;selectFile(i);});
+    item.addEventListener('click',e=>{if(e.target.classList.contains('fi-del')||e.target.classList.contains('fi-retry'))return;selectFile(i);});
     item.querySelector('.fi-del').addEventListener('click',e=>{e.stopPropagation();removeFile(i);});
+    item.querySelector('.fi-retry')?.addEventListener('click',e=>{e.stopPropagation();reprocessSingleFile(i);});
     list.appendChild(item);
   });
   refreshModeComparePanel();
@@ -2880,7 +2873,7 @@ function renderErrorCenter(result){
 }
 
 function getPdfModeLabel(mode){
-  return ({accurate:'高精度',balanced:'平衡',fast:'快速'})[mode]||String(mode||'balanced');
+  return ({accurate:'高精度',fast:'快速'})[mode]||String(mode||'fast');
 }
 
 function getModeCompareCandidate(){
@@ -3020,7 +3013,7 @@ function buildModeCompareMetrics(mode,result,errorMessage=''){
 }
 
 function buildModeCompareReport(file,entries,options={}){
-  const orderedModes=['accurate','balanced','fast'];
+  const orderedModes=['accurate','fast'];
   const entryMap=Object.fromEntries((entries||[]).map(item=>[item.mode,item]));
   const normalized=orderedModes.map(mode=>entryMap[mode]||buildModeCompareMetrics(mode,null,'未执行'));
   const successEntries=normalized.filter(item=>item.success);
@@ -3047,7 +3040,6 @@ function buildModeCompareReport(file,entries,options={}){
       recommended=[...nearBest].sort((a,b)=>(a.processing_ms-b.processing_ms)||(b.coverage_pct-a.coverage_pct)||(b.chars-a.chars))[0];
       if(recommended.mode===bestQuality.mode){
         if(recommended.mode==='accurate')reason='高精度模式在本次实验中覆盖率或字符量领先，适合优先保证识别质量。';
-        else if(recommended.mode==='balanced')reason='平衡模式在质量与耗时之间表现最稳，适合作为默认选择。';
         else reason='快速模式在当前文件上已经取得最佳结果，说明文档文本层质量较好。';
       }else{
         reason=`${recommended.label}与最佳质量结果接近，但耗时更低，更适合作为当前文件的默认模式。`;
@@ -3143,7 +3135,7 @@ function renderModeCompareReport(report){
   summaryText.textContent=`推荐模式（基于本次文件推断）：${report.summary?.recommended_label||'无推荐'}。${report.summary?.reason||''} ${report.summary?.note||''}`.trim();
   const entryMap=Object.fromEntries(report.entries.map(entry=>[entry.mode,entry]));
   const renderRow=(label,pick)=>{
-    const cells=['accurate','balanced','fast'].map(mode=>{
+    const cells=['accurate','fast'].map(mode=>{
       const entry=entryMap[mode];
       const val=pick(entry);
       return `<div class="mode-table-cell${mode===recommendedMode?' recommended':''}">${esc(val)}</div>`;
@@ -3154,7 +3146,6 @@ function renderModeCompareReport(report){
     `<div class="mode-table-row mode-table-head">
       <div class="mode-table-cell">指标</div>
       <div class="mode-table-cell${recommendedMode==='accurate'?' recommended':''}">高精度</div>
-      <div class="mode-table-cell${recommendedMode==='balanced'?' recommended':''}">平衡</div>
       <div class="mode-table-cell${recommendedMode==='fast'?' recommended':''}">快速</div>
     </div>`,
     renderRow('状态',entry=>entry.success?'成功':'失败'),
@@ -3196,7 +3187,7 @@ function downloadModeCompareReport(fmt){
       '| --- | --- | --- | --- |',
     ];
     const entryMap=Object.fromEntries(report.entries.map(entry=>[entry.mode,entry]));
-    const row=(label,pick)=>`| ${label} | ${pick(entryMap.accurate)} | ${pick(entryMap.balanced)} | ${pick(entryMap.fast)} |`;
+    const row=(label,pick)=>`| ${label} | ${pick(entryMap.accurate)} | ${pick(entryMap.fast)} |`;
     lines.push(row('状态',entry=>entry.success?'成功':'失败'));
     lines.push(row('总耗时',entry=>entry.success?fmtDuration(entry.processing_ms):'—'));
     lines.push(row('字符数',entry=>entry.success?entry.chars.toLocaleString():'—'));
@@ -3246,7 +3237,7 @@ async function runPdfModeCompare(){
   if(_isModeComparing)return;
   const candidate=getModeCompareCandidate();
   if(!candidate){toast('⚠ 请先添加或选中一个 PDF 文件','var(--amber)');return;}
-  const modes=['accurate','balanced','fast'];
+  const modes=['accurate','fast'];
   const entries=[];
   _isModeComparing=true;
   _modeCompareCancelRequested=false;
@@ -3441,7 +3432,7 @@ async function startProcessJob(file,fmt,pdfMode,forceReprocess=false){
   if(invoiceOpt&&!invoiceOpt.classList.contains('off')){
     fd.append('invoice_extract','1');
     const slider=document.getElementById('confSlider');
-    if(slider)fd.append('confidence_threshold',(Number(slider.value)/100).toFixed(2));
+    if(slider)fd.append('confidence_threshold','0.00');
   }
   const res=await fetch('/process/start',{method:'POST',body:fd});
   const data=await res.json().catch(()=>({}));
@@ -3622,6 +3613,68 @@ async function cancelModeCompare(){
 }
 
 // Process
+async function reprocessSingleFile(i){
+  if(_isProcessing){toast('⚠ 正在处理中，请等待完成后再试','var(--amber)');return;}
+  const f=files[i];
+  if(!f)return;
+  _isProcessing=true;
+  _processCancelRequested=false;
+  updateRunBtn();
+  const fmt=getFormat();
+  const pdfMode=getPdfMode();
+  f.status='ready';f.progress_pct=0;f.progress_stage='';f.processJobId=null;f.processRunId=null;f.processStarted=false;
+  renderFiles();
+  _activeProcessRunId=++_processRunSeq;
+  try{
+    f.status='proc';f.progress_pct=0;f.processStarted=true;activeIdx=i;
+    renderFiles();
+    log('INFO',`重新处理: ${f.name}`);
+    const startData=await startProcessJob(f.file,fmt,pdfMode,true);
+    f.processJobId=startData.job_id;
+    _activeProcessJobId=startData.job_id;
+    _activeProcessJobIds.add(startData.job_id);
+    const data=await pollProcessJob(startData.job_id,(jobData)=>{
+      f.progress_pct=Math.max(0,Math.min(100,Number(jobData?.progress_pct||0)));
+      f.progress_stage=jobData?.stage||'';
+      renderFiles();
+    });
+    if(data.state==='cancelled'){
+      f.result=buildUiResult(f,data.result||{error:data.error||'任务已取消'},data.result?.error_info||buildClientErrorInfo(data.error||'任务已取消'));
+      f.status='cancel';f.processRunId=_activeProcessRunId;
+      log('WARN',`⏹ ${f.name}: ${data.error||'任务已取消'}`);
+      if(activeIdx===i)showResult(f.result,f.name);
+      return;
+    }
+    const resultPayload=data.result||{};
+    if(data.state!=='completed'||!resultPayload.success){
+      f.progress_pct=100;
+      f.result=buildUiResult(f,resultPayload,resultPayload.error_info||buildClientErrorInfo(data.error||resultPayload.error||'处理失败'));
+      f.status='error';f.processRunId=_activeProcessRunId;
+      log('ERROR',`✗ ${f.name}: ${data.error||resultPayload.error||'处理失败'}`);
+      if(activeIdx===i)showResult(f.result,f.name);
+      return;
+    }
+    f.progress_pct=100;
+    f.result=buildUiResult(f,resultPayload);
+    f.forceReprocess=false;f.status='done';f.processRunId=_activeProcessRunId;
+    log('INFO',`✓ ${f.name} — 重新处理完成`);
+    if(activeIdx===i)showResult(f.result,f.name);
+    saveToHistory(f,f.result);
+  }catch(e){
+    f.progress_pct=100;f.status='error';f.processRunId=_activeProcessRunId;
+    f.result=buildUiResult(f,{error:e.message},buildClientErrorInfo(e.message));
+    log('ERROR',`✗ ${f.name}: ${e.message}`);
+    if(activeIdx===i)showResult(f.result,f.name);
+  }finally{
+    if(f.processJobId)_activeProcessJobIds.delete(f.processJobId);
+    f.processJobId=null;
+    _activeProcessJobId=_activeProcessJobIds.size?[..._activeProcessJobIds][0]:null;
+    _isProcessing=false;
+    updateRunBtn();
+    renderFiles();updateBatchBar();
+  }
+}
+
 async function runProcess(){
   if(!files.length)return;
   if(_isModeComparing){toast('⚠ 模式实验进行中，请稍后再开始正式处理','var(--amber)');return;}
@@ -4091,8 +4144,20 @@ function dl(fmt){
     content=`# DocFlow 提取结果\n\n> 导出时间：${new Date().toLocaleString()}\n\n## 文本内容\n\n${rawText}\n\n## 统计\n\n- 字符数：${s.char_count||s.chars||0}\n- 段落数：${s.paragraph_count||s.paras||0}\n- 表格数：${(_lastResult.tables||[]).length}\n`;
     mime='text/markdown';ext2='md';
   }else if(fmt==='csv'){
-    const rows=(_lastResult.tables||[]).flatMap((t,i)=>[['--- 表格 '+(i+1)+' ---'],...t,[]]);
-    content=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+    const invoice=_lastResult.stats?.invoice_fields||{};
+    const applicableFields=invoiceDisplayFields(invoice).filter(key=>invoiceFieldValue(invoice,key));
+    const invoiceRows=[];
+    if(invoice.is_invoice&&applicableFields.length){
+      invoiceRows.push([INVOICE_FIELD_LABELS['invoice_type']||'发票类型', invoice.schema_name||invoice.invoice_category||'']);
+      applicableFields.forEach(key=>{
+        if(key==='invoice_type')return;
+        invoiceRows.push([INVOICE_FIELD_LABELS[key]||key, invoiceFieldValue(invoice,key)||'']);
+      });
+    }
+    const tableRows=(_lastResult.tables||[]).flatMap((t,i)=>[['--- 表格 '+(i+1)+' ---'],...t,[]]);
+    const sep=invoiceRows.length&&tableRows.length?[[]]:[];
+    const allRows=[...invoiceRows,...sep,...tableRows];
+    content=allRows.map(r=>r.map(csvCell).join(',')).join('\n');
     mime='text/csv';ext2='csv';
   }else{
     content=rawText;mime='text/plain';ext2='txt';
@@ -4129,11 +4194,15 @@ function dlAll(fmt){
     content=parts.join('\n');
     mime='text/markdown';ext2='md';
   }else if(fmt==='csv'){
-    const dynamicFields=[...INVOICE_FIELD_ORDER];
+    // 只收集各文件实际适用字段的并集，不用全字段列表兜底
+    const applicableSet=new Set();
     done.forEach(f=>{
       const invoice=f.result?.stats?.invoice_fields||{};
-      invoiceDisplayFields(invoice).forEach(key=>{if(!dynamicFields.includes(key))dynamicFields.push(key);});
+      invoiceDisplayFields(invoice).forEach(key=>applicableSet.add(key));
     });
+    // 按 INVOICE_FIELD_ORDER 排序，保持字段顺序一致
+    const dynamicFields=[...INVOICE_FIELD_ORDER].filter(k=>applicableSet.has(k));
+    applicableSet.forEach(k=>{if(!dynamicFields.includes(k))dynamicFields.push(k);});
     const headers=['文件名','字符数','处理耗时(s)','是否发票','票据类别',...dynamicFields.map(key=>INVOICE_FIELD_LABELS[key]||key)];
     const rows=[headers];
     done.forEach(f=>{
@@ -4144,7 +4213,8 @@ function dlAll(fmt){
         s.processing_s??(s.processing_ms?Number(s.processing_ms/1000).toFixed(2):''),
         invoice.is_invoice?'是':'否',
         invoice.schema_name||invoice.invoice_category||'',
-        ...dynamicFields.map(key=>invoiceFieldValue(invoice,key)||invoice.missing_fields?.[key]?.message||invoice.not_applicable_fields?.[key]?.message||'')
+        // 只输出有值的字段，不适用/未识别的留空
+        ...dynamicFields.map(key=>invoiceFieldValue(invoice,key)||'')
       ]);
     });
     content=rows.map(row=>row.map(csvCell).join(',')).join('\n');
@@ -4800,9 +4870,21 @@ async function viewInvoiceRecord(id){
     const data=await res.json();
     if(!data.success||!data.record)return;
     const r=data.record;
+    // 从 invoice_type 文本推断 category，用于 invoiceDisplayFields 过滤字段
+    const typeText=r.invoice_type||'';
+    let detectedCategory='';
+    for(const tpl of _invoiceTemplates){
+      if(tpl.aliases&&tpl.aliases.some(a=>a&&typeText.includes(a))){detectedCategory=tpl.key;break;}
+      if(tpl.name&&typeText.includes(tpl.name)){detectedCategory=tpl.key;break;}
+    }
+    const expectedFields=detectedCategory
+      ?(_invoiceTemplates.find(t=>t.key===detectedCategory)?.fields||[])
+      :[];
     const fakeResult={stats:{invoice_fields:{
       is_invoice:true,confidence:r.confidence,field_count:r.field_count,
       saved_record_id:r.id,
+      invoice_category:detectedCategory,
+      expected_fields:expectedFields,
       fields:{}
     }}};
     INVOICE_FIELD_ORDER.forEach(key=>{
@@ -4833,7 +4915,7 @@ function toggleInvoiceOpt(el){
     }
   }
 }
-function updateConf(val){document.getElementById("confVal").textContent=(val/100).toFixed(2);var s=document.getElementById("confSlider");s.style.background="linear-gradient(to right,var(--accent) 0%,var(--accent) "+val+"%,var(--border) "+val+"%,var(--border) 100%)";}
+function updateConf(val){}
 function setFontSize(size){
   const targets=[
     document.getElementById('text-out'),

@@ -206,18 +206,6 @@ class PDFParser(BaseParser):
                 "prefer_fast_ocr": False,
                 "label": "高精度",
             },
-            "balanced": {
-                "render_scales": (2.0, 1.6),
-                "binary_thresholds": (180,),
-                "min_text_signal": 8,
-                "target_long_edge": 1200,
-                "max_long_edge": 1600,
-                "ocr_variants": ("rgb", "gray", "contrast", "binary"),
-                "score_break_threshold": 80,
-                "variant_break_threshold": 70,
-                "prefer_fast_ocr": False,
-                "label": "平衡",
-            },
             "fast": {
                 "render_scales": (1.4,),
                 "binary_thresholds": (),
@@ -274,18 +262,7 @@ class PDFParser(BaseParser):
 
         if is_large_pdf:
             config["prefer_fast_ocr"] = True
-            if pdf_mode == "balanced":
-                config["render_scales"] = (1.6,)
-                config["binary_thresholds"] = ()
-                config["ocr_variants"] = ("gray", "rgb")
-                config["target_long_edge"] = min(config["target_long_edge"], 1100)
-                config["max_long_edge"] = min(config["max_long_edge"], 1350)
-                config["variant_break_threshold"] = min(config["variant_break_threshold"], 58)
-                config["score_break_threshold"] = min(config["score_break_threshold"], 72)
-                config["extract_tables"] = False
-                config["table_page_cap"] = 0
-                config["runtime_label"] = "大文件优化 / 平衡"
-            elif pdf_mode == "fast":
+            if pdf_mode == "fast":
                 config["render_scales"] = (1.2,)
                 config["ocr_variants"] = ("gray",)
                 config["target_long_edge"] = min(config["target_long_edge"], 920)
@@ -628,7 +605,7 @@ class PDFParser(BaseParser):
     def _ocr_pdf_page(self, pdf, page_index: int, mode_config: Optional[dict] = None, progress_callback=None, page_no: Optional[int] = None, total_pages: Optional[int] = None, cancel_callback=None) -> str:
         import tempfile
 
-        mode_config = mode_config or self._get_pdf_mode_config("balanced")
+        mode_config = mode_config or self._get_pdf_mode_config("fast")
         _ensure_not_cancelled(cancel_callback)
         backend = self._get_ocr_backend(prefer_fast=bool(mode_config.get("prefer_fast_ocr")))
         page = pdf[page_index]
@@ -704,7 +681,7 @@ class PDFParser(BaseParser):
         return ""
 
     def _ocr_pil_image(self, backend: dict, image, temp_image_path: str, mode_config: Optional[dict] = None, progress_callback=None, page_no: Optional[int] = None, total_pages: Optional[int] = None, cancel_callback=None) -> str:
-        mode_config = mode_config or self._get_pdf_mode_config("balanced")
+        mode_config = mode_config or self._get_pdf_mode_config("fast")
         best_text = ""
         best_score = float("-inf")
         last_error = None
@@ -748,7 +725,7 @@ class PDFParser(BaseParser):
     def _iter_ocr_candidates(self, image, mode_config: Optional[dict] = None):
         from PIL import ImageEnhance, ImageOps
 
-        mode_config = mode_config or self._get_pdf_mode_config("balanced")
+        mode_config = mode_config or self._get_pdf_mode_config("fast")
         enabled = set(mode_config.get("ocr_variants") or ())
         base = image.convert("RGB")
         if "rgb" in enabled:
@@ -772,7 +749,7 @@ class PDFParser(BaseParser):
     def _fit_image_for_ocr(self, image, mode_config: Optional[dict] = None):
         from PIL import Image
 
-        mode_config = mode_config or self._get_pdf_mode_config("balanced")
+        mode_config = mode_config or self._get_pdf_mode_config("fast")
         width, height = image.size
         long_edge = max(width, height)
         max_long_edge = int(mode_config.get("max_long_edge", 1600))
@@ -1768,7 +1745,7 @@ def main():
     )
     parser.add_argument(
         "--pdf-mode",
-        choices=["accurate", "balanced", "fast"],
+        choices=["accurate", "fast"],
         default=DEFAULT_PDF_MODE,
         help=f"PDF 解析模式（默认: {DEFAULT_PDF_MODE}）",
     )

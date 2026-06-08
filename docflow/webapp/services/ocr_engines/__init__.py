@@ -191,8 +191,6 @@ def _get_image_ocr_speed_profile() -> str:
     profile = str(os.getenv("DOCFLOW_IMAGE_OCR_SPEED_PROFILE", "fast")).strip().lower()
     if profile in {"accurate", "full", "quality"}:
         return "accurate"
-    if profile in {"balanced", "normal"}:
-        return "balanced"
     return "fast"
 
 
@@ -206,12 +204,6 @@ def _get_image_ocr_variant_config(provider: str = "") -> dict:
             "paddleocr": "gray,detail",
             "tesseract": "gray",
             "easyocr": "gray",
-        },
-        "balanced": {
-            "rapidocr": "gray,detail,contrast",
-            "paddleocr": "gray,detail,contrast",
-            "tesseract": "gray,contrast",
-            "easyocr": "gray,contrast",
         },
         "accurate": {
             "rapidocr": "rgb,gray,detail,contrast,binary",

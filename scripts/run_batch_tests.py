@@ -110,9 +110,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--pdf-mode",
-        choices=["accurate", "balanced", "fast"],
-        default=os.getenv("DOCFLOW_DEFAULT_PDF_MODE", "balanced"),
-        help="PDF 解析模式：高精度 / 平衡 / 快速",
+        choices=["accurate", "fast"],
+        default=os.getenv("DOCFLOW_DEFAULT_PDF_MODE", "fast"),
+        help="PDF 解析模式：高精度 / 快速",
     )
     return parser.parse_args()
 
@@ -227,7 +227,7 @@ def run_single_case(
     }
 
 
-def build_summary(records: list[dict], pdf_mode: str = "balanced") -> dict:
+def build_summary(records: list[dict], pdf_mode: str = "fast") -> dict:
     success_count = sum(1 for item in records if item["success"])
     fail_count = len(records) - success_count
     matched = [item for item in records if item["matches_expectation"] is not None]
@@ -355,7 +355,7 @@ def write_markdown(report_dir: Path, summary: dict, records: list[dict], suite_n
     overview_rows.extend(
         [
             ["生成时间", summary["generated_at"]],
-            ["PDF模式", summary.get("pdf_mode", "balanced")],
+            ["PDF模式", summary.get("pdf_mode", "fast")],
             ["测试总数", str(summary["total"])],
             ["成功", str(summary["success"])],
             ["失败", str(summary["failed"])],
@@ -636,7 +636,7 @@ def write_html_dashboard(report_dir: Path, summary: dict, records: list[dict], s
         f'<span class="tag">异常项 {fmt_number(summary.get("unexpected_count", 0))}</span>',
         f'<span class="tag">总字符 {fmt_number(summary.get("char_count_total", 0))}</span>',
         f'<span class="tag">总表格 {fmt_number(summary.get("table_count_total", 0))}</span>',
-        f'<span class="tag">PDF 模式 {esc(summary.get("pdf_mode", "balanced"))}</span>',
+        f'<span class="tag">PDF 模式 {esc(summary.get("pdf_mode", "fast"))}</span>',
     ]
 
     error_sample_cards = "".join(
@@ -657,33 +657,35 @@ def write_html_dashboard(report_dir: Path, summary: dict, records: list[dict], s
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DocFlow 批测汇总</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root{{color-scheme:dark;--bg:#0b1020;--panel:#131a2f;--panel2:#10172a;--line:#283350;--text:#edf2ff;--muted:#93a4c8;--green:#3de8a0;--blue:#7cb4ff;--violet:#9b8cff;--amber:#ffb340;--pink:#ff6b8a;}}
+    :root{{color-scheme:light;--bg:#F6F4F1;--panel:#FFFFFF;--panel2:#F5F2EE;--line:#E8E2DC;--line2:#D5CFC8;--text:#111827;--muted:#6B7280;--green:#16A34A;--blue:#3B82F6;--violet:#8B5CF6;--amber:#F59E0B;--pink:#E85D4F;--accent:#F97316;--wash:#FFF4EA;--mint:#F0FDF4;--font:'Outfit','Noto Sans SC',-apple-system,BlinkMacSystemFont,sans-serif;--mono:'JetBrains Mono','SFMono-Regular',ui-monospace,monospace;--display:'Cormorant Garamond',Georgia,serif;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);--shadow-md:0 6px 18px rgba(15,23,42,.06);}}
     *{{box-sizing:border-box}}
-    body{{font-family:Segoe UI,Arial,sans-serif;background:radial-gradient(circle at top,#192444 0,#0b1020 48%);color:var(--text);margin:0;padding:24px}}
+    body{{font-family:var(--font);background:var(--bg);color:var(--text);margin:0;padding:24px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}}
     .wrap{{max-width:1320px;margin:0 auto}}
     h1,h2,h3{{margin:0}}
-    h2{{font-size:22px;margin-bottom:16px}}
+    h1{{font-family:var(--display);font-weight:500;letter-spacing:-.2px}}
+    h2{{font-size:22px;margin-bottom:16px;letter-spacing:-.01em}}
     section{{margin-top:28px}}
     .hero{{display:grid;grid-template-columns:1.4fr .9fr;gap:18px;align-items:stretch}}
-    .hero-card,.panel,table{{background:rgba(19,26,47,.92);border:1px solid var(--line);border-radius:18px;box-shadow:0 16px 40px rgba(0,0,0,.18)}}
+    .hero-card,.panel,table{{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-md)}}
     .hero-card{{padding:22px}}
     .hero-title{{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px}}
     .meta{{color:var(--muted);font-size:14px;line-height:1.7}}
     .status-badge{{display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700}}
-    .status-badge.ok{{background:rgba(61,232,160,.14);color:var(--green);border:1px solid rgba(61,232,160,.28)}}
-    .status-badge.warn{{background:rgba(255,179,64,.12);color:var(--amber);border:1px solid rgba(255,179,64,.28)}}
-    .status-badge.danger{{background:rgba(255,107,138,.12);color:var(--pink);border:1px solid rgba(255,107,138,.28)}}
+    .status-badge.ok{{background:var(--mint);color:var(--green);border:1px solid rgba(22,163,74,.28)}}
+    .status-badge.warn{{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.32)}}
+    .status-badge.danger{{background:rgba(232,93,79,.1);color:var(--pink);border:1px solid rgba(232,93,79,.3)}}
     .hero-progress{{padding:22px}}
-    .big-metric{{font-size:44px;font-weight:800;line-height:1}}
+    .big-metric{{font-size:44px;font-weight:800;line-height:1;color:var(--accent)}}
     .sub-metric{{color:var(--muted);margin-top:8px}}
-    .hero-bar{{height:14px;background:#0e1528;border-radius:999px;border:1px solid var(--line);overflow:hidden;margin:18px 0 14px}}
-    .hero-bar-fill{{height:100%;background:linear-gradient(90deg,var(--green),#7cf0b9)}}
+    .hero-bar{{height:14px;background:var(--panel2);border-radius:999px;border:1px solid var(--line);overflow:hidden;margin:18px 0 14px}}
+    .hero-bar-fill{{height:100%;background:linear-gradient(90deg,var(--accent),#fb923c)}}
     .hero-split{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}}
-    .split-box{{padding:12px 14px;border-radius:14px;background:var(--panel2);border:1px solid var(--line)}}
+    .split-box{{padding:12px 14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line)}}
     .split-box strong{{display:block;font-size:20px;margin-top:6px}}
     .tag-row{{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}}
-    .tag{{display:inline-flex;align-items:center;padding:7px 11px;border-radius:999px;background:#1a2542;color:#dfe8ff;font-size:13px;border:1px solid #27365b}}
+    .tag{{display:inline-flex;align-items:center;padding:7px 11px;border-radius:999px;background:var(--panel2);color:var(--text);font-size:13px;border:1px solid var(--line)}}
     .cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:18px}}
     .card{{padding:16px 18px}}
     .lbl{{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}}
@@ -693,46 +695,46 @@ def write_html_dashboard(report_dir: Path, summary: dict, records: list[dict], s
     .two-col{{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}}
     .three-col{{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}}
     .suite-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}}
-    .suite-card{{padding:16px;border-radius:16px;background:var(--panel2);border:1px solid var(--line)}}
+    .suite-card{{padding:16px;border-radius:12px;background:var(--panel2);border:1px solid var(--line)}}
     .suite-top{{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}}
     .suite-name{{font-size:16px;font-weight:700}}
     .suite-sub{{margin-top:6px;color:var(--muted);font-size:13px}}
-    .suite-progress{{height:10px;background:#0e1528;border-radius:999px;overflow:hidden;border:1px solid #202b46;margin:14px 0}}
+    .suite-progress{{height:10px;background:#ECE6E0;border-radius:999px;overflow:hidden;border:1px solid var(--line);margin:14px 0}}
     .suite-metrics{{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;color:var(--muted);font-size:13px}}
     .pill{{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid transparent;white-space:nowrap}}
-    .pill.ok{{background:rgba(61,232,160,.14);color:var(--green);border-color:rgba(61,232,160,.28)}}
-    .pill.warn{{background:rgba(255,179,64,.12);color:var(--amber);border-color:rgba(255,179,64,.28)}}
-    .pill.danger{{background:rgba(255,107,138,.12);color:var(--pink);border-color:rgba(255,107,138,.28)}}
+    .pill.ok{{background:var(--mint);color:var(--green);border-color:rgba(22,163,74,.28)}}
+    .pill.warn{{background:rgba(245,158,11,.12);color:var(--amber);border-color:rgba(245,158,11,.32)}}
+    .pill.danger{{background:rgba(232,93,79,.1);color:var(--pink);border-color:rgba(232,93,79,.3)}}
     .bar-stack{{display:flex;flex-direction:column;gap:12px}}
-    .bar-item{{padding:12px 14px;border-radius:14px;background:var(--panel2);border:1px solid var(--line)}}
+    .bar-item{{padding:12px 14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line)}}
     .bar-head{{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}}
     .bar-head span{{color:var(--muted)}}
-    .bar-track,.mini-track{{height:10px;background:#0d1426;border-radius:999px;overflow:hidden;border:1px solid #1f2a45}}
+    .bar-track,.mini-track{{height:10px;background:#ECE6E0;border-radius:999px;overflow:hidden;border:1px solid var(--line)}}
     .bar-fill,.mini-fill{{height:100%;border-radius:999px}}
-    .bar-fill.green,.mini-fill.green{{background:linear-gradient(90deg,var(--green),#7bf1bb)}}
-    .bar-fill.blue,.mini-fill.blue{{background:linear-gradient(90deg,var(--blue),#a8ccff)}}
-    .bar-fill.violet,.mini-fill.violet{{background:linear-gradient(90deg,var(--violet),#beb0ff)}}
-    .bar-fill.amber,.mini-fill.amber{{background:linear-gradient(90deg,var(--amber),#ffd180)}}
-    .bar-fill.pink,.mini-fill.pink{{background:linear-gradient(90deg,var(--pink),#ff9cb2)}}
+    .bar-fill.green,.mini-fill.green{{background:linear-gradient(90deg,var(--green),#4ade80)}}
+    .bar-fill.blue,.mini-fill.blue{{background:linear-gradient(90deg,var(--blue),#7cb4ff)}}
+    .bar-fill.violet,.mini-fill.violet{{background:linear-gradient(90deg,var(--violet),#b69cff)}}
+    .bar-fill.amber,.mini-fill.amber{{background:linear-gradient(90deg,var(--amber),#fbbf24)}}
+    .bar-fill.pink,.mini-fill.pink{{background:linear-gradient(90deg,var(--pink),#fb923c)}}
     .sample-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}}
-    .sample-card{{padding:14px;border-radius:14px;background:var(--panel2);border:1px solid var(--line)}}
+    .sample-card{{padding:14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line)}}
     .sample-file{{font-weight:700}}
     .sample-cat{{margin-top:8px;color:var(--pink);font-size:13px}}
     .sample-msg{{margin-top:8px;font-size:13px;line-height:1.6}}
     .sample-hint{{margin-top:8px;color:var(--muted);font-size:12px;line-height:1.6}}
     table{{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden}}
     th,td{{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;vertical-align:top}}
-    th{{background:#18233f;color:#b8c6e6;font-weight:600;position:sticky;top:0}}
+    th{{background:var(--panel2);color:var(--text);font-weight:600;position:sticky;top:0}}
     tr:last-child td{{border-bottom:none}}
-    tbody tr:hover td{{background:rgba(124,180,255,.05)}}
-    code{{padding:3px 7px;border-radius:999px;background:#1a2542;color:#cfe0ff}}
+    tbody tr:hover td{{background:var(--wash)}}
+    code{{padding:3px 7px;border-radius:6px;background:var(--wash);color:var(--accent);font-family:var(--mono);font-size:13px}}
     .inline-metric{{display:flex;align-items:center;gap:10px;min-width:160px}}
     .inline-metric span{{white-space:nowrap}}
     .mini-track{{flex:1}}
     .empty,.empty-card{{padding:18px;color:var(--muted);text-align:center}}
     .nav{{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}}
-    .nav a{{color:var(--blue);text-decoration:none;padding:8px 12px;border-radius:999px;background:#121a31;border:1px solid var(--line)}}
-    .nav a:hover{{border-color:#3a4c78;background:#172140}}
+    .nav a{{color:var(--accent);text-decoration:none;padding:8px 12px;border-radius:999px;background:var(--wash);border:1px solid var(--line)}}
+    .nav a:hover{{border-color:var(--accent);background:#FFE9D6}}
     @media (max-width: 980px){{.hero,.two-col,.three-col{{grid-template-columns:1fr}} body{{padding:16px}}}}
   </style>
 </head>
@@ -743,7 +745,7 @@ def write_html_dashboard(report_dir: Path, summary: dict, records: list[dict], s
         <div class="hero-title">
           <div>
             <h1>DocFlow 批测可视化汇总</h1>
-            <div class="meta">生成时间：{esc(summary.get('generated_at', '--'))}<br>测试集：{esc(', '.join(suite_names))} ｜ PDF 模式：{esc(summary.get('pdf_mode', 'balanced'))}</div>
+            <div class="meta">生成时间：{esc(summary.get('generated_at', '--'))}<br>测试集：{esc(', '.join(suite_names))} ｜ PDF 模式：{esc(summary.get('pdf_mode', 'fast'))}</div>
           </div>
           <span class="status-badge {health_class}">{health_label}</span>
         </div>

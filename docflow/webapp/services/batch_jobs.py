@@ -128,13 +128,48 @@ def _build_report_payload(report_dir: Optional[Path]) -> tuple[dict, list, list,
         if item.get("matches_expectation") is False
     ][:20]
 
+    report_files = {
+        "html": "summary.html",
+        "markdown": "report.md",
+        "json": "results.json",
+        "csv": "results.csv",
+    }
     report_urls = {
-        "html": f"/reports/{report_dir.name}/summary.html",
-        "markdown": f"/reports/{report_dir.name}/report.md",
-        "json": f"/reports/{report_dir.name}/results.json",
-        "csv": f"/reports/{report_dir.name}/results.csv",
+        key: f"/reports/{report_dir.name}/{filename}"
+        for key, filename in report_files.items()
+        if (report_dir / filename).exists()
     }
     return summary, records, failed_cases, unexpected_cases, report_urls
+
+
+def _is_batch_job_success(return_code: int, cancelled: bool, summary: dict) -> bool:
+    """A batch run is successful only when the command exits cleanly and writes results."""
+
+    return not cancelled and return_code == 0 and bool(summary)
+
+
+def _build_batch_failure_message(
+    *,
+    cancelled: bool,
+    return_code: int,
+    summary: dict,
+    failed_cases: list,
+    unexpected_cases: list,
+    report_dir: Optional[Path],
+) -> str:
+    if cancelled:
+        return "任务已取消"
+    if not summary:
+        location = f"：{report_dir}" if report_dir else ""
+        return f"批量测试未生成结果文件{location}（退出码 {return_code}）"
+    if unexpected_cases:
+        names = ", ".join(
+            str(item.get("filename") or "") for item in unexpected_cases[:5] if item.get("filename")
+        )
+        return f"存在不符合预期的样本：{names}" if names else "存在不符合预期的样本"
+    if failed_cases:
+        return failed_cases[0].get("error") or "批量测试失败"
+    return f"批量测试失败（退出码 {return_code}）"
 
 
 def _terminate_batch_process(job_id: str) -> None:
@@ -185,7 +220,7 @@ def _run_batch_test_job(job_id: str) -> None:
         cmd.append("--keywords")
     if strict:
         cmd.append("--strict")
-    if pdf_mode in ("accurate", "balanced", "fast"):
+    if pdf_mode in ("accurate", "fast"):
         cmd.extend(["--pdf-mode", pdf_mode])
 
     env = os.environ.copy()
@@ -301,8 +336,17 @@ def _run_batch_test_job(job_id: str) -> None:
             failed_cases = failed_cases or []
             unexpected_cases = unexpected_cases or []
         else:
-            success = bool(summary) or return_code == 0
-            final_state = "completed" if success or report_dir else "failed"
+            success = _is_batch_job_success(return_code, cancelled, summary)
+            final_state = "completed" if success else "failed"
+
+        error = "" if success else _build_batch_failure_message(
+            cancelled=cancelled,
+            return_code=return_code,
+            summary=summary,
+            failed_cases=failed_cases,
+            unexpected_cases=unexpected_cases,
+            report_dir=report_dir,
+        )
 
         with BATCH_TEST_LOCK:
             job = BATCH_TEST_JOBS.get(job_id)
@@ -326,7 +370,7 @@ def _run_batch_test_job(job_id: str) -> None:
                         "total": total,
                         "current_file": "",
                         "current_suite": "",
-                        "error": "任务已取消" if cancelled else ("" if success else ((failed_cases[0]["error"] if failed_cases else "批量测试失败"))),
+                        "error": error,
                     }
                 )
 

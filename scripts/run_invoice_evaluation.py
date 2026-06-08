@@ -73,6 +73,12 @@ def parse_args() -> argparse.Namespace:
         default=0,
         help="仅运行前 N 个样本，用于快速验证。",
     )
+    parser.add_argument(
+        "--exclude-fields",
+        action="append",
+        default=[],
+        help="排除指定字段不参与评测，可重复传入。",
+    )
     return parser.parse_args()
 
 
@@ -675,7 +681,13 @@ def write_markdown(report_dir: Path, summary: dict[str, Any], items: list[dict[s
 
 
 def main() -> int:
+    global FIELD_NAMES
     args = parse_args()
+
+    if args.exclude_fields:
+        excluded = set(args.exclude_fields)
+        FIELD_NAMES = [f for f in FIELD_NAMES if f not in excluded]
+
     manifest_path = Path(args.manifest)
     if not manifest_path.is_absolute():
         manifest_path = PROJECT_ROOT / manifest_path

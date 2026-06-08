@@ -18,23 +18,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DOCFLOW_RAPIDOCR_MAX_LONG_EDGE=1400 \
     DOCFLOW_RAPIDOCR_FAST_EDGE_TRIGGER=2200 \
     DOCFLOW_RAPIDOCR_HUGE_LONG_EDGE=1100 \
-    DOCFLOW_CLOUD_DEPLOYMENT=1 \
-    DOCFLOW_CLOUD_IMAGE_OCR_DOWNSAMPLE=1 \
-    DOCFLOW_CLOUD_IMAGE_OCR_MAX_LONG_EDGE=960 \
-    DOCFLOW_CLOUD_IMAGE_OCR_FAST_EDGE_TRIGGER=1500 \
-    DOCFLOW_CLOUD_IMAGE_OCR_HUGE_LONG_EDGE=768 \
-    DOCFLOW_RAPIDOCR_PREWARM=1 \
-    OMP_NUM_THREADS=1 \
-    OMP_THREAD_LIMIT=1 \
-    OPENBLAS_NUM_THREADS=1 \
-    MKL_NUM_THREADS=1 \
-    NUMEXPR_NUM_THREADS=1 \
-    VECLIB_MAXIMUM_THREADS=1 \
-    BLIS_NUM_THREADS=1 \
-    GOTO_NUM_THREADS=1 \
-    OMP_WAIT_POLICY=PASSIVE \
-    WEB_CONCURRENCY=1 \
-    GUNICORN_THREADS=1
+    DOCFLOW_RAPIDOCR_PREWARM=1
 
 WORKDIR /app
 
@@ -47,10 +31,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements-cloud.txt ./
+COPY requirements.txt ./
 
 RUN python -m pip install --upgrade pip && \
-    pip install -r requirements-cloud.txt && \
+    pip install -r requirements.txt && \
     python -c "import cv2, onnxruntime, rapidocr; from rapidocr import RapidOCR; print('RapidOCR build probe OK:', getattr(rapidocr, '__version__', 'unknown'))"
 
 COPY . .
@@ -63,4 +47,4 @@ USER appuser
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "gunicorn -w ${WEB_CONCURRENCY:-1} --timeout 1800 --bind 0.0.0.0:${PORT:-8000} app:app"]
+CMD ["sh", "-c", "gunicorn --timeout 1800 --bind 0.0.0.0:${PORT:-8000} app:app"]

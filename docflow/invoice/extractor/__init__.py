@@ -530,10 +530,56 @@ class InvoiceExtractor:
         compact: str,
         lines: list[str],
     ) -> Optional[tuple[str, str]]:
-        for line in lines[:30]:
-            match = re.search(r"(?:车牌号|车号|车辆号|Car\s*No\.?)[：:\s]*([京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使A-Z][A-Z0-9挂学警港澳]{4,8})", line, re.IGNORECASE)
+        _PLATE_CHARS = r"[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使A-Z]"
+        _PLATE_BODY = r"[A-Z0-9\-\.挂学警港澳]{4,9}"
+        _LABEL = r"(?:车牌号|车号|车辆号|Car\s*No\.?|Taxi\s*No\.?)"
+        search_lines = lines[:30]
+        for i, line in enumerate(search_lines):
+            # 正常情况：标签和车牌在同一行
+            match = re.search(
+                rf"{_LABEL}[：:\s]*({_PLATE_CHARS}{_PLATE_BODY})",
+                line, re.IGNORECASE,
+            )
             if match:
-                return match.group(1).upper(), "high"
+                plate = re.sub(r"[-.]", "", match.group(1)).upper()
+                return plate, "high"
+            # OCR 换行情况：省份字符在标签行末，车牌其余部分在下一行
+            # 例如 "车号京\nB-N4585" 或 "车号京\nB.06908"
+            split_match = re.search(
+                rf"{_LABEL}[：:\s]*({_PLATE_CHARS})\s*$",
+                line, re.IGNORECASE,
+            )
+            if split_match and i + 1 < len(search_lines):
+                next_line = search_lines[i + 1].strip()
+                body_match = re.match(r"([A-Z0-9\-\.挂学警港澳]{4,9})", next_line, re.IGNORECASE)
+                if body_match:
+                    plate = re.sub(r"[-.]", "", split_match.group(1) + body_match.group(1)).upper()
+                    return plate, "high"
+        return None
+
+    def _find_taxi_time_range(self, lines: list[str]) -> Optional[tuple[str, str]]:
+        """从 OCR 行中提取出租车时间范围字符串，返回 (start, end) 或 None。
+        处理 "HH:MM-HH:MM" 格式，支持标签前后两种布局。
+        """
+        _TIME = r"\d{1,2}:\d{2}"
+        _RANGE = rf"({_TIME})\s*[-–]\s*({_TIME})"
+        _LABELS = ("时间", "Time", "上车时间", "下车时间")
+        label_expr = "|".join(map(re.escape, _LABELS))
+        for idx, line in enumerate(lines[:40]):
+            # 同行有范围时间
+            m = re.search(_RANGE, line)
+            if m:
+                return m.group(1), m.group(2)
+            # 标签行：往下一行找范围时间
+            if re.search(label_expr, line, re.IGNORECASE) and idx + 1 < len(lines):
+                m = re.search(_RANGE, lines[idx + 1])
+                if m:
+                    return m.group(1), m.group(2)
+            # 标签行：往上一行找范围时间（值在标签前的布局）
+            if re.search(label_expr, line, re.IGNORECASE) and idx > 0:
+                m = re.search(_RANGE, lines[idx - 1])
+                if m:
+                    return m.group(1), m.group(2)
         return None
 
     def _find_taxi_start_time(
@@ -542,6 +588,9 @@ class InvoiceExtractor:
         compact: str,
         lines: list[str],
     ) -> Optional[tuple[str, str]]:
+        result = self._find_taxi_time_range(lines)
+        if result:
+            return result[0], "high"
         return self._find_labeled_time(lines, ("上车时间", "上车", "Start", "Start Time"))
 
     def _find_taxi_end_time(
@@ -550,6 +599,9 @@ class InvoiceExtractor:
         compact: str,
         lines: list[str],
     ) -> Optional[tuple[str, str]]:
+        result = self._find_taxi_time_range(lines)
+        if result:
+            return result[1], "high"
         return self._find_labeled_time(lines, ("下车时间", "下车", "End", "End Time"))
 
     def _find_fare(
