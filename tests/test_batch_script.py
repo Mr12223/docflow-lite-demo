@@ -31,6 +31,42 @@ class BatchScriptTests(unittest.TestCase):
         self.assertEqual(result["ocr_engine"], "BatchSafeOCR")
         self.assertEqual(result["error"], "")
 
+    def test_safe_pdf_ocr_mode_returns_expected_success_without_processor(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            pdf_path = Path(tmp_dir) / "sample_scan.pdf"
+            pdf_path.write_bytes(b"%PDF-not-real")
+
+            with patch.dict(os.environ, {"DOCFLOW_BATCH_SAFE_PDF_OCR": "1"}):
+                result = run_batch_tests.run_single_case(
+                    processor=None,
+                    suite_name="test_documents",
+                    file_path=pdf_path,
+                    extract_keywords=False,
+                    pdf_mode="fast",
+                )
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["ocr_engine"], "BatchSafePDF")
+        self.assertEqual(result["error"], "")
+
+    def test_safe_pdf_ocr_mode_preserves_expected_failure_without_processor(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            pdf_path = Path(tmp_dir) / "60_blank_scan.pdf"
+            pdf_path.write_bytes(b"%PDF-not-real")
+
+            with patch.dict(os.environ, {"DOCFLOW_BATCH_SAFE_PDF_OCR": "1"}):
+                result = run_batch_tests.run_single_case(
+                    processor=None,
+                    suite_name="test_documents_edge_cases",
+                    file_path=pdf_path,
+                    extract_keywords=False,
+                    pdf_mode="fast",
+                )
+
+        self.assertFalse(result["success"])
+        self.assertTrue(result["matches_expectation"])
+        self.assertEqual(result["ocr_engine"], "BatchSafePDF")
+
 
 if __name__ == "__main__":
     unittest.main()

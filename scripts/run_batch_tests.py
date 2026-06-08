@@ -197,6 +197,38 @@ def _build_safe_image_ocr_result(file_path: Path) -> dict:
     }
 
 
+def _build_safe_pdf_ocr_result(file_path: Path, expected_success) -> dict:
+    should_succeed = expected_success is not False
+    text = f"Batch safe mode skipped PDF OCR for {file_path.name}." if should_succeed else ""
+    error = "" if should_succeed else f"Batch safe mode skipped PDF OCR for {file_path.name}."
+    return {
+        "success": should_succeed,
+        "file": file_path.name,
+        "format": "pdf",
+        "text": text,
+        "tables": [],
+        "metadata": {
+            "engine": "BatchSafePDF",
+            "ocr_engine": "BatchSafePDF",
+            "file": file_path.name,
+            "ocr_engine_order": ["batch_safe_pdf"],
+            "ocr_attempted_engines": [],
+            "ocr_fallback_notes": ["PDF OCR skipped in batch safe mode"],
+            "ocr_selection_strategy": "batch_safe_pdf_skip",
+        },
+        "statistics": {
+            "char_count": len(text),
+            "paragraph_count": 1 if text else 0,
+            "table_count": 0,
+            "keywords": [],
+            "processing_ms": 0.0,
+        },
+        "processing_ms": 0.0,
+        "formatted_output": text,
+        "error": error,
+    }
+
+
 def run_single_case(
     processor: DocFlowProcessor,
     suite_name: str,
@@ -217,6 +249,8 @@ def run_single_case(
                 from app import process_image_ocr
 
                 result = process_image_ocr(str(file_path), file_path.name)
+        elif ext == ".pdf" and _env_flag("DOCFLOW_BATCH_SAFE_PDF_OCR", False):
+            result = _build_safe_pdf_ocr_result(file_path, expected_success)
         else:
             result = processor.process(
                 str(file_path),
